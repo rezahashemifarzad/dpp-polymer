@@ -1,0 +1,170 @@
+// ============================================================================
+// DPP-Polymer — Prisma Schema (Phase 1: Core DPP Data Model)
+// ============================================================================
+// Notes:
+// - Uses PostgreSQL with JSONB for flexible / evolving compliance sub-structures
+//   (mass-balance sourcing, LCA methodology metadata) so we avoid migrations
+//   every time a certification scheme adds a field.
+// - All monetary/measurement values use Decimal, never Float, to avoid
+//   floating-point drift in audit-facing numbers.
+// - Every "claim" field (recycled %, bio-based %, carbon footprint) is paired
+//   with a certification/methodology reference — a bare number is not
+//   defensible under ESPR substantiation requirements.
+// ============================================================================
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+
+// ----------------------------------------------------------------------------
+// ENUMS
+// ----------------------------------------------------------------------------
+
+enum PolymerType {
+  PET
+  HDPE
+  PVC
+  LDPE
+  PP
+  PS
+  PLA      // bio-based
+  PHA      // bio-based
+  PA       // Polyamide / Nylon
+  PC       // Polycarbonate
+  ABS
+  OTHER
+}
+
+enum RecycledContentSource {
+  POST_CONSUMER // PCR
+  POST_INDUSTRIAL // PIR
+  VIRGIN
+  BIO_BASED
+}
+
+enum CertificationScheme {
+  ISCC_PLUS
+  REDCERT2        // REDcert2 sustainability certification for bio-based/renewable feedstocks
+  ISO_14021       // Self-declared environmental claims
+  ISO_14040_44    // LCA standard
+  EN_15343        // Plastics recycling traceability
+  EN_16785        // Bio-based content
+  GRS             // Global Recycled Standard
+  RECYCLASS
+  OTHER
+}
+
+enum DppStatus {
+  DRAFT
+  PENDING_VERIFICATION
+  ISSUED
+  REVOKED
+  SUPERSEDED // replaced by a newer batch record
+}
+
+// ----------------------------------------------------------------------------
+// CORE MODEL
+// ----------------------------------------------------------------------------
+
+model PolymerPassport {
+  id              String    @id @default(uuid())
+
+  // --- 1. Material Identification -----------------------------------------
+  polymerType     PolymerType
+  grade           String    // e.g. "Injection Molding Grade IM-450"
+  meltFlowIndex   Decimal   @db.Decimal(6, 2) // g/10min
+  mfiTestStandard String    @default("ISO 1133") // test conditions matter for MFI comparability
+  density         Decimal   @db.Decimal(5, 3)    // g/cm³
+  densityTestStandard String @default("ISO 1183")
+  colorAdditives  String?   // free text; relevant to recyclability downstream
+
+  // GS1 identification — GTIN identifies the *trade item* (product/grade),
+  // batchId (below) identifies *this specific batch* of that item. Together
+  // they form the GS1 Digital Link path: /01/{gtin}/21/{batchId}.
+  // Stored as the canonical 14-digit form (shorter GTIN-8/12/13 are
+  // zero-padded on input — see padGtinTo14() in types.ts).
+  gtin            String    @db.Char(14)
+
+  // --- 2. Sustainability & Recycled Content ---------------------------------
+  // Flat columns: confirmed one dominant recycled source per batch (no
+  // mass-balance blending), so a JSONB sub-ledger would be over-engineering.
+  recycledContentSource     RecycledContentSource? // POST_CONSUMER | POST_INDUSTRIAL | null if 0%
+  recycledContentPercent    Decimal @db.Decimal(5, 2) @default(0) // PCR or PIR %, per recycledContentSource
+  recycledContentCertScheme CertificationScheme?    // which scheme substantiates this specific claim
+  totalRecycledPercent      Decimal @db.Decimal(5, 2) @default(0) // = recycledContentPercent, kept as its own
+                                                                    // cached field so query patterns/API shape
+                                                                    // don't need to change if a second recycled
+                                                                    // stream is ever added later
+  bioBasedPercent           Decimal @db.Decimal(5, 2) @default(0)
+  bioBasedTestStandard      String? // e.g. "ASTM D6866"
+
+  // Carbon footprint — always paired with methodology, never a bare number.
+  // Scope fixed to cradle-to-gate (confirmed as the dominant customer
+  // requirement); field kept as a plain string default rather than an enum
+  // choice to avoid presenting an unused option in the UI.
+  carbonFootprintKgCO2ePerKg Decimal @db.Decimal(8, 3)
+  lcaMethodology              String  @default("PEF") // Product Environmental Footprint
+  lcaScope                    String  @default("cradle-to-gate")
+  lcaThirdPartyVerified        Boolean @default(false)
+  lcaVerifierName              String?
+
+  // --- 3. Supply Chain & Certification --------------------------------------
+  batchId           String   @unique // primary traceability key
+  manufacturerId    String
+  manufacturer      Manufacturer @relation(fields: [manufacturerId], references: [id])
+  productionDate    DateTime
+  productionSiteGln String?  // Global Location Number, GS1 standard — used in EU DPP linkage
+
+  certifications    Certification[]
+
+  // --- 4. Cryptographic Integrity --------------------------------------------
+  recordHash        String   @unique // SHA-256 of canonicalized record payload, see hashRecord() in types.ts
+  hashAlgorithm      String   @default("SHA-256")
+  previousRecordHash String?  // chains to prior version if this supersedes an older passport (audit trail)
+  signedAt           DateTime?
+  signedBy           String?  // key ID / manufacturer signing identity
+
+  // --- Lifecycle / meta --------------------------------------------------
+  status            DppStatus @default(DRAFT)
+  qrCodePayloadUrl  String?   // public resolver URL encoded in the QR code
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  @@index([polymerType])
+  @@index([manufacturerId])
+  @@index([status])
+  @@index([gtin])
+}
+
+// ----------------------------------------------------------------------------
+// SUPPORTING MODELS
+// ----------------------------------------------------------------------------
+
+model Manufacturer {
+  id            String   @id @default(uuid())
+  legalName     String
+  vatNumber     String?  @unique
+  gln           String?  // GS1 Global Location Number
+  country       String   // ISO 3166-1 alpha-2
+  passports     PolymerPassport[]
+  createdAt     DateTime @default(now())
+}
+
+model Certification {
+  id             String   @id @default(uuid())
+  scheme         CertificationScheme
+  certificateId  String   // issuer's own certificate/reference number
+  issuingBody    String
+  validFrom      DateTime
+  validUntil     DateTime
+  documentUrl    String?  // link to stored certificate PDF (S3/blob ref)
+
+  passportId     String
+  passport       PolymerPassport @relation(fields: [passportId], references: [id])
+
+  @@index([passportId])
+  @@index([scheme])
+}
