@@ -22,21 +22,21 @@ export async function POST(request: Request) {
     // 1. Generate unique identifiers
     const batchId = `BATCH-${Math.floor(100000 + Math.random() * 900000)}`;
     const random10 = Math.floor(1000000000 + Math.random() * 9000000000).toString();
-    const exact14Gtin = `0000${random10}`; // Exactly 14 chars
+    const exact14Gtin = `0000${random10}`;
 
-    // 2. Safe Enum mapping
+    // 2. Enum fallback
     let pType: PolymerType = PolymerType.PP;
     if (body.polymerType && Object.values(PolymerType).includes(body.polymerType as PolymerType)) {
       pType = body.polymerType as PolymerType;
     }
 
-    // 3. Convert numbers to Prisma.Decimal safely
+    // 3. Convert numbers to Prisma.Decimal
     const mfiVal = new Prisma.Decimal(parseFloat(body.mfi) || 12.0);
     const densityVal = new Prisma.Decimal(parseFloat(body.density) || 0.905);
     const pcrVal = new Prisma.Decimal(parseFloat(body.pcrPercentage) || 0.0);
     const carbonVal = new Prisma.Decimal(1.25);
 
-    // 4. Create Record with all required fallback values
+    // 4. Create record with strictly valid schema fields only
     const newPassport = await prisma.polymerPassport.create({
       data: {
         polymerType: pType,
@@ -50,12 +50,7 @@ export async function POST(request: Request) {
         batchId: batchId,
         status: DppStatus.ISSUED,
         carbonFootprintKgCO2ePerKg: carbonVal,
-        
-        // فیلدهای تکمیلی و احتمالی اسکیما جهت جلوگیری از خطای Required Fields
-        description: body.description || 'Polymer Digital Product Passport',
-        manufacturerName: body.manufacturerName || 'Circular Poly SaaS',
-        originCountry: body.originCountry || 'DE',
-      } as any, // اسکیپ تایپ‌چک محلی جهت تطابق کامل با اسکیمای پویا
+      },
     });
 
     return NextResponse.json({ success: true, data: newPassport }, { status: 201 });
@@ -65,7 +60,7 @@ export async function POST(request: Request) {
       { 
         success: false, 
         error: error?.message || 'Failed to issue passport',
-        details: JSON.stringify(error) 
+        details: String(error)
       },
       { status: 500 }
     );
