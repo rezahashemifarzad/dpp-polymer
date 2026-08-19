@@ -53,6 +53,16 @@ enum DppStatus {
   SUPERSEDED // replaced by a newer batch record
 }
 
+// STEP 5: audit trail action taxonomy. Additive — does not touch any
+// existing enum or model.
+enum AuditAction {
+  CREATED
+  VERIFIED
+  REVOKED
+  SUPERSEDED
+  UPDATED
+}
+
 // ----------------------------------------------------------------------------
 // CORE MODEL
 // ----------------------------------------------------------------------------
@@ -103,6 +113,9 @@ model PolymerPassport {
   signedAt           DateTime?
   signedBy           String?
 
+  // --- 5. Audit Trail (STEP 5 addition) --------------------------------------
+  auditLogs         AuditLog[]
+
   // --- Lifecycle / meta --------------------------------------------------
   status            DppStatus @default(ISSUED)
   qrCodePayloadUrl  String?
@@ -112,6 +125,7 @@ model PolymerPassport {
   @@index([polymerType])
   @@index([status])
   @@index([gtin])
+  @@index([manufacturerId]) // STEP 5: added — high-frequency filter in GET /api/passports
 }
 
 // ----------------------------------------------------------------------------
@@ -142,4 +156,27 @@ model Certification {
 
   @@index([passportId])
   @@index([scheme])
+}
+
+// ----------------------------------------------------------------------------
+// AUDIT LOG (STEP 5 addition — new model, no existing model touched)
+// ----------------------------------------------------------------------------
+
+model AuditLog {
+  id            String      @id @default(uuid())
+
+  passportId    String
+  passport      PolymerPassport @relation(fields: [passportId], references: [id])
+
+  action        AuditAction
+  actor         String      // role or service identity that performed the action
+                             // (e.g. "manufacturer:<uuid>", "AUDITOR", "ADMIN")
+  previousHash  String?
+  newHash       String?
+  metadata      Json?
+
+  createdAt     DateTime    @default(now())
+
+  @@index([passportId])
+  @@index([action])
 }
