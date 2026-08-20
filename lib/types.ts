@@ -20,32 +20,40 @@ import {
   RecycledContentSource,
   CertificationScheme,
 } from "@prisma/client";
+import { isValidGtin14 } from "@/lib/gtin";
+
+// Re-exported so existing `import { isValidGtin14 } from "@/lib/types"`
+// call sites keep working. New code — especially client components —
+// should import from "@/lib/gtin" directly: this module pulls in Node's
+// `crypto` and `@prisma/client` at load time, neither of which belongs in
+// a browser bundle.
+export { isValidGtin14 } from "@/lib/gtin";
 
 // ----------------------------------------------------------------------------
 // GTIN (GS1 mod-10 check digit)
 // ----------------------------------------------------------------------------
-
-function gtinCheckDigit(first13Digits: string): number {
-  let sum = 0;
-  for (let i = 0; i < 13; i++) {
-    const digit = Number(first13Digits[i]);
-    // Rightmost data digit (i = 12) carries weight 3, alternating leftward.
-    const weight = (12 - i) % 2 === 0 ? 3 : 1;
-    sum += digit * weight;
-  }
-  return (10 - (sum % 10)) % 10;
-}
-
-export function isValidGtin14(gtin: string): boolean {
-  if (!/^\d{14}$/.test(gtin)) return false;
-  return gtinCheckDigit(gtin.slice(0, 13)) === Number(gtin[13]);
-}
 
 export const GtinSchema = z
   .string()
   .length(14, "GTIN must be exactly 14 digits")
   .regex(/^\d{14}$/, "GTIN must contain only digits")
   .refine(isValidGtin14, { message: "GTIN fails the GS1 mod-10 check digit validation" });
+
+/**
+ * GS1 Digital Link URLs are allowed to encode a GTIN with its leading
+ * zero(s) stripped (a bare GTIN-13/UPC-12 padded up to the canonical
+ * GTIN-14 form). app/01/[gtin]/21/[serialOrBatch]/page.tsx reads the raw
+ * `gtin` route param straight off the URL and needs to compare it against
+ * the 14-digit form stored on the passport row — this is the shared
+ * left-pad-with-zeros helper that makes that comparison correct instead of
+ * silently failing whenever a scanner or browser normalizes away leading
+ * zeros. Non-digit input is returned unchanged (comparison will just fail,
+ * which is correct — an invalid GTIN should never "match").
+ */
+export function padGtinTo14(raw: string): string {
+  if (!/^\d+$/.test(raw)) return raw;
+  return raw.padStart(14, "0");
+}
 
 // ----------------------------------------------------------------------------
 // Certification

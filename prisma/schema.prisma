@@ -18,10 +18,10 @@ enum PolymerType {
   LDPE
   PP
   PS
-  PLA      // bio-based
-  PHA      // bio-based
-  PA       // Polyamide / Nylon
-  PC       // Polycarbonate
+  PLA // bio-based
+  PHA // bio-based
+  PA // Polyamide / Nylon
+  PC // Polycarbonate
   ABS
   OTHER
 }
@@ -35,12 +35,12 @@ enum RecycledContentSource {
 
 enum CertificationScheme {
   ISCC_PLUS
-  REDCERT2        // REDcert2 sustainability certification for bio-based/renewable feedstocks
-  ISO_14021       // Self-declared environmental claims
-  ISO_14040_44    // LCA standard
-  EN_15343        // Plastics recycling traceability
-  EN_16785        // Bio-based content
-  GRS             // Global Recycled Standard
+  REDCERT2 // REDcert2 sustainability certification for bio-based/renewable feedstocks
+  ISO_14021 // Self-declared environmental claims
+  ISO_14040_44 // LCA standard
+  EN_15343 // Plastics recycling traceability
+  EN_16785 // Bio-based content
+  GRS // Global Recycled Standard
   RECYCLASS
   OTHER
 }
@@ -68,43 +68,43 @@ enum AuditAction {
 // ----------------------------------------------------------------------------
 
 model PolymerPassport {
-  id              String    @id @default(uuid())
+  id String @id @default(uuid())
 
   // --- 1. Material Identification -----------------------------------------
-  polymerType     PolymerType
-  grade           String    // e.g. "Injection Molding Grade IM-450"
-  meltFlowIndex   Decimal   @db.Decimal(6, 2) // g/10min
-  mfiTestStandard String    @default("ISO 1133") // test conditions matter for MFI comparability
-  density         Decimal   @db.Decimal(5, 3)    // g/cm³
-  densityTestStandard String @default("ISO 1183")
-  colorAdditives  String?   // free text; relevant to recyclability downstream
+  polymerType         PolymerType
+  grade               String // e.g. "Injection Molding Grade IM-450"
+  meltFlowIndex       Decimal     @db.Decimal(6, 2) // g/10min
+  mfiTestStandard     String      @default("ISO 1133") // test conditions matter for MFI comparability
+  density             Decimal     @db.Decimal(5, 3) // g/cm³
+  densityTestStandard String      @default("ISO 1183")
+  colorAdditives      String? // free text; relevant to recyclability downstream
 
   // GS1 identification
-  gtin            String    @default("00000000000000") @db.Char(14)
+  gtin String @default("00000000000000") @db.Char(14)
 
   // --- 2. Sustainability & Recycled Content ---------------------------------
-  recycledContentSource   RecycledContentSource?
-  recycledContentPercent  Decimal @db.Decimal(5, 2) @default(0)
+  recycledContentSource     RecycledContentSource?
+  recycledContentPercent    Decimal                @default(0) @db.Decimal(5, 2)
   recycledContentCertScheme CertificationScheme?
-  totalRecycledPercent     Decimal @db.Decimal(5, 2) @default(0)
-  bioBasedPercent          Decimal @db.Decimal(5, 2) @default(0)
-  bioBasedTestStandard     String?
+  totalRecycledPercent      Decimal                @default(0) @db.Decimal(5, 2)
+  bioBasedPercent           Decimal                @default(0) @db.Decimal(5, 2)
+  bioBasedTestStandard      String?
 
   // Carbon footprint
   carbonFootprintKgCO2ePerKg Decimal @default(0) @db.Decimal(8, 3)
-  lcaMethodology              String  @default("PEF")
-  lcaScope                    String  @default("cradle-to-gate")
-  lcaThirdPartyVerified        Boolean @default(false)
-  lcaVerifierName             String?
+  lcaMethodology             String  @default("PEF")
+  lcaScope                   String  @default("cradle-to-gate")
+  lcaThirdPartyVerified      Boolean @default(false)
+  lcaVerifierName            String?
 
   // --- 3. Supply Chain & Certification --------------------------------------
-  batchId           String   @unique
+  batchId           String        @unique
   manufacturerId    String?
   manufacturer      Manufacturer? @relation(fields: [manufacturerId], references: [id])
-  productionDate    DateTime @default(now())
+  productionDate    DateTime      @default(now())
   productionSiteGln String?
 
-  certifications    Certification[]
+  certifications Certification[]
 
   // --- 4. Cryptographic Integrity --------------------------------------------
   recordHash         String?   @unique
@@ -114,13 +114,20 @@ model PolymerPassport {
   signedBy           String?
 
   // --- 5. Audit Trail (STEP 5 addition) --------------------------------------
-  auditLogs         AuditLog[]
+  auditLogs AuditLog[]
+
+  // --- 6. GS1 Digital Link resolver record (STEP 5 addition) -----------------
+  // 1:1 with this passport, written in the SAME transaction as the passport
+  // itself (see app/api/passports/route.ts) — a passport row can never exist
+  // without its resolver row, so a public QR/link lookup can never come back
+  // "No GS1 Link record found" for a batch that was actually created here.
+  gs1Link GS1DigitalLink?
 
   // --- Lifecycle / meta --------------------------------------------------
-  status            DppStatus @default(ISSUED)
-  qrCodePayloadUrl  String?
-  createdAt         DateTime  @default(now())
-  updatedAt         DateTime  @updatedAt
+  status           DppStatus @default(ISSUED)
+  qrCodePayloadUrl String?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
 
   @@index([polymerType])
   @@index([status])
@@ -133,26 +140,26 @@ model PolymerPassport {
 // ----------------------------------------------------------------------------
 
 model Manufacturer {
-  id            String   @id @default(uuid())
-  legalName     String
-  vatNumber     String?  @unique
-  gln           String?
-  country       String
-  passports     PolymerPassport[]
-  createdAt     DateTime @default(now())
+  id        String            @id @default(uuid())
+  legalName String
+  vatNumber String?           @unique
+  gln       String?
+  country   String
+  passports PolymerPassport[]
+  createdAt DateTime          @default(now())
 }
 
 model Certification {
-  id             String   @id @default(uuid())
-  scheme         CertificationScheme
+  id            String              @id @default(uuid())
+  scheme        CertificationScheme
   certificateId String
-  issuingBody    String
-  validFrom      DateTime
-  validUntil     DateTime
-  documentUrl    String?
+  issuingBody   String
+  validFrom     DateTime
+  validUntil    DateTime
+  documentUrl   String?
 
-  passportId     String
-  passport       PolymerPassport @relation(fields: [passportId], references: [id])
+  passportId String
+  passport   PolymerPassport @relation(fields: [passportId], references: [id])
 
   @@index([passportId])
   @@index([scheme])
@@ -163,20 +170,53 @@ model Certification {
 // ----------------------------------------------------------------------------
 
 model AuditLog {
-  id            String      @id @default(uuid())
+  id String @id @default(uuid())
 
-  passportId    String
-  passport      PolymerPassport @relation(fields: [passportId], references: [id])
+  passportId String
+  passport   PolymerPassport @relation(fields: [passportId], references: [id])
 
-  action        AuditAction
-  actor         String      // role or service identity that performed the action
-                             // (e.g. "manufacturer:<uuid>", "AUDITOR", "ADMIN")
-  previousHash  String?
-  newHash       String?
-  metadata      Json?
+  action       AuditAction
+  actor        String // role or service identity that performed the action
+  // (e.g. "manufacturer:<uuid>", "AUDITOR", "ADMIN")
+  previousHash String?
+  newHash      String?
+  metadata     Json?
 
-  createdAt     DateTime    @default(now())
+  createdAt DateTime @default(now())
 
   @@index([passportId])
   @@index([action])
+}
+
+// ----------------------------------------------------------------------------
+// GS1 DIGITAL LINK RESOLVER (STEP 5 addition — new model, no existing model
+// or field touched or removed)
+// ----------------------------------------------------------------------------
+// A dedicated, independently-queryable resolver record for every passport's
+// GS1 Digital Link (GTIN + batchId -> public verification URL). This is
+// deliberately a separate table from PolymerPassport.qrCodePayloadUrl, not a
+// replacement for it: whatever code path renders the public QR / "verify
+// this batch" page can resolve a scan by GTIN+batchId (the GS1 Digital Link
+// syntax, /01/{GTIN}/21/{BATCH} — matching the real resolver route at
+// app/01/[gtin]/21/[serialOrBatch]/page.tsx) directly against this table
+// without having
+// to know anything else about the passport schema. It is written inside the
+// SAME prisma.$transaction() call that creates the PolymerPassport row (see
+// app/api/passports/route.ts) — so the two rows are created atomically, and
+// a passport can never exist without a matching, resolvable GS1 link record.
+model GS1DigitalLink {
+  id String @id @default(uuid())
+
+  gtin        String @db.Char(14)
+  batchId     String
+  resolverUri String @unique // GS1 Digital Link path: /01/{GTIN}/21/{BATCH}
+  targetUrl   String // full public verification URL (resolverUri + ?v=<hash prefix>)
+  recordHash  String
+
+  passportId String          @unique
+  passport   PolymerPassport @relation(fields: [passportId], references: [id])
+
+  createdAt DateTime @default(now())
+
+  @@index([gtin, batchId])
 }

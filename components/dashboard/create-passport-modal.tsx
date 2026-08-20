@@ -6,12 +6,29 @@
  * Form that POSTs a new polymer passport claim to /api/passports. Field
  * names mirror PolymerPassportInputSchema exactly (lib/types.ts) so a 400
  * response's `issues.fieldErrors` maps directly onto the fields below.
+ *
+ * Three things that previously caused silent-looking 400s are addressed
+ * here directly (see the follow-up after the initial Step 5 delivery):
+ *   1. The GTIN example was itself invalid against the GS1 check-digit
+ *      rule — fixed, plus a live validity indicator and a "Generate
+ *      valid GTIN" button so nobody has to hand-compute a check digit.
+ *   2. recycledContentSource / recycledContentCertScheme become required
+ *      the moment recycledContentPercent > 0 (a real cross-field rule in
+ *      the schema) — now visually flagged instead of failing silently.
+ *   3. manufacturerId must be a real Manufacturer row's UUID — there was
+ *      no way to get one. See prisma/seed.ts and the hint below the field.
+ *
+ * `onCreate` is passed in by the parent (which already holds a
+ * usePassports() instance) rather than this component calling
+ * usePassports() itself — avoids spinning up a second, redundant
+ * GET /api/passports fetch every time the modal mounts.
  */
 
-import React, { useState } from "react";
-import { X, Loader2 } from "lucide-react";
+import React, { useMemo, useState } from "react";
+import { X, Loader2, CheckCircle2, XCircle, Wand2, AlertTriangle } from "lucide-react";
 import { useToast } from "@/lib/hooks/use-toast";
-import { usePassports, PassportValidationError, type CreatePassportInput } from "@/lib/hooks/use-passports";
+import { PassportValidationError, type ApiPassport, type CreatePassportInput } from "@/lib/hooks/use-passports";
+import { isValidGtin14, generateValidGtin } from "@/lib/gtin";
 
 const POLYMER_TYPES = ["PET", "HDPE", "PVC", "LDPE", "PP", "PS", "PLA", "PHA", "PA", "PC", "ABS", "OTHER"];
 const RECYCLED_SOURCES = ["POST_CONSUMER", "POST_INDUSTRIAL", "VIRGIN", "BIO_BASED"];
@@ -27,10 +44,27 @@ const CERT_SCHEMES = [
   "OTHER",
 ];
 
+const FIELD_LABELS: Record<string, string> = {
+  polymerType: "Polymer Type",
+  grade: "Grade Name",
+  meltFlowIndex: "Melt Flow Index",
+  density: "Density",
+  gtin: "GTIN",
+  batchId: "Batch ID",
+  manufacturerId: "Manufacturer ID",
+  recycledContentSource: "Recycled Content Source",
+  recycledContentPercent: "Recycled Content (%)",
+  recycledContentCertScheme: "Recycled Content Cert. Scheme",
+  bioBasedPercent: "Bio-Based Content (%)",
+  carbonFootprintKgCO2ePerKg: "Carbon Footprint",
+  certifications: "Certification",
+};
+
 interface CreatePassportModalProps {
   open: boolean;
   onClose: () => void;
   onCreated: () => void;
+  onCreate: (input: CreatePassportInput) => Promise<ApiPassport>;
 }
 
 const emptyForm = {
@@ -59,27 +93,37 @@ const inputCls =
 function Field({
   label,
   error,
+  required,
   children,
 }: {
   label: string;
   error?: string[];
+  required?: boolean;
   children: React.ReactNode;
 }) {
   return (
     <label className="block">
-      <span className="text-slate-400 block mb-1">{label}</span>
+      <span className="text-slate-400 block mb-1">
+        {label}
+        {required && <span className="text-amber-400"> *required</span>}
+      </span>
       {children}
       {error && error.length > 0 && <span className="text-red-400 text-[10px] block mt-1">{error[0]}</span>}
     </label>
   );
 }
 
-export function CreatePassportModal({ open, onClose, onCreated }: CreatePassportModalProps) {
+export function CreatePassportModal({ open, onClose, onCreated, onCreate }: CreatePassportModalProps) {
   const { push } = useToast();
-  const { createPassport } = usePassports();
   const [form, setForm] = useState(emptyForm);
   const [submitting, setSubmitting] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string[]>>({});
+
+  const gtinIsValid = form.gtin.length > 0 && isValidGtin14(form.gtin);
+  const gtinShowsInvalid = form.gtin.length === 14 && !gtinIsValid;
+  const recycledMetaRequired = Number(form.recycledContentPercent) > 0;
+
+  const errorEntries = useMemo(() => Object.entries(fieldErrors), [fieldErrors]);
 
   if (!open) return null;
 
@@ -87,6 +131,11 @@ export function CreatePassportModal({ open, onClose, onCreated }: CreatePassport
     (key: keyof typeof emptyForm) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
       setForm((prev) => ({ ...prev, [key]: e.target.value }));
     };
+
+  const handleGenerateGtin = () => {
+    const digitsOnly = form.gtin.replace(/\D/g, "").slice(0, 13);
+    setForm((prev) => ({ ...prev, gtin: generateValidGtin(digitsOnly.length === 13 ? digitsOnly : undefined) }));
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -118,7 +167,7 @@ export function CreatePassportModal({ open, onClose, onCreated }: CreatePassport
     };
 
     try {
-      const created = await createPassport(payload);
+      const created = await onCreate(payload);
       push({
         variant: "success",
         title: "Passport issued",
@@ -130,10 +179,13 @@ export function CreatePassportModal({ open, onClose, onCreated }: CreatePassport
     } catch (err) {
       if (err instanceof PassportValidationError) {
         setFieldErrors(err.fieldErrors);
+        const failing = Object.keys(err.fieldErrors)
+          .map((key) => FIELD_LABELS[key] ?? key)
+          .join(", ");
         push({
           variant: "error",
           title: "Validation failed",
-          description: "Check the highlighted fields and try again.",
+          description: failing ? `Check: ${failing}` : "Check the highlighted fields and try again.",
         });
       } else {
         const message = err instanceof Error ? err.message : "Failed to create passport";
@@ -156,9 +208,25 @@ export function CreatePassportModal({ open, onClose, onCreated }: CreatePassport
         </button>
 
         <h3 className="text-lg font-bold text-white mb-1">Issue New Polymer Passport</h3>
-        <p className="text-xs text-slate-400 mb-6 font-mono">
+        <p className="text-xs text-slate-400 mb-4 font-mono">
           Persists to Neon via POST /api/passports. New records start as PENDING_VERIFICATION.
         </p>
+
+        {errorEntries.length > 0 && (
+          <div className="mb-4 p-3 bg-red-500/10 border border-red-500/30 rounded-xl text-xs font-mono">
+            <div className="flex items-center gap-2 text-red-300 font-bold mb-2">
+              <AlertTriangle className="w-3.5 h-3.5" />
+              {errorEntries.length} field{errorEntries.length > 1 ? "s" : ""} rejected by the server
+            </div>
+            <ul className="space-y-1 text-red-300/90 pl-1">
+              {errorEntries.map(([key, messages]) => (
+                <li key={key}>
+                  <span className="font-bold">{FIELD_LABELS[key] ?? key}:</span> {messages[0]}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
 
         <form onSubmit={handleSubmit} className="space-y-4 font-mono text-xs">
           <div className="grid grid-cols-2 gap-3">
@@ -202,16 +270,46 @@ export function CreatePassportModal({ open, onClose, onCreated }: CreatePassport
                 className={inputCls}
               />
             </Field>
-            <Field label="GTIN (14 digits)" error={fieldErrors.gtin}>
-              <input
-                required
-                pattern="\d{14}"
-                value={form.gtin}
-                onChange={update("gtin")}
-                className={inputCls}
-                placeholder="04012345678905"
-              />
-            </Field>
+
+            <div className="col-span-2">
+              <Field label="GTIN (14 digits, GS1 check-digit validated)" error={fieldErrors.gtin}>
+                <div className="flex gap-2">
+                  <div className="relative flex-1">
+                    <input
+                      required
+                      pattern="\d{14}"
+                      value={form.gtin}
+                      onChange={update("gtin")}
+                      className={`${inputCls} pr-8`}
+                      placeholder="04012345678901"
+                    />
+                    {form.gtin.length === 14 && (
+                      <span className="absolute right-2.5 top-1/2 -translate-y-1/2">
+                        {gtinIsValid ? (
+                          <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                        ) : (
+                          <XCircle className="w-4 h-4 text-red-400" />
+                        )}
+                      </span>
+                    )}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleGenerateGtin}
+                    title="Generate a check-digit-valid GTIN from the digits typed so far (or a random one)"
+                    className="px-3 py-2.5 bg-slate-800 hover:bg-slate-700 text-emerald-400 rounded-xl flex items-center gap-1.5 whitespace-nowrap"
+                  >
+                    <Wand2 className="w-3.5 h-3.5" /> Generate valid GTIN
+                  </button>
+                </div>
+                {gtinShowsInvalid && (
+                  <span className="text-amber-400 text-[10px] block mt-1">
+                    14 digits entered, but this fails the GS1 mod-10 check digit — click &quot;Generate valid GTIN&quot; for a working example.
+                  </span>
+                )}
+              </Field>
+            </div>
+
             <Field label="Batch ID" error={fieldErrors.batchId}>
               <input
                 required
@@ -230,7 +328,18 @@ export function CreatePassportModal({ open, onClose, onCreated }: CreatePassport
                 placeholder="uuid of an existing Manufacturer row"
               />
             </Field>
-            <Field label="Recycled Content Source" error={fieldErrors.recycledContentSource}>
+            <div className="col-span-2 -mt-2">
+              <p className="text-[10px] text-slate-500">
+                No manufacturer yet? Run <code className="text-slate-400">npx prisma db seed</code> (adds
+                prisma/seed.ts) to create a demo one, then paste its printed id here.
+              </p>
+            </div>
+
+            <Field
+              label="Recycled Content Source"
+              error={fieldErrors.recycledContentSource}
+              required={recycledMetaRequired}
+            >
               <select value={form.recycledContentSource} onChange={update("recycledContentSource")} className={inputCls}>
                 <option value="">— none —</option>
                 {RECYCLED_SOURCES.map((s) => (
@@ -251,7 +360,11 @@ export function CreatePassportModal({ open, onClose, onCreated }: CreatePassport
                 className={inputCls}
               />
             </Field>
-            <Field label="Recycled Content Cert. Scheme" error={fieldErrors.recycledContentCertScheme}>
+            <Field
+              label="Recycled Content Cert. Scheme"
+              error={fieldErrors.recycledContentCertScheme}
+              required={recycledMetaRequired}
+            >
               <select
                 value={form.recycledContentCertScheme}
                 onChange={update("recycledContentCertScheme")}

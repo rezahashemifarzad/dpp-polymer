@@ -27,6 +27,12 @@ import { usePassports, type ApiPassport } from '@/lib/hooks/use-passports';
 import { PassportSkeleton, PassportRowSkeleton } from '@/components/dashboard/passport-skeleton';
 import { CreatePassportModal } from '@/components/dashboard/create-passport-modal';
 
+// Same source of truth as lib/qr.ts's buildGs1VerificationUrl — set via
+// NEXT_PUBLIC_BASE_URL (.env.local for local dev) so this client-side demo
+// widget's preview link stays consistent with the real, persisted GS1
+// links generated server-side, instead of a hardcoded production domain.
+const PUBLIC_BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
+
 interface DisplayPassport {
   id: string;
   gradeName: string;
@@ -244,7 +250,7 @@ function CompletePolymerDPPInner() {
   const [customGrade, setCustomGrade] = useState('Recycled Polypropylene X1');
   const [customPcr, setCustomPcr] = useState(50);
   const [customBatch, setCustomBatch] = useState('BATCH-2026-EU');
-  const [generatedGs1Uri, setGeneratedGs1Uri] = useState('https://dpp.polymer.eu/01/04012345678909/10/BATCH-2026-EU');
+  const [generatedGs1Uri, setGeneratedGs1Uri] = useState(`${PUBLIC_BASE_URL}/01/04012345678909/21/BATCH-2026-EU`);
 
   // AI Copilot Interactive State
   const [simulatedPcr, setSimulatedPcr] = useState<number>(60);
@@ -271,7 +277,7 @@ function CompletePolymerDPPInner() {
 
   const handleGenerateGs1 = () => {
     const randomGtin = Math.floor(10000000000000 + Math.random() * 90000000000000);
-    setGeneratedGs1Uri(`https://dpp.polymer.eu/01/${randomGtin}/10/${customBatch}`);
+    setGeneratedGs1Uri(`${PUBLIC_BASE_URL}/01/${randomGtin}/21/${customBatch}`);
   };
 
   const handleRefresh = async () => {

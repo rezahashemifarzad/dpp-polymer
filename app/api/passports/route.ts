@@ -19,7 +19,8 @@
  *   2. Confirm the manufacturer exists.
  *   3. Confirm batchId is not already in use.
  *   4. Compute the canonical recordHash over the submitted claim data.
- *   5. Build the GS1 Digital Link URL (/01/{gtin}/10/{batchId}).
+ *   5. Build the GS1 Digital Link URL (/01/{gtin}/21/{batchId} — matching
+ *      the real resolver route app/01/[gtin]/21/[serialOrBatch]/page.tsx).
  *   6. Persist the passport + certifications and a CREATED audit log
  *      entry in a single transaction.
  *
@@ -104,6 +105,7 @@ export async function GET(req: NextRequest) {
         include: {
           manufacturer: { select: { id: true, legalName: true, country: true } },
           certifications: true,
+          gs1Link: true,
         },
       }),
     ]);
@@ -182,8 +184,13 @@ export async function POST(req: NextRequest) {
     const recordHash = hashRecord({ ...data, totalRecycledPercent });
 
     let qrCodePayloadUrl: string;
+    let gs1ResolverUri: string;
     try {
-      ({ url: qrCodePayloadUrl } = buildGs1VerificationUrl(data.gtin, data.batchId, recordHash));
+      ({ url: qrCodePayloadUrl, path: gs1ResolverUri } = buildGs1VerificationUrl(
+        data.gtin,
+        data.batchId,
+        recordHash
+      ));
     } catch (err) {
       // Should be unreachable — GtinSchema already validates the check
       // digit — but never issue a passport with a QR pointing at a
@@ -237,8 +244,24 @@ export async function POST(req: NextRequest) {
               documentUrl: c.documentUrl,
             })),
           },
+
+          // GS1 Digital Link resolver row — created in the SAME nested
+          // write as the passport itself (Prisma nested writes inside an
+          // interactive $transaction are atomic: either both rows commit
+          // or neither does). This is what guarantees a freshly-created
+          // passport is immediately resolvable by GTIN+batchId and can
+          // never surface "No GS1 Link record found".
+          gs1Link: {
+            create: {
+              gtin: data.gtin,
+              batchId: data.batchId,
+              resolverUri: gs1ResolverUri,
+              targetUrl: qrCodePayloadUrl,
+              recordHash,
+            },
+          },
         },
-        include: { certifications: true, manufacturer: true },
+        include: { certifications: true, manufacturer: true, gs1Link: true },
       });
 
       await writeAuditLog(tx, {
@@ -247,7 +270,7 @@ export async function POST(req: NextRequest) {
         actor: `manufacturer:${data.manufacturerId}`,
         previousHash: null,
         newHash: recordHash,
-        metadata: { batchId: data.batchId },
+        metadata: { batchId: data.batchId, resolverUri: gs1ResolverUri },
       });
 
       return passport;

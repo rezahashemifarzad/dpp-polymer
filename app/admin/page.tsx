@@ -1,101 +1,50 @@
-'use client';
+"use client";
 
-import React, { useState, useEffect } from 'react';
-import { 
-  ShieldCheck, 
-  PlusCircle, 
-  Database, 
-  FileSpreadsheet, 
-  QrCode, 
+/**
+ * app/admin/page.tsx
+ * -----------------------------------------------------------------------
+ * "DPP Industrial Admin Console" — root-cause fix.
+ *
+ * The previous version of this file (never seen by the Step 5 work until
+ * a direct read of the live repo) had its own bespoke inline form with
+ * fields { gradeName, polymerType, pcrPercentage, mfi, density, supplier }
+ * and posted that shape straight to POST /api/passports. That payload
+ * shares almost no field names with PolymerPassportInputSchema (lib/types.ts)
+ * — no gtin, no batchId, no manufacturerId, no certifications — so every
+ * submission from this page was guaranteed to 400 with "Validation failed"
+ * regardless of anything done to the API route or to the *other*,
+ * already-correct form component (components/dashboard/create-passport-modal.tsx),
+ * because this page never rendered that component in the first place.
+ *
+ * Fix: this page now uses the exact same data layer and form as the root
+ * dashboard (app/page.tsx) — usePassports() + <CreatePassportModal /> —
+ * instead of a second, independently-maintained, incompatible copy. One
+ * form, one validation path, one place that can drift out of sync with
+ * the schema. The "Direct Link" column now points at the real stored
+ * qrCodePayloadUrl (the GS1 Digital Link built by lib/qr.ts and persisted
+ * atomically with the passport) instead of a hardcoded `/passport/${id}`
+ * route that doesn't exist anywhere in this app.
+ */
+
+import { useState } from "react";
+import {
+  ShieldCheck,
+  PlusCircle,
+  Database,
+  QrCode,
   ArrowLeft,
   RefreshCw,
   ExternalLink,
-  Layers
-} from 'lucide-react';
-import Link from 'next/link';
+  Layers,
+} from "lucide-react";
+import Link from "next/link";
+import { ToastProvider } from "@/lib/hooks/use-toast";
+import { usePassports } from "@/lib/hooks/use-passports";
+import { CreatePassportModal } from "@/components/dashboard/create-passport-modal";
 
-interface PolymerPassport {
-  id: string;
-  grade: string;
-  polymerType: string;
-  recycledContentPercent: number;
-  meltFlowIndex: number;
-  density: number;
-  batchId: string;
-  status: string;
-  createdAt?: string;
-}
-
-export default function AdminDashboard() {
-  const [passports, setPassports] = useState<PolymerPassport[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
-  const [submitting, setSubmitting] = useState<boolean>(false);
-  const [alertMessage, setAlertMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
-
-  const [formData, setFormData] = useState({
-    gradeName: '',
-    polymerType: 'PP',
-    pcrPercentage: '50',
-    mfi: '12',
-    density: '0.905',
-    supplier: 'Circular Plastics GmbH',
-  });
-
-  const fetchPassports = async () => {
-    setLoading(true);
-    try {
-      const res = await fetch('/api/passports');
-      if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
-      const json = await res.json();
-      if (json.success) {
-        setPassports(json.data || []);
-      }
-    } catch (err) {
-      console.error('Error fetching passports:', err);
-      setPassports([]);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchPassports();
-  }, []);
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setSubmitting(true);
-    setAlertMessage(null);
-
-    try {
-      const res = await fetch('/api/passports', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData),
-      });
-
-      const json = await res.json();
-
-      if (json.success) {
-        setAlertMessage({ type: 'success', text: `Passport issued successfully! Batch ID: ${json.data.batchId}` });
-        setFormData({
-          gradeName: '',
-          polymerType: 'PP',
-          pcrPercentage: '50',
-          mfi: '12',
-          density: '0.905',
-          supplier: 'Circular Plastics GmbH',
-        });
-        fetchPassports();
-      } else {
-        throw new Error(json.error || 'Submission failed');
-      }
-    } catch (err: any) {
-      setAlertMessage({ type: 'error', text: err.message || 'Database error occurred' });
-    } finally {
-      setSubmitting(false);
-    }
-  };
+function AdminDashboardInner() {
+  const { data: passports, loading, refetch, createPassport } = usePassports();
+  const [showCreateModal, setShowCreateModal] = useState(false);
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 p-6 font-sans">
@@ -107,12 +56,12 @@ export default function AdminDashboard() {
           </div>
           <div>
             <h1 className="text-xl font-bold tracking-wide">DPP Industrial Admin Console</h1>
-            <p className="text-xs text-slate-400">Compounder & Material Lifecycle Management (ESPR Compliance)</p>
+            <p className="text-xs text-slate-400">Compounder &amp; Material Lifecycle Management (ESPR Compliance)</p>
           </div>
         </div>
 
-        <Link 
-          href="/" 
+        <Link
+          href="/"
           className="flex items-center gap-2 text-xs font-medium bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 px-4 py-2 rounded-lg transition-all"
         >
           <ArrowLeft className="w-4 h-4" />
@@ -122,9 +71,9 @@ export default function AdminDashboard() {
 
       <div className="max-w-7xl mx-auto space-y-8">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Form */}
-          <div className="lg:col-span-2 bg-slate-900/60 border border-slate-800 rounded-xl p-6 backdrop-blur-md">
-            <div className="flex items-center justify-between mb-6">
+          {/* Issue action */}
+          <div className="lg:col-span-2 bg-slate-900/60 border border-slate-800 rounded-xl p-6 backdrop-blur-md flex flex-col items-start justify-center gap-4">
+            <div className="flex items-center justify-between w-full">
               <h2 className="text-lg font-semibold flex items-center gap-2">
                 <PlusCircle className="w-5 h-5 text-emerald-400" />
                 Issue New Digital Passport
@@ -133,102 +82,19 @@ export default function AdminDashboard() {
                 Neon DB Sync
               </span>
             </div>
-
-            {alertMessage && (
-              <div className={`p-3.5 rounded-lg mb-5 text-xs font-medium ${
-                alertMessage.type === 'success' 
-                  ? 'bg-emerald-500/10 border border-emerald-500/30 text-emerald-300' 
-                  : 'bg-rose-500/10 border border-rose-500/30 text-rose-300'
-              }`}>
-                {alertMessage.text}
-              </div>
-            )}
-
-            <form onSubmit={handleSubmit} className="space-y-5">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-medium text-slate-400 mb-1.5">Grade Trade Name</label>
-                  <input 
-                    type="text" 
-                    placeholder="e.g. Injection Molding Grade IM-450"
-                    value={formData.gradeName}
-                    onChange={(e) => setFormData({...formData, gradeName: e.target.value})}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3.5 py-2 text-sm focus:outline-none focus:border-emerald-500 text-slate-200"
-                    required
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-medium text-slate-400 mb-1.5">Base Polymer Type</label>
-                  <select 
-                    value={formData.polymerType}
-                    onChange={(e) => setFormData({...formData, polymerType: e.target.value})}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3.5 py-2 text-sm focus:outline-none focus:border-emerald-500 text-slate-200"
-                  >
-                    <option value="PP">PP</option>
-                    <option value="HDPE">HDPE</option>
-                    <option value="LDPE">LDPE</option>
-                    <option value="PET">PET</option>
-                    <option value="ABS">ABS</option>
-                    <option value="PC">PC</option>
-                  </select>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div>
-                  <label className="block text-xs font-medium text-slate-400 mb-1.5">PCR Content (%)</label>
-                  <input 
-                    type="number" 
-                    placeholder="50"
-                    value={formData.pcrPercentage}
-                    onChange={(e) => setFormData({...formData, pcrPercentage: e.target.value})}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3.5 py-2 text-sm focus:outline-none focus:border-emerald-500 text-slate-200"
-                    required
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-medium text-slate-400 mb-1.5">MFI (g/10min @ ISO 1133)</label>
-                  <input 
-                    type="text" 
-                    placeholder="12"
-                    value={formData.mfi}
-                    onChange={(e) => setFormData({...formData, mfi: e.target.value})}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3.5 py-2 text-sm focus:outline-none focus:border-emerald-500 text-slate-200"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-medium text-slate-400 mb-1.5">Density (g/cm³ @ ISO 1183)</label>
-                  <input 
-                    type="text" 
-                    placeholder="0.905"
-                    value={formData.density}
-                    onChange={(e) => setFormData({...formData, density: e.target.value})}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3.5 py-2 text-sm focus:outline-none focus:border-emerald-500 text-slate-200"
-                  />
-                </div>
-              </div>
-
-              <button 
-                type="submit" 
-                disabled={submitting}
-                className="w-full bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-semibold py-2.5 rounded-lg text-sm transition-all flex items-center justify-center gap-2 mt-4 cursor-pointer disabled:opacity-50"
-              >
-                {submitting ? (
-                  <>
-                    <RefreshCw className="w-4 h-4 animate-spin" />
-                    Saving to Neon DB...
-                  </>
-                ) : (
-                  <>
-                    <QrCode className="w-4 h-4" />
-                    Save Live & Issue Digital Passport
-                  </>
-                )}
-              </button>
-            </form>
+            <p className="text-xs text-slate-400 font-mono">
+              Opens the full, schema-validated intake form — every field required by
+              PolymerPassportInputSchema (GTIN, batch ID, manufacturer, certification, etc.) is
+              collected here, so submissions from this console can never hit "Validation failed"
+              for a field this page silently omitted.
+            </p>
+            <button
+              onClick={() => setShowCreateModal(true)}
+              className="bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-semibold py-2.5 px-5 rounded-lg text-sm transition-all flex items-center justify-center gap-2 cursor-pointer"
+            >
+              <QrCode className="w-4 h-4" />
+              Issue Digital Passport
+            </button>
           </div>
 
           {/* System Info */}
@@ -262,15 +128,15 @@ export default function AdminDashboard() {
             <div>
               <h3 className="text-base font-semibold flex items-center gap-2">
                 <Layers className="w-5 h-5 text-emerald-400" />
-                Material Ledger & Active Passports
+                Material Ledger &amp; Active Passports
               </h3>
               <p className="text-xs text-slate-400 mt-1">Live data records synchronized with Neon DB</p>
             </div>
-            <button 
-              onClick={fetchPassports}
+            <button
+              onClick={() => refetch()}
               className="flex items-center gap-1.5 text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 px-3 py-1.5 rounded-lg transition-all"
             >
-              <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
+              <RefreshCw className={`w-3.5 h-3.5 ${loading ? "animate-spin" : ""}`} />
               Refresh
             </button>
           </div>
@@ -282,7 +148,7 @@ export default function AdminDashboard() {
                   <th className="p-3">Batch ID</th>
                   <th className="p-3">Grade Name</th>
                   <th className="p-3 text-center">Polymer</th>
-                  <th className="p-3 text-center">PCR %</th>
+                  <th className="p-3 text-center">Recycled %</th>
                   <th className="p-3 text-center">MFI</th>
                   <th className="p-3 text-center">Density</th>
                   <th className="p-3 text-center">Status</th>
@@ -293,7 +159,7 @@ export default function AdminDashboard() {
                 {passports.length === 0 ? (
                   <tr>
                     <td colSpan={8} className="text-center p-6 text-slate-500">
-                      {loading ? 'Fetching records from database...' : 'No passports issued yet. Create your first passport above.'}
+                      {loading ? "Fetching records from database..." : "No passports issued yet. Create your first passport above."}
                     </td>
                   </tr>
                 ) : (
@@ -315,13 +181,17 @@ export default function AdminDashboard() {
                         </span>
                       </td>
                       <td className="p-3 text-center">
-                        <Link 
-                          href={`/passport/${item.id}`}
-                          target="_blank"
-                          className="inline-flex items-center gap-1 text-xs text-cyan-400 hover:text-cyan-300"
-                        >
-                          View <ExternalLink className="w-3 h-3" />
-                        </Link>
+                        {item.qrCodePayloadUrl ? (
+                          <Link
+                            href={item.qrCodePayloadUrl}
+                            target="_blank"
+                            className="inline-flex items-center gap-1 text-xs text-cyan-400 hover:text-cyan-300"
+                          >
+                            View <ExternalLink className="w-3 h-3" />
+                          </Link>
+                        ) : (
+                          <span className="text-slate-600">—</span>
+                        )}
                       </td>
                     </tr>
                   ))
@@ -331,6 +201,21 @@ export default function AdminDashboard() {
           </div>
         </div>
       </div>
+
+      <CreatePassportModal
+        open={showCreateModal}
+        onClose={() => setShowCreateModal(false)}
+        onCreated={() => refetch()}
+        onCreate={createPassport}
+      />
     </div>
+  );
+}
+
+export default function AdminDashboard() {
+  return (
+    <ToastProvider>
+      <AdminDashboardInner />
+    </ToastProvider>
   );
 }
