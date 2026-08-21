@@ -61,6 +61,23 @@ enum AuditAction {
   REVOKED
   SUPERSEDED
   UPDATED
+  // Compliance & Green Certifications Module — additive, existing values
+  // and rows untouched. See docs/COMPLIANCE_CERTIFICATIONS_MODULE_SPEC.md.
+  CERT_ADDED
+  CERT_VERIFIED
+  CERT_REJECTED
+}
+
+// Compliance & Green Certifications Module (docs/COMPLIANCE_CERTIFICATIONS_MODULE_SPEC.md
+// §2.2). Deliberately has NO "EXPIRED" member: expiry is a fact derived
+// from Certification.validUntil vs. the current date, not a human
+// decision — compute it at read time (verificationStatus === VERIFIED &&
+// validUntil > now()) rather than storing it, or a certification nobody
+// re-checks stays stuck at a stale stored state forever.
+enum CertificationVerificationStatus {
+  PENDING_REVIEW
+  VERIFIED
+  REJECTED
 }
 
 // ----------------------------------------------------------------------------
@@ -158,11 +175,37 @@ model Certification {
   validUntil    DateTime
   documentUrl   String?
 
+  // --- Compliance & Green Certifications Module additions -----------------
+  // See docs/COMPLIANCE_CERTIFICATIONS_MODULE_SPEC.md §2.2-2.3. All fields
+  // below are new and optional/defaulted — no existing column touched.
+
+  // Verification workflow: every certification starts PENDING_REVIEW: a
+  // manufacturer's own submission is never implicitly trusted. Moved to
+  // VERIFIED/REJECTED only by a separate Auditor/Admin actor (see
+  // lib/rbac.ts), mirroring PolymerPassport.status's PENDING_VERIFICATION
+  // -> ISSUED pattern.
+  verificationStatus CertificationVerificationStatus @default(PENDING_REVIEW)
+  verifiedBy         String? // actor identity, same convention as AuditLog.actor (e.g. "AUDITOR:<uuid>")
+  verifiedAt         DateTime?
+  rejectionReason    String? // required by the API when moving to REJECTED
+
+  // Document integrity: mirrors PolymerPassport.recordHash — a SHA-256 of
+  // the uploaded/linked certificate document, so a swapped or edited PDF
+  // behind an unchanged documentUrl is detectable.
+  documentHash String?
+
+  // ISCC PLUS / mass-balance specific. Only meaningful when scheme is a
+  // mass-balance scheme (ISCC_PLUS, REDCERT2); left null otherwise —
+  // validated conditionally in the Zod schema, not a DB constraint, so the
+  // column stays usable for every scheme.
+  massBalanceAllocationPercent Decimal? @db.Decimal(5, 2)
+
   passportId String
   passport   PolymerPassport @relation(fields: [passportId], references: [id])
 
   @@index([passportId])
   @@index([scheme])
+  @@index([verificationStatus]) // admin "pending review" queue filters on this
 }
 
 // ----------------------------------------------------------------------------
