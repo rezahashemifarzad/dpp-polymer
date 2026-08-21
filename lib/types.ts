@@ -67,6 +67,26 @@ export const CertificationInputSchema = z
     validFrom: z.coerce.date(),
     validUntil: z.coerce.date(),
     documentUrl: z.string().url().optional(),
+
+    // Compliance & Green Certifications Module additions (see
+    // docs/COMPLIANCE_CERTIFICATIONS_MODULE_SPEC.md §2.2). Both optional —
+    // adding them here doesn't change validation for existing callers
+    // (the nested certifications[] on PolymerPassportInputSchema).
+    //
+    // documentHash: SHA-256 hex digest of the certificate document,
+    // computed by whoever uploads it (client-side or wherever the file
+    // actually lives) and submitted alongside documentUrl. Deliberately
+    // NOT computed server-side by fetching documentUrl — having this API
+    // fetch an arbitrary caller-supplied URL would be an SSRF vector.
+    documentHash: z
+      .string()
+      .regex(/^[a-f0-9]{64}$/i, "documentHash must be a 64-character hex SHA-256 digest")
+      .optional(),
+    // Only meaningful for mass-balance schemes (ISCC_PLUS, REDCERT2);
+    // left undefined for others. Not enforced against `scheme` here —
+    // see the spec for why this stays a soft convention, not a hard
+    // DB/Zod constraint.
+    massBalanceAllocationPercent: z.coerce.number().min(0).max(100).optional(),
   })
   .refine((c) => c.validUntil > c.validFrom, {
     message: "validUntil must be after validFrom",
