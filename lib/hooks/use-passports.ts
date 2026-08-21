@@ -16,6 +16,7 @@
  */
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { createPassportAction } from "@/lib/actions/create-passport";
 
 export interface ApiCertification {
   id: string;
@@ -126,20 +127,20 @@ export function usePassports() {
 
   const createPassport = useCallback(
     async (input: CreatePassportInput): Promise<ApiPassport> => {
-      const res = await fetch("/api/passports", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(input),
-      });
-      const json = await res.json();
-      if (!res.ok || !json.success) {
-        if (json.issues?.fieldErrors) {
-          throw new PassportValidationError(json.error || "Validation failed", json.issues.fieldErrors);
+      // Calls the createPassportAction Server Action directly — Next.js
+      // handles this as an RPC to server-only code, not a client-side
+      // fetch() to the public /api/passports route, so this in-app flow
+      // keeps working without ever needing the POST route's
+      // API_SECRET_KEY (which must never be exposed to browser code).
+      const result = await createPassportAction(input);
+      if (!result.ok) {
+        if (result.issues?.fieldErrors) {
+          throw new PassportValidationError(result.error || "Validation failed", result.issues.fieldErrors);
         }
-        throw new Error(json.error || `Request failed with status ${res.status}`);
+        throw new Error(result.error || "Failed to create passport");
       }
       await refetch();
-      return json.data as ApiPassport;
+      return result.data as ApiPassport;
     },
     [refetch]
   );

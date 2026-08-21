@@ -31,14 +31,49 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
+import { timingSafeEqual } from "crypto";
 import { Prisma, DppStatus, PolymerType } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
-import { PolymerPassportInputSchema, hashRecord, computeTotalRecycledPercent } from "@/lib/types";
-import { buildGs1VerificationUrl } from "@/lib/qr";
-import { writeAuditLog } from "@/lib/audit";
+import { createPassport } from "@/lib/services/create-passport";
 
 const MAX_PAGE_SIZE = 100;
 const DEFAULT_PAGE_SIZE = 25;
+
+/**
+ * Lightweight API-secret gate for the write path (POST) — see the
+ * TODO(auth) note this replaces, below. This is deliberately minimal
+ * (a single shared secret, not per-manufacturer auth/session/RBAC): it
+ * closes the "anyone on the internet can write to the database" hole
+ * right now, without blocking on the real auth system this project will
+ * eventually need. Accepts the secret via either header:
+ *   x-api-key: <API_SECRET_KEY>
+ *   Authorization: Bearer <API_SECRET_KEY>
+ *
+ * Fails CLOSED: if API_SECRET_KEY isn't set in the environment, every
+ * request is rejected rather than silently falling back to "open to
+ * everyone" — an unset secret must never be indistinguishable from "no
+ * auth required".
+ */
+function isAuthorizedRequest(req: NextRequest): boolean {
+  const expected = process.env.API_SECRET_KEY;
+  if (!expected) return false;
+
+  const headerKey = req.headers.get("x-api-key");
+  const authHeader = req.headers.get("authorization");
+  const bearerKey = authHeader?.startsWith("Bearer ") ? authHeader.slice(7) : null;
+  const provided = headerKey ?? bearerKey;
+  if (!provided) return false;
+
+  // timingSafeEqual requires equal-length buffers and throws otherwise,
+  // so the length check must happen first — and doing the length check
+  // as a separate short-circuit (rather than padding) is fine here since
+  // it only leaks the *length* of the secret, not its content.
+  const expectedBuf = Buffer.from(expected);
+  const providedBuf = Buffer.from(provided);
+  if (expectedBuf.length !== providedBuf.length) return false;
+
+  return timingSafeEqual(expectedBuf, providedBuf);
+}
 
 function parsePagination(searchParams: URLSearchParams) {
   const pageRaw = Number(searchParams.get("page") ?? "1");
@@ -132,6 +167,16 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
+  if (!isAuthorizedRequest(req)) {
+    return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
+  }
+
+  // TODO(auth): the x-api-key / Bearer check above closes the "open to
+  // the whole internet" hole, but it's still one shared secret for every
+  // caller — it does not scope a manufacturer to their own account. Once
+  // real per-manufacturer session auth exists, derive manufacturerId from
+  // the authenticated session instead of trusting the request body, so a
+  // manufacturer can't issue passports under someone else's ID.
   let body: unknown;
   try {
     body = await req.json();
@@ -139,144 +184,25 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ success: false, error: "Request body must be valid JSON" }, { status: 400 });
   }
 
-  const parsed = PolymerPassportInputSchema.safeParse(body);
-  if (!parsed.success) {
-    return NextResponse.json(
-      { success: false, error: "Validation failed", issues: parsed.error.flatten() },
-      { status: 400 }
-    );
-  }
-  const data = parsed.data;
-
-  // TODO(auth): once session auth is wired, derive manufacturerId from the
-  // authenticated session instead of trusting the request body — a
-  // manufacturer should only be able to issue passports under their own
-  // account. Until then this endpoint must sit behind a network-level
-  // boundary (API gateway / VPN) in production; it is not open to the
-  // public internet.
   try {
-    const manufacturer = await prisma.manufacturer.findUnique({
-      where: { id: data.manufacturerId },
-      select: { id: true },
-    });
-    if (!manufacturer) {
+    // Shared with the in-app dashboard/admin create flow — see
+    // lib/services/create-passport.ts and lib/actions/create-passport.ts.
+    // Validation, manufacturer/batch checks, hashing, GS1 link, and the
+    // persist transaction all live there now; this route only handles
+    // the HTTP-specific concerns (auth header, request body parsing,
+    // status-code translation).
+    const result = await createPassport(body);
+    if (!result.ok) {
       return NextResponse.json(
-        { success: false, error: `Manufacturer ${data.manufacturerId} not found` },
-        { status: 404 }
-      );
-    }
-
-    const existing = await prisma.polymerPassport.findUnique({
-      where: { batchId: data.batchId },
-      select: { id: true },
-    });
-    if (existing) {
-      return NextResponse.json(
-        { success: false, error: `A passport already exists for batchId "${data.batchId}"` },
-        { status: 409 }
-      );
-    }
-
-    const totalRecycledPercent = computeTotalRecycledPercent({
-      recycledContentPercent: data.recycledContentPercent,
-    });
-
-    const recordHash = hashRecord({ ...data, totalRecycledPercent });
-
-    let qrCodePayloadUrl: string;
-    let gs1ResolverUri: string;
-    try {
-      ({ url: qrCodePayloadUrl, path: gs1ResolverUri } = buildGs1VerificationUrl(
-        data.gtin,
-        data.batchId,
-        recordHash
-      ));
-    } catch (err) {
-      // Should be unreachable — GtinSchema already validates the check
-      // digit — but never issue a passport with a QR pointing at a
-      // malformed GTIN.
-      return NextResponse.json({ success: false, error: (err as Error).message }, { status: 400 });
-    }
-
-    const created = await prisma.$transaction(async (tx) => {
-      const passport = await tx.polymerPassport.create({
-        data: {
-          polymerType: data.polymerType,
-          grade: data.grade,
-          meltFlowIndex: data.meltFlowIndex,
-          mfiTestStandard: data.mfiTestStandard,
-          density: data.density,
-          densityTestStandard: data.densityTestStandard,
-          colorAdditives: data.colorAdditives,
-          gtin: data.gtin,
-
-          recycledContentSource: data.recycledContentSource,
-          recycledContentPercent: data.recycledContentPercent,
-          recycledContentCertScheme: data.recycledContentCertScheme,
-          totalRecycledPercent,
-          bioBasedPercent: data.bioBasedPercent,
-          bioBasedTestStandard: data.bioBasedTestStandard,
-
-          carbonFootprintKgCO2ePerKg: data.carbonFootprintKgCO2ePerKg,
-          lcaMethodology: data.lcaMethodology,
-          lcaScope: data.lcaScope,
-          lcaThirdPartyVerified: data.lcaThirdPartyVerified,
-          lcaVerifierName: data.lcaVerifierName,
-
-          batchId: data.batchId,
-          manufacturerId: data.manufacturerId,
-          productionDate: data.productionDate,
-          productionSiteGln: data.productionSiteGln,
-
-          recordHash,
-          hashAlgorithm: "SHA-256",
-          previousRecordHash: null, // first version of this batch's lineage
-          qrCodePayloadUrl,
-          status: "PENDING_VERIFICATION",
-
-          certifications: {
-            create: data.certifications.map((c) => ({
-              scheme: c.scheme,
-              certificateId: c.certificateId,
-              issuingBody: c.issuingBody,
-              validFrom: c.validFrom,
-              validUntil: c.validUntil,
-              documentUrl: c.documentUrl,
-            })),
-          },
-
-          // GS1 Digital Link resolver row — created in the SAME nested
-          // write as the passport itself (Prisma nested writes inside an
-          // interactive $transaction are atomic: either both rows commit
-          // or neither does). This is what guarantees a freshly-created
-          // passport is immediately resolvable by GTIN+batchId and can
-          // never surface "No GS1 Link record found".
-          gs1Link: {
-            create: {
-              gtin: data.gtin,
-              batchId: data.batchId,
-              resolverUri: gs1ResolverUri,
-              targetUrl: qrCodePayloadUrl,
-              recordHash,
-            },
-          },
+        {
+          success: false,
+          error: result.error,
+          ...("issues" in result ? { issues: result.issues } : {}),
         },
-        include: { certifications: true, manufacturer: true, gs1Link: true },
-      });
-
-      await writeAuditLog(tx, {
-        passportId: passport.id,
-        action: "CREATED",
-        actor: `manufacturer:${data.manufacturerId}`,
-        previousHash: null,
-        newHash: recordHash,
-        metadata: { batchId: data.batchId, resolverUri: gs1ResolverUri },
-      });
-
-      return passport;
-    });
-
-    return NextResponse.json({ success: true, data: created }, { status: 201 });
+        { status: result.status }
+      );
+    }
+    return NextResponse.json({ success: true, data: result.data }, { status: 201 });
   } catch (error) {
     console.error("POST /api/passports failed:", error);
     return NextResponse.json(
