@@ -8,11 +8,11 @@
  * server-side — Next.js invokes it through its own internal RPC
  * mechanism when a client component calls it, never through a plain
  * `fetch()` to a public URL — so it does NOT check for, and must never
- * be given, the API_SECRET_KEY that gates the public POST /api/passports
- * route: there is no publicly-reachable URL here for an outside caller
- * to hit with a stolen or guessed key. The trust boundary is "this code
- * only runs because a Server Component/Client Component in THIS app
- * invoked it," not a bearer token.
+ * be given, an RBAC role key (see lib/rbac.ts, which gates the public
+ * POST /api/passports route): there is no publicly-reachable URL here
+ * for an outside caller to hit with a stolen or guessed key. The trust
+ * boundary is "this code only runs because a Server Component/Client
+ * Component in THIS app invoked it," not a bearer token.
  *
  * Calls the same lib/services/create-passport.ts logic that POST
  * /api/passports uses, so the API route and the in-app UI can never

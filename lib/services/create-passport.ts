@@ -9,11 +9,13 @@
  * Extracted out of app/api/passports/route.ts so there is exactly ONE
  * implementation, shared by both real entry points:
  *   - POST /api/passports (app/api/passports/route.ts) — external
- *     callers, gated by the API_SECRET_KEY check in that route.
+ *     callers, gated by lib/rbac.ts's authorize(req, ["MANUFACTURER",
+ *     "ADMIN"]) — the same role-key RBAC used across every other
+ *     write route (certifications, passport status transitions).
  *   - createPassportAction (lib/actions/create-passport.ts) — the
  *     in-app dashboard/admin "Create Passport" flow, invoked as a Next.js
  *     Server Action so it never crosses the network as a client fetch
- *     and therefore never needs (or exposes) the API secret.
+ *     and therefore never needs (or exposes) an RBAC key at all.
  *
  * This repo has already been bitten once by two divergent copies of this
  * exact logic drifting apart (see the STEP 5 note in route.ts) — do not

@@ -31,49 +31,13 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import { timingSafeEqual } from "crypto";
 import { Prisma, DppStatus, PolymerType } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { createPassport } from "@/lib/services/create-passport";
+import { authorize, unauthorizedResponse } from "@/lib/rbac";
 
 const MAX_PAGE_SIZE = 100;
 const DEFAULT_PAGE_SIZE = 25;
-
-/**
- * Lightweight API-secret gate for the write path (POST) — see the
- * TODO(auth) note this replaces, below. This is deliberately minimal
- * (a single shared secret, not per-manufacturer auth/session/RBAC): it
- * closes the "anyone on the internet can write to the database" hole
- * right now, without blocking on the real auth system this project will
- * eventually need. Accepts the secret via either header:
- *   x-api-key: <API_SECRET_KEY>
- *   Authorization: Bearer <API_SECRET_KEY>
- *
- * Fails CLOSED: if API_SECRET_KEY isn't set in the environment, every
- * request is rejected rather than silently falling back to "open to
- * everyone" — an unset secret must never be indistinguishable from "no
- * auth required".
- */
-function isAuthorizedRequest(req: NextRequest): boolean {
-  const expected = process.env.API_SECRET_KEY;
-  if (!expected) return false;
-
-  const headerKey = req.headers.get("x-api-key");
-  const authHeader = req.headers.get("authorization");
-  const bearerKey = authHeader?.startsWith("Bearer ") ? authHeader.slice(7) : null;
-  const provided = headerKey ?? bearerKey;
-  if (!provided) return false;
-
-  // timingSafeEqual requires equal-length buffers and throws otherwise,
-  // so the length check must happen first — and doing the length check
-  // as a separate short-circuit (rather than padding) is fine here since
-  // it only leaks the *length* of the secret, not its content.
-  const expectedBuf = Buffer.from(expected);
-  const providedBuf = Buffer.from(provided);
-  if (expectedBuf.length !== providedBuf.length) return false;
-
-  return timingSafeEqual(expectedBuf, providedBuf);
-}
 
 function parsePagination(searchParams: URLSearchParams) {
   const pageRaw = Number(searchParams.get("page") ?? "1");
@@ -167,16 +131,19 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
-  if (!isAuthorizedRequest(req)) {
-    return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
+  const role = authorize(req, ["MANUFACTURER", "ADMIN"]);
+  if (!role) {
+    return unauthorizedResponse();
   }
 
-  // TODO(auth): the x-api-key / Bearer check above closes the "open to
-  // the whole internet" hole, but it's still one shared secret for every
-  // caller — it does not scope a manufacturer to their own account. Once
-  // real per-manufacturer session auth exists, derive manufacturerId from
-  // the authenticated session instead of trusting the request body, so a
-  // manufacturer can't issue passports under someone else's ID.
+  // TODO(auth): the RBAC check above (lib/rbac.ts) closes the "open to
+  // the whole internet" hole and unifies this route onto the same
+  // role-key system as certifications and passport status transitions,
+  // but it's still one shared key per role, not per-manufacturer
+  // auth/session — it does not scope a manufacturer to their own account.
+  // Once real per-manufacturer session auth exists, derive manufacturerId
+  // from the authenticated session instead of trusting the request body,
+  // so a manufacturer can't issue passports under someone else's ID.
   let body: unknown;
   try {
     body = await req.json();
