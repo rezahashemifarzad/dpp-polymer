@@ -64,6 +64,22 @@ export function buildGs1VerificationUrl(
     throw new Error("Cannot build GS1 Digital Link: recordHash is missing or too short");
   }
 
+  // HARDENING: NEXT_PUBLIC_BASE_URL was previously unset in the Vercel
+  // production environment, so every passport created there silently got
+  // an http://localhost:3000 GS1 link baked into its persisted
+  // qrCodePayloadUrl (see scripts/backfill-gs1-links.ts for the one-off
+  // fix to already-created rows). This warning makes that misconfiguration
+  // impossible to miss in the server logs going forward, instead of
+  // failing silently again.
+  if (!process.env.NEXT_PUBLIC_BASE_URL && process.env.NODE_ENV === "production") {
+    console.warn(
+      "[lib/qr.ts] NEXT_PUBLIC_BASE_URL is not set in this production environment — " +
+        `falling back to ${DEFAULT_BASE_URL}, which will be baked into this passport's ` +
+        "persisted GS1 link. Set NEXT_PUBLIC_BASE_URL to your real production domain " +
+        "in Vercel's Environment Variables and redeploy."
+    );
+  }
+
   const baseUrl = (process.env.NEXT_PUBLIC_BASE_URL || DEFAULT_BASE_URL).replace(/\/+$/, "");
   const path = `/01/${gtin}/21/${encodeURIComponent(batchId)}`;
   const verificationToken = deriveVerificationToken(recordHash);

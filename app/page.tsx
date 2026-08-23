@@ -21,11 +21,13 @@ import {
   Home,
   Table,
   AlertTriangle,
+  Settings2,
 } from 'lucide-react';
 import { ToastProvider, useToast } from '@/lib/hooks/use-toast';
 import { usePassports, type ApiPassport } from '@/lib/hooks/use-passports';
 import { PassportSkeleton, PassportRowSkeleton } from '@/components/dashboard/passport-skeleton';
 import { CreatePassportModal } from '@/components/dashboard/create-passport-modal';
+import { BatchDetailsModal } from '@/components/dashboard/batch-details-modal';
 
 // Same source of truth as lib/qr.ts's buildGs1VerificationUrl — set via
 // NEXT_PUBLIC_BASE_URL (.env.local for local dev) so this client-side demo
@@ -48,6 +50,11 @@ interface DisplayPassport {
   gs1Url: string;
   batchId: string;
   status: ApiPassport['status'];
+  // Circular Economy Platform Upgrade — used only to render the "Manage"
+  // button's green dot indicator without a per-row lookup against `data`.
+  // The full ApiPassport (needed by BatchDetailsModal) is still looked up
+  // from `data` by id when the button is clicked — see manageTargetId.
+  hasGenealogyOrCarbon: boolean;
 }
 
 // 🌐 سیستم کامل ترجمه برای تمام اجزای برنامه
@@ -229,6 +236,7 @@ function toDisplayPassport(p: ApiPassport): DisplayPassport {
     gs1Url: p.qrCodePayloadUrl ?? '',
     batchId: p.batchId,
     status: p.status,
+    hasGenealogyOrCarbon: p.parentLinks.length > 0 || p.carbonFootprintCalculation !== null,
   };
 }
 
@@ -239,10 +247,17 @@ function CompletePolymerDPPInner() {
   const [selectedLang, setSelectedLang] = useState<'EN' | 'DE' | 'FR'>('EN');
   const [showQrModal, setShowQrModal] = useState<boolean>(false);
   const [showCreateModal, setShowCreateModal] = useState<boolean>(false);
+  // Circular Economy Platform Upgrade (Step 3) — this was previously only
+  // wired into app/admin/page.tsx. This root dashboard's "Material Ledger"
+  // tab is a second, independent table over the same data (see the file
+  // banner history in app/admin/page.tsx for why two copies exist) and
+  // needs its own Manage entry point.
+  const [manageTargetId, setManageTargetId] = useState<string | null>(null);
 
   const t = translations[selectedLang];
   const { push } = useToast();
-  const { data, loading, error, hasLoadedOnce, refetch } = usePassports();
+  const { data, loading, error, hasLoadedOnce, refetch, createPassport, linkParentBatch, calculateCarbonFootprint } =
+    usePassports();
 
   // Custom QR & GS1 Link Generator State (client-only design sandbox — does
   // not persist to the database; the real, persisted QR/GS1 link is
@@ -711,6 +726,7 @@ function CompletePolymerDPPInner() {
                     <th className="py-3 px-4">Certifications</th>
                     <th className="py-3 px-4">Status</th>
                     <th className="py-3 px-4 text-right">GS1 Digital Link</th>
+                    <th className="py-3 px-4 text-right">Genealogy / Carbon</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-800/60">
@@ -722,7 +738,7 @@ function CompletePolymerDPPInner() {
                     </>
                   ) : filteredPassports.length === 0 ? (
                     <tr>
-                      <td colSpan={7} className="py-8 text-center text-slate-500">
+                      <td colSpan={8} className="py-8 text-center text-slate-500">
                         {passports.length === 0 ? 'No passports issued yet.' : 'No passports match your search.'}
                       </td>
                     </tr>
@@ -749,6 +765,16 @@ function CompletePolymerDPPInner() {
                             className="px-3 py-1 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 rounded-lg transition text-[11px] font-bold"
                           >
                             Show QR & Twin
+                          </button>
+                        </td>
+                        <td className="py-4 px-4 text-right">
+                          <button
+                            onClick={() => setManageTargetId(item.id)}
+                            className="inline-flex items-center gap-1.5 px-3 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 rounded-lg transition text-[11px] font-bold"
+                          >
+                            <Settings2 className="w-3 h-3" />
+                            Manage
+                            {item.hasGenealogyOrCarbon && <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />}
                           </button>
                         </td>
                       </tr>
@@ -930,6 +956,26 @@ function CompletePolymerDPPInner() {
           open={showCreateModal}
           onClose={() => setShowCreateModal(false)}
           onCreated={() => { /* usePassports().createPassport already refetches */ }}
+          // FIX (discovered while wiring the Manage button into this page):
+          // this required prop was never passed, so clicking "New Passport"
+          // here threw "onCreate is not a function" at submit time — masked
+          // in production because next.config.ts sets
+          // typescript.ignoreBuildErrors: true, so the missing-prop type
+          // error never blocked the build. This is the same createPassport
+          // Server Action wrapper already used by app/admin/page.tsx.
+          onCreate={createPassport}
+        />
+
+        <BatchDetailsModal
+          open={manageTargetId !== null}
+          onClose={() => setManageTargetId(null)}
+          // Re-derive from the live list (not a stale snapshot) so the modal
+          // reflects the just-saved state immediately after each refetch()
+          // triggered by linkParentBatch / calculateCarbonFootprint.
+          passport={manageTargetId ? data.find((p) => p.id === manageTargetId) ?? null : null}
+          allPassports={data}
+          onLinkParent={linkParentBatch}
+          onCalculateCarbon={calculateCarbonFootprint}
         />
 
       </main>
