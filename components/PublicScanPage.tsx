@@ -16,15 +16,30 @@
  * NOTE: for production, prefer next/font/google over the runtime @import
  * below (avoids a render-blocking font fetch) — kept as @import here only
  * to match the standalone preview artifact byte-for-byte during review.
+ *
+ * Multi-Language Support (see lib/i18n/dictionaries.ts) — every static UI
+ * label on this page goes through `t(key, vars?)`, a locale bound to
+ * local component state and switched entirely client-side (no route
+ * change, no server round-trip: the GS1 Digital Link URI shape is fixed
+ * by spec and must not grow a locale segment). The chosen locale persists
+ * across visits via localStorage — safe here because this is the real
+ * product's own page, not a Claude-hosted preview artifact. Data VALUES
+ * (batch IDs, hashes, numbers, dates) are never translated, only the
+ * labels around them; dates are formatted per-locale via
+ * toLocaleDateString(locale, ...).
  */
 
-import { useState, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   ShieldCheck, ShieldAlert, Leaf, Recycle, Layers, Gauge, Hash,
   BadgeCheck, ExternalLink, Download, Copy, Check, AlertTriangle,
   Factory, CalendarDays, Clock, CheckCircle2, GitBranch, FileText,
-  UserCheck,
+  UserCheck, Languages,
 } from "lucide-react";
+import {
+  type Locale, SUPPORTED_LOCALES, DEFAULT_LOCALE, LOCALE_LABELS,
+  isSupportedLocale, createTranslator,
+} from "@/lib/i18n/dictionaries";
 
 /* ---------------------------------------------------------------------------
  * Types — mirror the JSON shape page.tsx passes down (Decimals already
@@ -119,6 +134,8 @@ interface PublicScanPageProps {
   auditorSignOff: AuditorSignOffView | null;
 }
 
+const LOCALE_STORAGE_KEY = "dpp-locale";
+
 /* Same fingerprint device used on the dashboard — here driven by the real recordHash. */
 function fingerprintBars(hash: string, count = 48) {
   const bars: number[] = [];
@@ -153,11 +170,18 @@ const CERT_LABELS: Record<string, string> = {
   OTHER: "Certification",
 };
 
-function certStatus(validUntil: string): { label: string; cls: string; icon: typeof CheckCircle2 } {
+// Certification scheme names are proper/standard names (ISCC PLUS, GRS,
+// ...) — these do not get translated per locale, same convention as batch
+// IDs and hashes below. Only the status word wrapping them
+// (Expired/Valid/...) is localized, via `t()` at each call site.
+function certStatus(
+  validUntil: string,
+  t: ReturnType<typeof createTranslator>
+): { label: string; cls: string; icon: typeof CheckCircle2 } {
   const days = (new Date(validUntil).getTime() - Date.now()) / 86_400_000;
-  if (days < 0) return { label: "Expired", cls: "bg-rose-50 text-rose-700 border-rose-200", icon: AlertTriangle };
-  if (days < 60) return { label: "Expiring soon", cls: "bg-amber-50 text-amber-700 border-amber-200", icon: Clock };
-  return { label: "Valid", cls: "bg-teal-50 text-teal-700 border-teal-200", icon: CheckCircle2 };
+  if (days < 0) return { label: t("certStatus.expired"), cls: "bg-rose-50 text-rose-700 border-rose-200", icon: AlertTriangle };
+  if (days < 60) return { label: t("certStatus.expiringSoon"), cls: "bg-amber-50 text-amber-700 border-amber-200", icon: Clock };
+  return { label: t("certStatus.valid"), cls: "bg-teal-50 text-teal-700 border-teal-200", icon: CheckCircle2 };
 }
 
 function CopyableHash({ hash }: { hash: string }) {
@@ -182,10 +206,62 @@ function CopyableHash({ hash }: { hash: string }) {
   );
 }
 
+/* A small segmented control — EN / DE / FR — switching `locale` entirely
+   client-side. No page reload, no route change: see this file's own
+   banner comment for why the GS1 Digital Link URI must stay locale-free. */
+function LanguageSwitcher({ locale, onChange, label }: { locale: Locale; onChange: (l: Locale) => void; label: string }) {
+  return (
+    <div className="flex items-center gap-1.5" role="group" aria-label={label}>
+      <Languages className="w-3.5 h-3.5 text-slate-500" aria-hidden="true" />
+      <div className="flex rounded-md border border-slate-700 overflow-hidden">
+        {SUPPORTED_LOCALES.map((code) => (
+          <button
+            key={code}
+            onClick={() => onChange(code)}
+            aria-pressed={locale === code}
+            aria-label={LOCALE_LABELS[code].native}
+            className={`px-2 py-1 text-[10px] f-mono font-medium transition-colors ${
+              locale === code
+                ? "bg-teal-500 text-slate-950"
+                : "bg-slate-800 text-slate-400 hover:bg-slate-700 hover:text-slate-200"
+            }`}
+          >
+            {LOCALE_LABELS[code].short}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export default function PublicScanPage({ passport, integrityVerified, linkTrusted, auditorSignOff }: PublicScanPageProps) {
   const circularity = passport.recycledContentPercent + passport.bioBasedPercent;
   const virgin = Math.max(0, 100 - circularity);
   const overallTrusted = integrityVerified && linkTrusted;
+
+  // Default render is always English (DEFAULT_LOCALE) so server and
+  // client markup match on first paint — a stored preference (if any) is
+  // applied in an effect AFTER mount, which re-renders once but never
+  // causes a hydration mismatch, since the initial client render still
+  // matches what the server sent.
+  const [locale, setLocale] = useState<Locale>(DEFAULT_LOCALE);
+  useEffect(() => {
+    try {
+      const stored = window.localStorage.getItem(LOCALE_STORAGE_KEY);
+      if (isSupportedLocale(stored)) setLocale(stored);
+    } catch {
+      /* localStorage unavailable (private browsing, blocked storage, etc.) — default locale stands */
+    }
+  }, []);
+  const changeLocale = (next: Locale) => {
+    setLocale(next);
+    try {
+      window.localStorage.setItem(LOCALE_STORAGE_KEY, next);
+    } catch {
+      /* best-effort persistence only — switching still works for this view */
+    }
+  };
+  const t = useMemo(() => createTranslator(locale), [locale]);
 
   return (
     <div className="min-h-screen bg-slate-50 f-body">
@@ -200,30 +276,34 @@ export default function PublicScanPage({ passport, integrityVerified, linkTruste
       {!overallTrusted && (
         <div className="bg-rose-600 text-white text-center py-2 px-4 text-xs f-body font-medium flex items-center justify-center gap-2">
           <AlertTriangle className="w-3.5 h-3.5" />
-          {!linkTrusted
-            ? "This QR link doesn't match our signed record for this batch — verify with the manufacturer before relying on this data."
-            : "Data integrity check failed — this record does not match its signed hash."}
+          {!linkTrusted ? t("banner.linkMismatch") : t("banner.integrityFailed")}
         </div>
       )}
 
-      <div className="bg-slate-900 text-white px-5 py-4 flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <Layers className="w-4 h-4 text-teal-400" />
-          <span className="f-mono text-[11px] tracking-widest text-slate-400">DPP · POLYMER PASSPORT</span>
+      <div className="bg-slate-900 text-white px-5 py-4 flex items-center justify-between gap-3">
+        <div className="flex items-center gap-2 min-w-0">
+          <Layers className="w-4 h-4 text-teal-400 shrink-0" />
+          <span className="f-mono text-[11px] tracking-widest text-slate-400 truncate">{t("brand")}</span>
         </div>
-        {overallTrusted ? (
-          <span className="flex items-center gap-1.5 text-teal-400 text-xs f-body font-medium">
-            <ShieldCheck className="w-4 h-4" /> Verified
-          </span>
-        ) : (
-          <span className="flex items-center gap-1.5 text-rose-400 text-xs f-body font-medium">
-            <ShieldAlert className="w-4 h-4" /> Unverified
-          </span>
-        )}
+        <div className="flex items-center gap-3 shrink-0">
+          <LanguageSwitcher locale={locale} onChange={changeLocale} label={t("language.label")} />
+          {overallTrusted ? (
+            <span className="flex items-center gap-1.5 text-teal-400 text-xs f-body font-medium">
+              <ShieldCheck className="w-4 h-4" /> {t("status.verified")}
+            </span>
+          ) : (
+            <span className="flex items-center gap-1.5 text-rose-400 text-xs f-body font-medium">
+              <ShieldAlert className="w-4 h-4" /> {t("status.unverified")}
+            </span>
+          )}
+        </div>
       </div>
 
       <div className="max-w-md mx-auto px-5 py-6 space-y-5">
-        {/* Product header */}
+        {/* Product header — polymer type/grade, GTIN, batch ID, and
+            manufacturer name are DATA, not UI labels, so they are never
+            passed through t() — only the German/French UI wrapping them
+            (elsewhere on this page) changes with locale. */}
         <div>
           <h1 className="f-display text-xl font-semibold text-slate-900">{passport.polymerType} · {passport.grade}</h1>
           <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs f-mono text-slate-500">
@@ -249,12 +329,12 @@ export default function PublicScanPage({ passport, integrityVerified, linkTruste
               <UserCheck className="w-4.5 h-4.5 text-white" />
             </div>
             <div className="min-w-0">
-              <div className="f-body text-sm font-semibold text-teal-900">Third-Party Auditor Verified</div>
+              <div className="f-body text-sm font-semibold text-teal-900">{t("auditor.title")}</div>
               <div className="text-xs f-body text-teal-800 mt-0.5">
-                Signed by {auditorSignOff.auditorName} · {auditorSignOff.auditorOrganization}
+                {t("auditor.signedBy", { name: auditorSignOff.auditorName, org: auditorSignOff.auditorOrganization })}
               </div>
               <div className="text-[11px] f-body text-teal-600 mt-0.5">
-                {new Date(auditorSignOff.signedAt).toLocaleDateString(undefined, {
+                {new Date(auditorSignOff.signedAt).toLocaleDateString(locale, {
                   year: "numeric", month: "long", day: "numeric",
                 })}
               </div>
@@ -265,12 +345,12 @@ export default function PublicScanPage({ passport, integrityVerified, linkTruste
         {/* Technical properties */}
         <section className="rounded-xl bg-white border border-slate-200 p-4">
           <h2 className="f-display text-sm font-semibold text-slate-900 flex items-center gap-1.5 mb-3">
-            <Gauge className="w-4 h-4 text-teal-700" /> Technical Properties
+            <Gauge className="w-4 h-4 text-teal-700" /> {t("tech.title")}
           </h2>
           <div className="grid grid-cols-2 gap-3">
             {[
-              { label: "Melt Flow Index", value: `${passport.meltFlowIndex} g/10min`, sub: passport.mfiTestStandard },
-              { label: "Density", value: `${passport.density} g/cm³`, sub: passport.densityTestStandard },
+              { label: t("tech.mfi"), value: `${passport.meltFlowIndex} g/10min`, sub: passport.mfiTestStandard },
+              { label: t("tech.density"), value: `${passport.density} g/cm³`, sub: passport.densityTestStandard },
             ].map((p) => (
               <div key={p.label} className="rounded-lg bg-slate-50 p-3">
                 <div className="text-[10px] text-slate-400 f-body">{p.label}</div>
@@ -284,7 +364,7 @@ export default function PublicScanPage({ passport, integrityVerified, linkTruste
         {/* Composition */}
         <section className="rounded-xl bg-white border border-slate-200 p-4">
           <h2 className="f-display text-sm font-semibold text-slate-900 flex items-center gap-1.5 mb-3">
-            <Recycle className="w-4 h-4 text-teal-700" /> Material Composition
+            <Recycle className="w-4 h-4 text-teal-700" /> {t("composition.title")}
           </h2>
           <div className="flex h-3 w-full overflow-hidden rounded-full border border-slate-200 mb-2">
             <div className="bg-teal-600" style={{ width: `${passport.recycledContentPercent}%` }} />
@@ -295,16 +375,20 @@ export default function PublicScanPage({ passport, integrityVerified, linkTruste
             <div>
               <div className="f-mono text-sm font-medium text-teal-700">{passport.recycledContentPercent}%</div>
               <div className="text-[10px] text-slate-400 f-body">
-                {passport.recycledContentSource === "POST_CONSUMER" ? "Post-Consumer" : passport.recycledContentSource === "POST_INDUSTRIAL" ? "Post-Industrial" : "Recycled"}
+                {passport.recycledContentSource === "POST_CONSUMER"
+                  ? t("composition.postConsumer")
+                  : passport.recycledContentSource === "POST_INDUSTRIAL"
+                  ? t("composition.postIndustrial")
+                  : t("composition.recycled")}
               </div>
             </div>
             <div>
               <div className="f-mono text-sm font-medium text-emerald-600">{passport.bioBasedPercent}%</div>
-              <div className="text-[10px] text-slate-400 f-body">Bio-based</div>
+              <div className="text-[10px] text-slate-400 f-body">{t("composition.bioBased")}</div>
             </div>
             <div>
               <div className="f-mono text-sm font-medium text-slate-500">{virgin}%</div>
-              <div className="text-[10px] text-slate-400 f-body">Virgin</div>
+              <div className="text-[10px] text-slate-400 f-body">{t("composition.virgin")}</div>
             </div>
           </div>
         </section>
@@ -314,11 +398,12 @@ export default function PublicScanPage({ passport, integrityVerified, linkTruste
           <div className="flex items-center justify-between">
             <div>
               <h2 className="f-display text-sm font-semibold text-slate-900 flex items-center gap-1.5">
-                <Leaf className="w-4 h-4 text-emerald-600" /> Carbon Footprint
+                <Leaf className="w-4 h-4 text-emerald-600" /> {t("carbon.title")}
               </h2>
               <div className="text-[10px] text-slate-400 f-body mt-0.5">
                 {passport.lcaMethodology} · {passport.lcaScope}
-                {passport.lcaThirdPartyVerified && ` · verified by ${passport.lcaVerifierName ?? "third party"}`}
+                {passport.lcaThirdPartyVerified &&
+                  ` · ${t("carbon.verifiedBy", { name: passport.lcaVerifierName ?? t("carbon.thirdPartyFallback") })}`}
               </div>
             </div>
             <span className="f-mono text-lg font-medium text-slate-900">
@@ -336,32 +421,32 @@ export default function PublicScanPage({ passport, integrityVerified, linkTruste
           {passport.carbonFootprintCalculation && (
             <div className="mt-3 pt-3 border-t border-dashed border-slate-200">
               <div className="text-[10px] text-slate-400 f-body mb-2">
-                Estimated Scope 1/2/3 breakdown (illustrative — {passport.carbonFootprintCalculation.emissionFactorVersion})
+                {t("carbon.illustrative", { version: passport.carbonFootprintCalculation.emissionFactorVersion })}
               </div>
               <div className="grid grid-cols-4 gap-2 text-center">
                 <div>
                   <div className="f-mono text-xs font-medium text-slate-600">
                     {passport.carbonFootprintCalculation.scope1KgCO2e}
                   </div>
-                  <div className="text-[9px] text-slate-400 f-body">Scope 1</div>
+                  <div className="text-[9px] text-slate-400 f-body">{t("carbon.scope1")}</div>
                 </div>
                 <div>
                   <div className="f-mono text-xs font-medium text-slate-600">
                     {passport.carbonFootprintCalculation.scope2KgCO2e}
                   </div>
-                  <div className="text-[9px] text-slate-400 f-body">Scope 2</div>
+                  <div className="text-[9px] text-slate-400 f-body">{t("carbon.scope2")}</div>
                 </div>
                 <div>
                   <div className="f-mono text-xs font-medium text-slate-600">
                     {passport.carbonFootprintCalculation.scope3KgCO2e}
                   </div>
-                  <div className="text-[9px] text-slate-400 f-body">Scope 3</div>
+                  <div className="text-[9px] text-slate-400 f-body">{t("carbon.scope3")}</div>
                 </div>
                 <div>
                   <div className="f-mono text-xs font-semibold text-slate-700">
                     {passport.carbonFootprintCalculation.totalKgCO2e}
                   </div>
-                  <div className="text-[9px] text-slate-400 f-body">Total (kg)</div>
+                  <div className="text-[9px] text-slate-400 f-body">{t("carbon.total")}</div>
                 </div>
               </div>
             </div>
@@ -372,7 +457,7 @@ export default function PublicScanPage({ passport, integrityVerified, linkTruste
         {passport.parentLinks.length > 0 && (
           <section className="rounded-xl bg-white border border-slate-200 p-4">
             <h2 className="f-display text-sm font-semibold text-slate-900 flex items-center gap-1.5 mb-3">
-              <GitBranch className="w-4 h-4 text-teal-700" /> Batch Lineage
+              <GitBranch className="w-4 h-4 text-teal-700" /> {t("lineage.title")}
             </h2>
             <div className="space-y-2">
               {passport.parentLinks.map((link) => (
@@ -381,8 +466,8 @@ export default function PublicScanPage({ passport, integrityVerified, linkTruste
                     <div className="f-mono text-xs font-medium text-slate-900">{link.parentPassport.batchId}</div>
                     <div className="text-[10px] text-slate-400 f-body mt-0.5">
                       {link.parentPassport.polymerType} · {link.parentPassport.grade} ·{" "}
-                      {link.parentPassport.recycledContentPercent}% recycled
-                      {link.quantityUsedKg ? ` · ${link.quantityUsedKg} kg used` : ""}
+                      {link.parentPassport.recycledContentPercent}% {t("lineage.recycled")}
+                      {link.quantityUsedKg ? ` · ${t("lineage.kgUsed", { qty: link.quantityUsedKg })}` : ""}
                     </div>
                   </div>
                 </div>
@@ -394,11 +479,11 @@ export default function PublicScanPage({ passport, integrityVerified, linkTruste
         {/* Certifications */}
         <section>
           <h2 className="f-display text-sm font-semibold text-slate-900 flex items-center gap-1.5 mb-3">
-            <BadgeCheck className="w-4 h-4 text-amber-600" /> Certifications
+            <BadgeCheck className="w-4 h-4 text-amber-600" /> {t("certifications.title")}
           </h2>
           <div className="space-y-2">
             {passport.certifications.map((c, i) => {
-              const st = certStatus(c.validUntil);
+              const st = certStatus(c.validUntil, t);
               const StIcon = st.icon;
               return (
                 <div key={i} className="rounded-xl bg-white border border-slate-200 p-4">
@@ -414,15 +499,16 @@ export default function PublicScanPage({ passport, integrityVerified, linkTruste
                   </div>
                   <div className="mt-3 flex items-center justify-between text-[11px] f-body">
                     <span className="text-slate-400 flex items-center gap-1">
-                      <CalendarDays className="w-3 h-3" /> Valid until {new Date(c.validUntil).toLocaleDateString()}
+                      <CalendarDays className="w-3 h-3" />
+                      {t("certifications.validUntil", { date: new Date(c.validUntil).toLocaleDateString(locale) })}
                     </span>
                     {c.documentUrl ? (
                       <a href={c.documentUrl} target="_blank" rel="noopener noreferrer"
                         className="flex items-center gap-1 text-teal-700 font-medium hover:text-teal-800">
-                        <Download className="w-3.5 h-3.5" /> Certificate PDF
+                        <Download className="w-3.5 h-3.5" /> {t("certifications.download")}
                       </a>
                     ) : (
-                      <span className="text-slate-300">No document on file</span>
+                      <span className="text-slate-300">{t("certifications.noDocument")}</span>
                     )}
                   </div>
                 </div>
@@ -434,12 +520,9 @@ export default function PublicScanPage({ passport, integrityVerified, linkTruste
         {/* Data Integrity & Cryptographic Security */}
         <section className="rounded-xl bg-slate-900 p-5">
           <h2 className="f-display text-sm font-semibold text-white flex items-center gap-1.5 mb-1">
-            <Hash className="w-4 h-4 text-amber-400" /> Data Integrity & Cryptographic Security
+            <Hash className="w-4 h-4 text-amber-400" /> {t("integrity.title")}
           </h2>
-          <p className="text-[11px] f-body text-slate-400 mb-3">
-            This record was independently re-hashed at the moment you scanned it and compared
-            against its signed value — this isn't a stored badge, it's checked live.
-          </p>
+          <p className="text-[11px] f-body text-slate-400 mb-3">{t("integrity.description")}</p>
 
           <div className={`flex items-center gap-2 rounded-lg px-3 py-2 mb-3 ${
             integrityVerified ? "bg-teal-950/50 border border-teal-800" : "bg-rose-950/50 border border-rose-800"
@@ -448,15 +531,13 @@ export default function PublicScanPage({ passport, integrityVerified, linkTruste
               <>
                 <ShieldCheck className="w-4 h-4 text-teal-400 shrink-0" />
                 <span className="text-xs f-body text-teal-300 font-medium">
-                  Verified — record matches its signed {passport.hashAlgorithm} hash
+                  {t("integrity.verified", { algo: passport.hashAlgorithm })}
                 </span>
               </>
             ) : (
               <>
                 <ShieldAlert className="w-4 h-4 text-rose-400 shrink-0" />
-                <span className="text-xs f-body text-rose-300 font-medium">
-                  Warning — this record does not match its signed hash
-                </span>
+                <span className="text-xs f-body text-rose-300 font-medium">{t("integrity.warning")}</span>
               </>
             )}
           </div>
@@ -464,9 +545,7 @@ export default function PublicScanPage({ passport, integrityVerified, linkTruste
           {!linkTrusted && (
             <div className="flex items-center gap-2 rounded-lg px-3 py-2 mb-3 bg-amber-950/50 border border-amber-800">
               <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0" />
-              <span className="text-xs f-body text-amber-300 font-medium">
-                The scanned QR's GTIN or verification token doesn't match this record.
-              </span>
+              <span className="text-xs f-body text-amber-300 font-medium">{t("integrity.linkMismatch")}</span>
             </div>
           )}
 
@@ -474,18 +553,20 @@ export default function PublicScanPage({ passport, integrityVerified, linkTruste
 
           <div className="mt-3 space-y-2">
             <div>
-              <span className="text-[10px] f-body text-slate-500 block mb-1">recordHash ({passport.hashAlgorithm})</span>
+              <span className="text-[10px] f-body text-slate-500 block mb-1">
+                {t("integrity.recordHash", { algo: passport.hashAlgorithm })}
+              </span>
               <CopyableHash hash={passport.recordHash} />
             </div>
             {passport.previousRecordHash && (
               <div>
-                <span className="text-[10px] f-body text-slate-500 block mb-1">chained from previous version</span>
+                <span className="text-[10px] f-body text-slate-500 block mb-1">{t("integrity.chainedFrom")}</span>
                 <span className="text-[11px] f-mono text-slate-500 break-all">{passport.previousRecordHash}</span>
               </div>
             )}
             {passport.signedAt && (
               <div className="text-[10px] f-body text-slate-500">
-                Signed {new Date(passport.signedAt).toLocaleString()}
+                {t("integrity.signed", { date: new Date(passport.signedAt).toLocaleString(locale) })}
               </div>
             )}
           </div>
@@ -495,20 +576,22 @@ export default function PublicScanPage({ passport, integrityVerified, linkTruste
             Upgrade, Step 4) — streamed server-side by
             app/api/passports/[batchId]/certificate.pdf/route.ts, a public
             GET (no RBAC key: this is the same data already shown on this
-            page, just as a signed, printable document). */}
+            page, just as a signed, printable document). The PDF itself
+            stays English-only for now — see lib/services/generate-certificate-pdf.tsx —
+            only this page's on-screen label is localized. */}
         <a
           href={`/api/passports/${encodeURIComponent(passport.batchId)}/certificate.pdf`}
           target="_blank"
           rel="noopener noreferrer"
           className="flex items-center justify-center gap-2 rounded-xl bg-slate-900 text-white text-xs f-body font-medium py-3 hover:bg-slate-800 transition-colors"
         >
-          <FileText className="w-4 h-4" /> Download Official Certificate (PDF)
+          <FileText className="w-4 h-4" /> {t("download.pdf")}
         </a>
 
         <div className="text-center pt-1 pb-4">
           <a href="https://gs1.org/standards/digital-link" target="_blank" rel="noopener noreferrer"
             className="inline-flex items-center gap-1 text-[10px] f-body text-slate-400 hover:text-slate-600">
-            Resolved via GS1 Digital Link <ExternalLink className="w-3 h-3" />
+            {t("footer.resolvedVia")} <ExternalLink className="w-3 h-3" />
           </a>
         </div>
       </div>

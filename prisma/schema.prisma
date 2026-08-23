@@ -79,6 +79,13 @@ enum AuditAction {
   // rejected this batch through the review portal."
   AUDITOR_VERIFIED
   AUDITOR_REJECTED
+  // B2B Client Portal & Buyer API Access — additive, existing values and
+  // rows untouched. Written whenever an admin records that a batch was
+  // sold/allocated to a Client (see lib/services/allocate-passport-to-client.ts) —
+  // the one write this feature makes against an existing PolymerPassport,
+  // so it gets its own audit trail entry like every other passport-level
+  // event in this app.
+  CLIENT_PURCHASE_RECORDED
 }
 
 // Compliance & Green Certifications Module (docs/COMPLIANCE_CERTIFICATIONS_MODULE_SPEC.md
@@ -197,6 +204,14 @@ model PolymerPassport {
   // at read time (lib/verifyPassport.ts), never cached on this model, per
   // the app's existing "compute, don't store" convention.
   auditorVerifications AuditorVerification[]
+
+  // --- 10. Client Purchase Allocations (B2B Client Portal & Buyer API) -------
+  // See the Client / ClientPassportAccess models below. Many-to-many in
+  // principle (a batch could in theory be split across multiple buyers),
+  // modeled as an explicit join table for the same reason as
+  // BatchGenealogyLink above — so each allocation can carry its own
+  // quantity/notes and its own place in the audit trail.
+  clientAccess ClientPassportAccess[]
 
   // --- Lifecycle / meta --------------------------------------------------
   status           DppStatus @default(ISSUED)
@@ -460,4 +475,62 @@ model AuditorVerification {
 
   @@index([passportId])
   @@index([auditorId])
+}
+
+// ----------------------------------------------------------------------------
+// B2B CLIENT PORTAL & BUYER API ACCESS (new models, no existing model or
+// field touched or removed)
+// ----------------------------------------------------------------------------
+// Same auth shape as the Auditor model above, applied to a different
+// actor: an industrial buyer / corporate customer. A Client is a COMPANY,
+// not an individual (unlike Auditor, where the credential must identify a
+// specific signing person) — one shared companyApiKeyHash per buyer
+// account is the right granularity here, since the portal/API only ever
+// answers "what has THIS BUYER purchased," never "which employee of the
+// buyer looked." See lib/client-auth.ts for the lookup and
+// scripts/create-client.ts for provisioning.
+model Client {
+  id           String  @id @default(uuid())
+  companyName  String
+  contactEmail String? @unique
+  country      String?
+  apiKeyHash   String  @unique
+  active       Boolean @default(true) // soft-revoke, same convention as Auditor.active
+
+  purchases ClientPassportAccess[]
+
+  createdAt DateTime @default(now())
+
+  @@index([apiKeyHash])
+}
+
+// Records that `passport` was sold/allocated to `client`. This is
+// deliberately NOT a general order/invoicing system — no price, no
+// currency, no line items — just the minimum needed to answer "which
+// batches can this buyer see," matching what the B2B portal and Buyer API
+// actually need. quantityKg is optional context (a buyer may have
+// purchased only part of a batch's total output).
+//
+// @@unique([clientId, passportId]) keeps this "one allocation per
+// buyer per batch" for MVP simplicity — a repeat/topped-up purchase of
+// the same batch by the same buyer updates the existing row rather than
+// creating a second one; see lib/services/allocate-passport-to-client.ts.
+model ClientPassportAccess {
+  id String @id @default(uuid())
+
+  clientId String
+  client   Client @relation(fields: [clientId], references: [id])
+
+  passportId String
+  passport   PolymerPassport @relation(fields: [passportId], references: [id])
+
+  quantityKg   Decimal? @db.Decimal(10, 3)
+  purchaseDate DateTime @default(now())
+  notes        String?
+
+  createdAt DateTime @default(now())
+
+  @@unique([clientId, passportId])
+  @@index([clientId])
+  @@index([passportId])
 }

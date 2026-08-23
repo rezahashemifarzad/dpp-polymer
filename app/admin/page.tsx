@@ -39,6 +39,7 @@ import {
   Settings2,
   BarChart3,
   KeyRound,
+  Building2,
 } from "lucide-react";
 import Link from "next/link";
 import { ToastProvider } from "@/lib/hooks/use-toast";
@@ -80,6 +81,13 @@ function AdminDashboardInner() {
           >
             <KeyRound className="w-4 h-4" />
             Auditor Portal
+          </Link>
+          <Link
+            href="/client-portal"
+            className="flex items-center gap-2 text-xs font-medium bg-cyan-500/10 hover:bg-cyan-500/20 border border-cyan-500/30 text-cyan-400 px-4 py-2 rounded-lg transition-all"
+          >
+            <Building2 className="w-4 h-4" />
+            Client Portal
           </Link>
           <Link
             href="/"
