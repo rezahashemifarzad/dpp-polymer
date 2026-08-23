@@ -22,7 +22,9 @@ import {
   Table,
   AlertTriangle,
   Settings2,
+  BarChart3,
 } from 'lucide-react';
+import Link from 'next/link';
 import { ToastProvider, useToast } from '@/lib/hooks/use-toast';
 import { usePassports, type ApiPassport } from '@/lib/hooks/use-passports';
 import { PassportSkeleton, PassportRowSkeleton } from '@/components/dashboard/passport-skeleton';
@@ -375,6 +377,18 @@ function CompletePolymerDPPInner() {
             >
               {t.esprReadiness}
             </button>
+
+            {/* Corporate ESG Analytics & Sustainability Dashboard — a real
+                Next.js route (app/admin/esg-analytics/page.tsx), not a
+                client-side tab like the buttons above, so this is a <Link>
+                navigation rather than a setActiveTab() call. */}
+            <Link
+              href="/admin/esg-analytics"
+              className="px-3.5 py-1.5 rounded-lg text-xs font-semibold font-mono flex items-center gap-1.5 transition text-slate-400 hover:text-white"
+            >
+              <BarChart3 className="w-3.5 h-3.5" />
+              <span>ESG Analytics</span>
+            </Link>
           </div>
 
           {/* Language Picker & DB Status */}
