@@ -35,6 +35,7 @@ import { Prisma, DppStatus, PolymerType } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { createPassport } from "@/lib/services/create-passport";
 import { authorize, unauthorizedResponse } from "@/lib/rbac";
+import { getPassportCertificationAlert } from "@/lib/utils/certification-status";
 
 const MAX_PAGE_SIZE = 100;
 const DEFAULT_PAGE_SIZE = 25;
@@ -109,9 +110,18 @@ export async function GET(req: NextRequest) {
       }),
     ]);
 
+    // Compliance Expiry Alerts (docs/CIRCULAR_ECONOMY_PLATFORM_UPGRADE_SPEC.md
+    // §2.4) — computed here, not stored: Certification.validUntil is
+    // already the source of truth, so this is derived fresh on every read
+    // rather than a stored flag that could go stale between requests.
+    const passportsWithAlerts = passports.map((passport) => ({
+      ...passport,
+      certificationAlert: getPassportCertificationAlert(passport.certifications),
+    }));
+
     return NextResponse.json({
       success: true,
-      data: passports,
+      data: passportsWithAlerts,
       pagination: {
         page,
         pageSize,

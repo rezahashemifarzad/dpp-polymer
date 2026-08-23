@@ -66,6 +66,10 @@ enum AuditAction {
   CERT_ADDED
   CERT_VERIFIED
   CERT_REJECTED
+  // Circular Economy Platform Upgrade — additive, existing values and
+  // rows untouched. See docs/CIRCULAR_ECONOMY_PLATFORM_UPGRADE_SPEC.md.
+  GENEALOGY_LINKED
+  CARBON_CALCULATED
 }
 
 // Compliance & Green Certifications Module (docs/COMPLIANCE_CERTIFICATIONS_MODULE_SPEC.md
@@ -78,6 +82,16 @@ enum CertificationVerificationStatus {
   PENDING_REVIEW
   VERIFIED
   REJECTED
+}
+
+// Circular Economy Platform Upgrade (docs/CIRCULAR_ECONOMY_PLATFORM_UPGRADE_SPEC.md
+// §1.2) — freight mode driving the Scope 3 transport emission factor in
+// lib/utils/carbon-footprint-calculator.ts.
+enum TransportMode {
+  TRUCK
+  RAIL
+  SEA
+  AIR
 }
 
 // ----------------------------------------------------------------------------
@@ -139,6 +153,21 @@ model PolymerPassport {
   // without its resolver row, so a public QR/link lookup can never come back
   // "No GS1 Link record found" for a batch that was actually created here.
   gs1Link GS1DigitalLink?
+
+  // --- 7. Batch Genealogy (Circular Economy Platform Upgrade) -----------------
+  // See docs/CIRCULAR_ECONOMY_PLATFORM_UPGRADE_SPEC.md §1.1. Many-to-many
+  // via an explicit join model (not Prisma's implicit m2m) so each link can
+  // carry its own data (quantityUsedKg, notes) and its own audit trail.
+  parentLinks BatchGenealogyLink[] @relation("GenealogyChild") // this batch's upstream inputs
+  childLinks  BatchGenealogyLink[] @relation("GenealogyParent") // downstream batches made from this one
+
+  // --- 8. Carbon Footprint Calculation (Circular Economy Platform Upgrade) ---
+  // See docs/CIRCULAR_ECONOMY_PLATFORM_UPGRADE_SPEC.md §1.2. Deliberately a
+  // separate table from carbonFootprintKgCO2ePerKg above, which remains the
+  // manufacturer's own (optionally third-party-verified) LCA figure — this
+  // relation is the rough, clearly-labeled Scope 1/2/3 estimate and must
+  // never overwrite or be conflated with that verified figure.
+  carbonFootprintCalculation CarbonFootprintCalculation?
 
   // --- Lifecycle / meta --------------------------------------------------
   status           DppStatus @default(ISSUED)
@@ -262,4 +291,74 @@ model GS1DigitalLink {
   createdAt DateTime @default(now())
 
   @@index([gtin, batchId])
+}
+
+// ----------------------------------------------------------------------------
+// BATCH GENEALOGY (Circular Economy Platform Upgrade — new model, no
+// existing model or field touched or removed)
+// ----------------------------------------------------------------------------
+// Records that `childPassport` was (in whole or in part) compounded from
+// `parentPassport` — e.g. a PP grade blending two recycled feedstock lots.
+// A many-to-many relationship: one batch can have multiple parent batches,
+// and one batch can feed multiple downstream batches. Modeled as an
+// explicit join table (not Prisma's implicit m2m) so the link itself can
+// carry quantityUsedKg/notes and participate in the audit trail (see
+// AuditAction.GENEALOGY_LINKED).
+//
+// Cycle prevention (a batch can never be its own ancestor) is enforced in
+// application code before a link is created — see
+// docs/CIRCULAR_ECONOMY_PLATFORM_UPGRADE_SPEC.md §1.1 and §2.1 — not by a
+// DB constraint, since Postgres has no native "no cycles in this graph"
+// check.
+model BatchGenealogyLink {
+  id String @id @default(uuid())
+
+  parentPassportId String
+  parentPassport   PolymerPassport @relation("GenealogyParent", fields: [parentPassportId], references: [id])
+
+  childPassportId String
+  childPassport   PolymerPassport @relation("GenealogyChild", fields: [childPassportId], references: [id])
+
+  quantityUsedKg Decimal? @db.Decimal(10, 3) // how much of the parent batch went into this child batch
+  notes          String?
+
+  createdAt DateTime @default(now())
+
+  @@unique([parentPassportId, childPassportId])
+  @@index([parentPassportId])
+  @@index([childPassportId])
+}
+
+// ----------------------------------------------------------------------------
+// CARBON FOOTPRINT CALCULATION (Circular Economy Platform Upgrade — new
+// model, no existing model or field touched or removed)
+// ----------------------------------------------------------------------------
+// A rough, illustrative Scope 1/2/3 CO2e estimate computed by
+// lib/utils/carbon-footprint-calculator.ts from weight/transport inputs.
+// Deliberately separate from PolymerPassport.carbonFootprintKgCO2ePerKg,
+// which is the manufacturer's own (optionally third-party-verified) LCA
+// figure — this table must never be conflated with or silently overwrite
+// that one. `@unique` on passportId keeps this "latest calculation only"
+// for MVP simplicity; drop it (and add an index on
+// [passportId, calculatedAt]) if calculation history is ever needed.
+model CarbonFootprintCalculation {
+  id String @id @default(uuid())
+
+  passportId String          @unique
+  passport   PolymerPassport @relation(fields: [passportId], references: [id])
+
+  weightKg            Decimal       @db.Decimal(10, 3)
+  transportDistanceKm Decimal       @default(0) @db.Decimal(10, 2)
+  transportMode       TransportMode @default(TRUCK)
+
+  scope1KgCO2e Decimal @db.Decimal(10, 3) // on-site processing (direct)
+  scope2KgCO2e Decimal @db.Decimal(10, 3) // purchased energy for processing
+  scope3KgCO2e Decimal @db.Decimal(10, 3) // transport/logistics
+  totalKgCO2e  Decimal @db.Decimal(10, 3)
+
+  // Ties a stored result to the exact factor table that produced it (see
+  // EMISSION_FACTOR_VERSION in the calculator utility), so results stay
+  // explainable after factors are later updated.
+  emissionFactorVersion String   @default("illustrative-v1-2026")
+  calculatedAt          DateTime @default(now())
 }

@@ -36,6 +36,16 @@ export interface ApiManufacturer {
 
 export type DppStatusValue = "DRAFT" | "PENDING_VERIFICATION" | "ISSUED" | "REVOKED" | "SUPERSEDED";
 
+// Compliance Expiry Alerts (docs/CIRCULAR_ECONOMY_PLATFORM_UPGRADE_SPEC.md
+// §2.4) — computed server-side in GET /api/passports from
+// Certification.validUntil, not a stored column. See
+// lib/utils/certification-status.ts for how it's derived.
+export interface ApiCertificationAlert {
+  level: "EXPIRED" | "EXPIRING_SOON" | null;
+  expiredCount: number;
+  expiringSoonCount: number;
+}
+
 export interface ApiPassport {
   id: string;
   polymerType: string;
@@ -56,6 +66,7 @@ export interface ApiPassport {
   qrCodePayloadUrl: string | null;
   status: DppStatusValue;
   certifications: ApiCertification[];
+  certificationAlert: ApiCertificationAlert;
   createdAt: string;
 }
 

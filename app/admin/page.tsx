@@ -152,13 +152,14 @@ function AdminDashboardInner() {
                   <th className="p-3 text-center">MFI</th>
                   <th className="p-3 text-center">Density</th>
                   <th className="p-3 text-center">Status</th>
+                  <th className="p-3 text-center">Compliance</th>
                   <th className="p-3 text-center">Direct Link</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-800/60">
                 {passports.length === 0 ? (
                   <tr>
-                    <td colSpan={8} className="text-center p-6 text-slate-500">
+                    <td colSpan={9} className="text-center p-6 text-slate-500">
                       {loading ? "Fetching records from database..." : "No passports issued yet. Create your first passport above."}
                     </td>
                   </tr>
@@ -179,6 +180,25 @@ function AdminDashboardInner() {
                         <span className="text-[10px] bg-slate-800 text-emerald-400 px-2 py-0.5 rounded-full border border-emerald-500/20">
                           {item.status}
                         </span>
+                      </td>
+                      <td className="p-3 text-center">
+                        {item.certificationAlert.level === "EXPIRED" ? (
+                          <span
+                            className="text-[10px] bg-red-500/10 text-red-400 border border-red-500/30 px-2 py-0.5 rounded-full font-semibold"
+                            title={`${item.certificationAlert.expiredCount} certification(s) past their validUntil date`}
+                          >
+                            Expired ({item.certificationAlert.expiredCount})
+                          </span>
+                        ) : item.certificationAlert.level === "EXPIRING_SOON" ? (
+                          <span
+                            className="text-[10px] bg-amber-500/10 text-amber-400 border border-amber-500/30 px-2 py-0.5 rounded-full font-semibold"
+                            title={`${item.certificationAlert.expiringSoonCount} certification(s) expiring within 30 days`}
+                          >
+                            Expiring Soon ({item.certificationAlert.expiringSoonCount})
+                          </span>
+                        ) : (
+                          <span className="text-slate-600">—</span>
+                        )}
                       </td>
                       <td className="p-3 text-center">
                         {item.qrCodePayloadUrl ? (

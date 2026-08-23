@@ -20,6 +20,7 @@ import { prisma } from "@/lib/prisma";
 import { hashRecord } from "@/lib/types";
 import { writeAuditLog } from "@/lib/audit";
 import { authorize, unauthorizedResponse } from "@/lib/rbac";
+import { getPassportCertificationAlert } from "@/lib/utils/certification-status";
 
 const ALLOWED_TRANSITIONS: Record<DppStatus, DppStatus[]> = {
   DRAFT: ["PENDING_VERIFICATION", "REVOKED"],
@@ -73,7 +74,13 @@ export async function GET(
       );
     }
 
-    return NextResponse.json({ success: true, data: passport });
+    // Compliance Expiry Alerts (docs/CIRCULAR_ECONOMY_PLATFORM_UPGRADE_SPEC.md
+    // §2.4) — same computed-not-stored alert as the list route, for the
+    // admin detail view.
+    return NextResponse.json({
+      success: true,
+      data: { ...passport, certificationAlert: getPassportCertificationAlert(passport.certifications) },
+    });
   } catch (error) {
     console.error(`GET /api/passports/${batchId} failed:`, error);
     return NextResponse.json({ success: false, error: "Failed to load passport" }, { status: 500 });
