@@ -70,6 +70,15 @@ enum AuditAction {
   // rows untouched. See docs/CIRCULAR_ECONOMY_PLATFORM_UPGRADE_SPEC.md.
   GENEALOGY_LINKED
   CARBON_CALCULATED
+  // Third-Party Auditor Verification Workflow — additive, existing values
+  // and rows untouched. Deliberately distinct from VERIFIED/REVOKED (the
+  // generic shared-role-key transition already used by
+  // app/api/passports/[batchId]/route.ts's PATCH) so the audit trail can
+  // tell "the AUDITOR-role key was used to flip status" apart from "a
+  // specific, individually-authenticated Auditor formally signed or
+  // rejected this batch through the review portal."
+  AUDITOR_VERIFIED
+  AUDITOR_REJECTED
 }
 
 // Compliance & Green Certifications Module (docs/COMPLIANCE_CERTIFICATIONS_MODULE_SPEC.md
@@ -92,6 +101,17 @@ enum TransportMode {
   RAIL
   SEA
   AIR
+}
+
+// Third-Party Auditor Verification Workflow — new enum, additive, no
+// existing enum or model touched. Deliberately its own type rather than
+// reusing DppStatus or CertificationVerificationStatus: an
+// AuditorVerification row is a permanent, individually-signed record of
+// one review event, not a mutable current-state field, so its value set
+// only ever grows (a correction is a NEW row, never an edit of this one).
+enum AuditorVerificationStatus {
+  AUDITOR_VERIFIED
+  REJECTED_BY_AUDITOR
 }
 
 // ----------------------------------------------------------------------------
@@ -168,6 +188,15 @@ model PolymerPassport {
   // relation is the rough, clearly-labeled Scope 1/2/3 estimate and must
   // never overwrite or be conflated with that verified figure.
   carbonFootprintCalculation CarbonFootprintCalculation?
+
+  // --- 9. Auditor Verifications (Third-Party Auditor Verification Workflow) --
+  // See the Auditor / AuditorVerification models below. One-to-many:
+  // corrections/re-reviews create a NEW row rather than editing an old one,
+  // so the full review history for a batch is always reconstructable. The
+  // "current" sign-off is whichever row has the latest signedAt — resolved
+  // at read time (lib/verifyPassport.ts), never cached on this model, per
+  // the app's existing "compute, don't store" convention.
+  auditorVerifications AuditorVerification[]
 
   // --- Lifecycle / meta --------------------------------------------------
   status           DppStatus @default(ISSUED)
@@ -361,4 +390,74 @@ model CarbonFootprintCalculation {
   // explainable after factors are later updated.
   emissionFactorVersion String   @default("illustrative-v1-2026")
   calculatedAt          DateTime @default(now())
+}
+
+// ----------------------------------------------------------------------------
+// THIRD-PARTY AUDITOR VERIFICATION WORKFLOW (new models, no existing model
+// or field touched or removed)
+// ----------------------------------------------------------------------------
+// This app has no general login system — every write today goes through a
+// single shared per-role API key checked by lib/rbac.ts's authorize(). That
+// remains true for MANUFACTURER/ADMIN. Auditors are the one exception: a
+// digital "signature" is only meaningful if it is attributable to a specific
+// person, not to "whoever currently holds the shared AUDITOR key." So each
+// Auditor gets their OWN personal key (like a personal access token) —
+// still simple header-based auth, no session cookies, no new dependency —
+// but the credential itself now identifies the individual. See
+// lib/auditor-auth.ts for the lookup and scripts/create-auditor.ts for
+// provisioning.
+//
+// apiKeyHash stores a SHA-256 hash of the raw key, never the raw key itself
+// (same principle as a password hash) — the raw value is shown to the
+// operator exactly once, at creation time, by the CLI script, and is not
+// recoverable from the database afterward.
+model Auditor {
+  id           String  @id @default(uuid())
+  name         String
+  organization String
+  email        String? @unique
+  apiKeyHash   String  @unique
+  active       Boolean @default(true) // soft-revoke: flip false to disable a lost/rotated key without deleting review history
+
+  verifications AuditorVerification[]
+
+  createdAt DateTime @default(now())
+
+  @@index([apiKeyHash])
+}
+
+// One row per formal review decision an authenticated Auditor makes on a
+// passport. Deliberately append-only / immutable once written (the API
+// layer only ever creates rows here, never updates or deletes them) so the
+// audit trail can't be quietly rewritten — a corrected decision is a new
+// row with a later signedAt, not an edit of the old one.
+//
+// signatureHash is a SHA-256 (via lib/types.ts's hashRecord, the same
+// helper used for PolymerPassport.recordHash) over the canonical
+// verification claim (passportId, auditorId, status, notes, signedAt) —
+// giving each sign-off its own tamper-evident fingerprint, distinct from
+// and in addition to the passport's own recordHash chain.
+model AuditorVerification {
+  id String @id @default(uuid())
+
+  passportId String
+  passport   PolymerPassport @relation(fields: [passportId], references: [id])
+
+  auditorId String
+  auditor   Auditor @relation(fields: [auditorId], references: [id])
+
+  status AuditorVerificationStatus
+
+  // Compliance remarks / rationale. Admin+portal-only — deliberately never
+  // surfaced on the public passport page (see components/PublicScanPage.tsx),
+  // since notes may reference sensitive audit findings.
+  notes String? @db.Text
+
+  signatureHash String
+  signedAt      DateTime @default(now())
+
+  createdAt DateTime @default(now())
+
+  @@index([passportId])
+  @@index([auditorId])
 }

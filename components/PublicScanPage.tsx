@@ -23,6 +23,7 @@ import {
   ShieldCheck, ShieldAlert, Leaf, Recycle, Layers, Gauge, Hash,
   BadgeCheck, ExternalLink, Download, Copy, Check, AlertTriangle,
   Factory, CalendarDays, Clock, CheckCircle2, GitBranch, FileText,
+  UserCheck,
 } from "lucide-react";
 
 /* ---------------------------------------------------------------------------
@@ -70,6 +71,18 @@ interface CarbonFootprintCalculationView {
   emissionFactorVersion: string;
 }
 
+// Third-Party Auditor Verification Workflow. page.tsx only ever passes
+// this prop when the passport's LATEST auditor verification event has
+// status AUDITOR_VERIFIED — a REJECTED_BY_AUDITOR record is never sent
+// down to this component, so there is no "rejected" branch to render here
+// by design. Audit notes are deliberately NOT part of this view (portal
+// and admin-only — see lib/services/submit-auditor-verification.ts).
+interface AuditorSignOffView {
+  auditorName: string;
+  auditorOrganization: string;
+  signedAt: string;
+}
+
 interface PassportView {
   polymerType: string;
   grade: string;
@@ -103,6 +116,7 @@ interface PublicScanPageProps {
   passport: PassportView;
   integrityVerified: boolean;
   linkTrusted: boolean;
+  auditorSignOff: AuditorSignOffView | null;
 }
 
 /* Same fingerprint device used on the dashboard — here driven by the real recordHash. */
@@ -168,7 +182,7 @@ function CopyableHash({ hash }: { hash: string }) {
   );
 }
 
-export default function PublicScanPage({ passport, integrityVerified, linkTrusted }: PublicScanPageProps) {
+export default function PublicScanPage({ passport, integrityVerified, linkTrusted, auditorSignOff }: PublicScanPageProps) {
   const circularity = passport.recycledContentPercent + passport.bioBasedPercent;
   const virgin = Math.max(0, 100 - circularity);
   const overallTrusted = integrityVerified && linkTrusted;
@@ -221,6 +235,32 @@ export default function PublicScanPage({ passport, integrityVerified, linkTruste
             <Factory className="w-3.5 h-3.5" /> {passport.manufacturer.legalName} · {passport.manufacturer.country}
           </div>
         </div>
+
+        {/* Third-Party Auditor Sign-off (Third-Party Auditor Verification
+            Workflow) — deliberately placed high on the page, right after
+            the product header, so it reads as a prominent trust signal
+            rather than a footnote. Only rendered when the latest review
+            event for this batch is AUDITOR_VERIFIED; a REJECTED_BY_AUDITOR
+            record (or no review yet) renders nothing here at all — this
+            section is a positive trust signal only, never a warning. */}
+        {auditorSignOff && (
+          <section className="rounded-xl bg-teal-50 border border-teal-200 p-4 flex items-start gap-3">
+            <div className="shrink-0 w-9 h-9 rounded-full bg-teal-600 flex items-center justify-center">
+              <UserCheck className="w-4.5 h-4.5 text-white" />
+            </div>
+            <div className="min-w-0">
+              <div className="f-body text-sm font-semibold text-teal-900">Third-Party Auditor Verified</div>
+              <div className="text-xs f-body text-teal-800 mt-0.5">
+                Signed by {auditorSignOff.auditorName} · {auditorSignOff.auditorOrganization}
+              </div>
+              <div className="text-[11px] f-body text-teal-600 mt-0.5">
+                {new Date(auditorSignOff.signedAt).toLocaleDateString(undefined, {
+                  year: "numeric", month: "long", day: "numeric",
+                })}
+              </div>
+            </div>
+          </section>
+        )}
 
         {/* Technical properties */}
         <section className="rounded-xl bg-white border border-slate-200 p-4">

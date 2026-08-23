@@ -107,6 +107,7 @@ function CertificateDocument({
   recordHash,
   hashAlgorithm,
   integrityVerified,
+  auditorSignOff,
   generatedAt,
 }: {
   batchId: string;
@@ -132,6 +133,7 @@ function CertificateDocument({
   recordHash: string | null;
   hashAlgorithm: string;
   integrityVerified: boolean;
+  auditorSignOff: { auditorName: string; auditorOrganization: string; signedAt: string } | null;
   generatedAt: string;
 }) {
   return (
@@ -245,6 +247,20 @@ function CertificateDocument({
           </View>
         )}
 
+        {auditorSignOff && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Third-Party Auditor Sign-Off</Text>
+            <View style={styles.row}>
+              <Text style={styles.label}>Auditor</Text>
+              <Text style={styles.value}>{auditorSignOff.auditorName} ({auditorSignOff.auditorOrganization})</Text>
+            </View>
+            <View style={styles.row}>
+              <Text style={styles.label}>Signed</Text>
+              <Text style={styles.value}>{new Date(auditorSignOff.signedAt).toLocaleDateString()}</Text>
+            </View>
+          </View>
+        )}
+
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Cryptographic Integrity</Text>
           <Text style={styles.mono}>
@@ -291,6 +307,20 @@ export async function generateCertificatePdf(batchId: string): Promise<Buffer | 
       }
     : null;
 
+  // Mirrors the exact same rule as components/PublicScanPage.tsx and
+  // app/01/[gtin]/21/[serialOrBatch]/page.tsx: only a positive
+  // AUDITOR_VERIFIED sign-off is ever surfaced, and only the latest review
+  // event (already narrowed by lib/verifyPassport.ts's query).
+  const latestVerification = passport.auditorVerifications[0] ?? null;
+  const auditorSignOff =
+    latestVerification && latestVerification.status === "AUDITOR_VERIFIED"
+      ? {
+          auditorName: latestVerification.auditor.name,
+          auditorOrganization: latestVerification.auditor.organization,
+          signedAt: latestVerification.signedAt.toISOString(),
+        }
+      : null;
+
   // renderToBuffer (not the deprecated renderToStream) — resolves directly
   // to a Node Buffer, which NextResponse can hand back as the response
   // body with no manual stream-collection step.
@@ -319,6 +349,7 @@ export async function generateCertificatePdf(batchId: string): Promise<Buffer | 
       recordHash={passport.recordHash}
       hashAlgorithm={passport.hashAlgorithm}
       integrityVerified={integrityVerified}
+      auditorSignOff={auditorSignOff}
       generatedAt={new Date().toISOString()}
     />
   );

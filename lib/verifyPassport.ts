@@ -18,6 +18,19 @@ import { prisma } from "./prisma";
 import { hashRecord, computeTotalRecycledPercent } from "./types";
 import type { PolymerPassport, Certification, CarbonFootprintCalculation } from "@prisma/client";
 
+// Third-Party Auditor Verification Workflow — the latest sign-off event
+// for this passport, if any. Narrow `select` on the auditor relation
+// (name/organization only) since this is what the public scan page is
+// allowed to show — see components/PublicScanPage.tsx, which additionally
+// only renders this when status is AUDITOR_VERIFIED (a REJECTED_BY_AUDITOR
+// record is never surfaced as a public trust signal).
+export interface LatestAuditorVerification {
+  id: string;
+  status: string; // AuditorVerificationStatus
+  signedAt: Date;
+  auditor: { name: string; organization: string };
+}
+
 // Circular Economy Platform Upgrade (Step 4) — genealogy parent summaries are
 // intentionally a narrow `select`, not the full PolymerPassport, since the
 // public scan page only ever renders a lineage list, never a parent's full
@@ -42,6 +55,7 @@ export type PassportWithRelations = PolymerPassport & {
     parentPassport: GenealogyParentSummary;
   }>;
   carbonFootprintCalculation: CarbonFootprintCalculation | null;
+  auditorVerifications: LatestAuditorVerification[]; // latest first, at most 1 (see query below)
 };
 
 export interface VerifiedPassportResult {
@@ -71,6 +85,22 @@ export async function getVerifiedPassport(batchId: string): Promise<VerifiedPass
         },
       },
       carbonFootprintCalculation: true,
+      // Third-Party Auditor Verification Workflow — only the single most
+      // recent review event. A passport may have multiple historical
+      // AuditorVerification rows (a re-review after correction); the
+      // "current" sign-off state is always just the latest one, resolved
+      // here at read time rather than cached on PolymerPassport itself
+      // (this app's established "compute, don't store" convention).
+      auditorVerifications: {
+        orderBy: { signedAt: "desc" },
+        take: 1,
+        select: {
+          id: true,
+          status: true,
+          signedAt: true,
+          auditor: { select: { name: true, organization: true } },
+        },
+      },
     },
   });
   if (!passport) return null;

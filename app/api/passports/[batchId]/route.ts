@@ -15,20 +15,22 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { DppStatus, AuditAction } from "@prisma/client";
+import { AuditAction } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
-import { hashRecord } from "@/lib/types";
-import { writeAuditLog } from "@/lib/audit";
 import { authorize, unauthorizedResponse } from "@/lib/rbac";
 import { getPassportCertificationAlert } from "@/lib/utils/certification-status";
+import {
+  transitionPassportStatus,
+  PassportNotFoundError,
+  InvalidTransitionError,
+} from "@/lib/services/transition-passport-status";
 
-const ALLOWED_TRANSITIONS: Record<DppStatus, DppStatus[]> = {
-  DRAFT: ["PENDING_VERIFICATION", "REVOKED"],
-  PENDING_VERIFICATION: ["ISSUED", "REVOKED"],
-  ISSUED: ["REVOKED", "SUPERSEDED"],
-  REVOKED: [],
-  SUPERSEDED: [],
-};
+// STEP: the transition core (ALLOWED_TRANSITIONS, the hash re-chain, the
+// update + audit-log write, all inside one $transaction) was extracted to
+// lib/services/transition-passport-status.ts so the Third-Party Auditor
+// Verification Workflow's submit-auditor-verification service could reuse
+// it instead of forking a second copy. This route's behavior is
+// unchanged — see that module's file banner for the full rationale.
 
 const ACTION_BY_STATUS: Record<"ISSUED" | "REVOKED" | "SUPERSEDED", AuditAction> = {
   ISSUED: "VERIFIED",
@@ -40,20 +42,6 @@ const PatchSchema = z.object({
   status: z.enum(["ISSUED", "REVOKED", "SUPERSEDED"]),
   reason: z.string().max(500).optional(),
 });
-
-class PassportNotFoundError extends Error {
-  constructor(batchId: string) {
-    super(`No passport found for batch "${batchId}"`);
-    this.name = "PassportNotFoundError";
-  }
-}
-
-class InvalidTransitionError extends Error {
-  constructor(from: string, to: string) {
-    super(`Cannot transition passport from "${from}" to "${to}"`);
-    this.name = "InvalidTransitionError";
-  }
-}
 
 export async function GET(
   _req: NextRequest,
@@ -134,48 +122,15 @@ export async function PATCH(
   const { status: nextStatus, reason } = parsed.data;
 
   try {
-    const updated = await prisma.$transaction(async (tx) => {
-      const current = await tx.polymerPassport.findUnique({ where: { batchId } });
-      if (!current) {
-        throw new PassportNotFoundError(batchId);
-      }
-
-      const allowed = ALLOWED_TRANSITIONS[current.status];
-      if (!allowed.includes(nextStatus)) {
-        throw new InvalidTransitionError(current.status, nextStatus);
-      }
-
-      const newHash = hashRecord({
-        batchId: current.batchId,
-        gtin: current.gtin,
-        status: nextStatus,
-        previousRecordHash: current.recordHash,
-        transitionedAt: new Date(),
-      });
-
-      const passport = await tx.polymerPassport.update({
-        where: { batchId },
-        data: {
-          status: nextStatus,
-          previousRecordHash: current.recordHash,
-          recordHash: newHash,
-          signedAt: new Date(),
-          signedBy: role,
-        },
-        include: { certifications: true, manufacturer: true },
-      });
-
-      await writeAuditLog(tx, {
-        passportId: passport.id,
-        action: ACTION_BY_STATUS[nextStatus],
+    const updated = await prisma.$transaction((tx) =>
+      transitionPassportStatus(tx, {
+        batchId,
+        nextStatus,
         actor: role,
-        previousHash: current.recordHash,
-        newHash,
+        auditAction: ACTION_BY_STATUS[nextStatus],
         metadata: reason ? { reason } : undefined,
-      });
-
-      return passport;
-    });
+      })
+    );
 
     return NextResponse.json({ success: true, data: updated });
   } catch (error) {

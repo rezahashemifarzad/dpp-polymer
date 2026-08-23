@@ -56,6 +56,23 @@ export default async function Gs1ResolverPage({ params, searchParams }: PageProp
   const tokenMatches = v === deriveVerificationToken(passport.recordHash);
   const linkTrusted = gtinMatches && tokenMatches;
 
+  // Third-Party Auditor Verification Workflow — surface the latest review
+  // event ONLY when it is a positive sign-off. auditorVerifications is
+  // already narrowed to "latest one" by lib/verifyPassport.ts's query; a
+  // REJECTED_BY_AUDITOR record (or no review yet) intentionally becomes
+  // `null` here — the public page never displays a rejection as any kind
+  // of trust signal (see components/PublicScanPage.tsx's file banner on
+  // that section).
+  const latestVerification = passport.auditorVerifications[0] ?? null;
+  const auditorSignOff =
+    latestVerification && latestVerification.status === "AUDITOR_VERIFIED"
+      ? {
+          auditorName: latestVerification.auditor.name,
+          auditorOrganization: latestVerification.auditor.organization,
+          signedAt: latestVerification.signedAt.toISOString(),
+        }
+      : null;
+
   // Convert Prisma Decimal fields to plain numbers — required for passing
   // props from a Server Component into a Client Component (Decimal
   // instances aren't serializable across that boundary).
@@ -135,6 +152,7 @@ export default async function Gs1ResolverPage({ params, searchParams }: PageProp
       }}
       integrityVerified={integrityVerified}
       linkTrusted={linkTrusted}
+      auditorSignOff={auditorSignOff}
     />
   );
 }

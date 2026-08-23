@@ -38,6 +38,7 @@ import {
   Layers,
   Settings2,
   BarChart3,
+  KeyRound,
 } from "lucide-react";
 import Link from "next/link";
 import { ToastProvider } from "@/lib/hooks/use-toast";
@@ -72,6 +73,13 @@ function AdminDashboardInner() {
           >
             <BarChart3 className="w-4 h-4" />
             ESG Analytics
+          </Link>
+          <Link
+            href="/auditor"
+            className="flex items-center gap-2 text-xs font-medium bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 text-amber-400 px-4 py-2 rounded-lg transition-all"
+          >
+            <KeyRound className="w-4 h-4" />
+            Auditor Portal
           </Link>
           <Link
             href="/"
