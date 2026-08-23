@@ -30,20 +30,30 @@ import PublicScanPage from "@/components/PublicScanPage";
 export const revalidate = 0;
 export const dynamic = "force-dynamic";
 
+// FIX (Circular Economy Platform Upgrade, Step 4): params/searchParams are
+// Promises in this Next.js 16 App Router repo (see AGENTS.md — every other
+// dynamic route already follows this), but this file was still typed and
+// destructured synchronously. Left un-awaited, `params.serialOrBatch` and
+// `searchParams.v` are both `undefined` at runtime, so `getVerifiedPassport`
+// was being called with batchId "undefined" on every real scan — the actual
+// GS1/QR resolver 404ing in production. Fixed below.
 interface PageProps {
-  params: { gtin: string; serialOrBatch: string };
-  searchParams: { v?: string };
+  params: Promise<{ gtin: string; serialOrBatch: string }>;
+  searchParams: Promise<{ v?: string }>;
 }
 
 export default async function Gs1ResolverPage({ params, searchParams }: PageProps) {
-  const batchId = decodeURIComponent(params.serialOrBatch);
+  const { gtin, serialOrBatch } = await params;
+  const { v } = await searchParams;
+
+  const batchId = decodeURIComponent(serialOrBatch);
   const result = await getVerifiedPassport(batchId);
 
   if (!result) notFound();
   const { passport, integrityVerified } = result;
 
-  const gtinMatches = padGtinTo14(params.gtin) === passport.gtin;
-  const tokenMatches = searchParams.v === deriveVerificationToken(passport.recordHash);
+  const gtinMatches = padGtinTo14(gtin) === passport.gtin;
+  const tokenMatches = v === deriveVerificationToken(passport.recordHash);
   const linkTrusted = gtinMatches && tokenMatches;
 
   // Convert Prisma Decimal fields to plain numbers — required for passing
@@ -74,18 +84,54 @@ export default async function Gs1ResolverPage({ params, searchParams }: PageProp
           legalName: passport.manufacturer.legalName,
           country: passport.manufacturer.country,
         },
-        certifications: passport.certifications.map((c) => ({
-          scheme: c.scheme,
-          certificateId: c.certificateId,
-          issuingBody: c.issuingBody,
-          validFrom: c.validFrom.toISOString(),
-          validUntil: c.validUntil.toISOString(),
-          documentUrl: c.documentUrl,
-        })),
+        // FIX (Step 4, discovered while touching this file): the public page
+        // was rendering every certification regardless of
+        // verificationStatus, including a manufacturer's own unverified
+        // PENDING_REVIEW submissions — the exact "never show unverified
+        // claims as fact" rule the Compliance module established for
+        // certifications generally (see
+        // docs/COMPLIANCE_CERTIFICATIONS_MODULE_SPEC.md). Filtered to
+        // VERIFIED-only here, at the one place the consumer-facing view is
+        // built, so a REJECTED or still-pending certification can never
+        // read as a green claim on a scan.
+        certifications: passport.certifications
+          .filter((c) => c.verificationStatus === "VERIFIED")
+          .map((c) => ({
+            scheme: c.scheme,
+            certificateId: c.certificateId,
+            issuingBody: c.issuingBody,
+            validFrom: c.validFrom.toISOString(),
+            validUntil: c.validUntil.toISOString(),
+            documentUrl: c.documentUrl,
+          })),
         recordHash: passport.recordHash,
         hashAlgorithm: passport.hashAlgorithm,
         previousRecordHash: passport.previousRecordHash,
         signedAt: passport.signedAt ? passport.signedAt.toISOString() : null,
+        // Circular Economy Platform Upgrade (Step 4) additions.
+        parentLinks: passport.parentLinks.map((link) => ({
+          id: link.id,
+          quantityUsedKg: link.quantityUsedKg !== null ? Number(link.quantityUsedKg) : null,
+          notes: link.notes,
+          parentPassport: {
+            batchId: link.parentPassport.batchId,
+            gtin: link.parentPassport.gtin,
+            polymerType: link.parentPassport.polymerType,
+            grade: link.parentPassport.grade,
+            recycledContentPercent: Number(link.parentPassport.recycledContentPercent),
+          },
+        })),
+        carbonFootprintCalculation: passport.carbonFootprintCalculation
+          ? {
+              scope1KgCO2e: Number(passport.carbonFootprintCalculation.scope1KgCO2e),
+              scope2KgCO2e: Number(passport.carbonFootprintCalculation.scope2KgCO2e),
+              scope3KgCO2e: Number(passport.carbonFootprintCalculation.scope3KgCO2e),
+              totalKgCO2e: Number(passport.carbonFootprintCalculation.totalKgCO2e),
+              weightKg: Number(passport.carbonFootprintCalculation.weightKg),
+              transportMode: passport.carbonFootprintCalculation.transportMode,
+              emissionFactorVersion: passport.carbonFootprintCalculation.emissionFactorVersion,
+            }
+          : null,
       }}
       integrityVerified={integrityVerified}
       linkTrusted={linkTrusted}

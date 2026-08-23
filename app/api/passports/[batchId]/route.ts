@@ -64,7 +64,26 @@ export async function GET(
   try {
     const passport = await prisma.polymerPassport.findUnique({
       where: { batchId },
-      include: { certifications: true, manufacturer: true },
+      include: {
+        certifications: true,
+        manufacturer: true,
+        parentLinks: {
+          include: {
+            parentPassport: {
+              select: {
+                id: true,
+                batchId: true,
+                gtin: true,
+                polymerType: true,
+                grade: true,
+                recycledContentPercent: true,
+                qrCodePayloadUrl: true,
+              },
+            },
+          },
+        },
+        carbonFootprintCalculation: true,
+      },
     });
 
     if (!passport) {

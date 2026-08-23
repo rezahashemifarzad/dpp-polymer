@@ -106,6 +106,22 @@ export async function GET(req: NextRequest) {
           manufacturer: { select: { id: true, legalName: true, country: true } },
           certifications: true,
           gs1Link: true,
+          parentLinks: {
+            include: {
+              parentPassport: {
+                select: {
+                  id: true,
+                  batchId: true,
+                  gtin: true,
+                  polymerType: true,
+                  grade: true,
+                  recycledContentPercent: true,
+                  qrCodePayloadUrl: true,
+                },
+              },
+            },
+          },
+          carbonFootprintCalculation: true,
         },
       }),
     ]);

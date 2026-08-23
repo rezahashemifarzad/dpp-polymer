@@ -17,6 +17,8 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createPassportAction } from "@/lib/actions/create-passport";
+import { linkBatchGenealogyAction } from "@/lib/actions/link-batch-genealogy";
+import { calculateCarbonFootprintAction } from "@/lib/actions/calculate-carbon-footprint";
 
 export interface ApiCertification {
   id: string;
@@ -46,6 +48,41 @@ export interface ApiCertificationAlert {
   expiringSoonCount: number;
 }
 
+// Circular Economy Platform Upgrade (Step 3) — genealogy + carbon footprint.
+// Both arrive nested off GET /api/passports / GET /api/passports/[batchId]
+// (see the `include` blocks added to those routes). Decimal fields are
+// strings for the same reason as the rest of this file — see the file
+// banner comment.
+export interface ApiGenealogyParentSummary {
+  id: string;
+  batchId: string;
+  gtin: string;
+  polymerType: string;
+  grade: string;
+  recycledContentPercent: string;
+  qrCodePayloadUrl: string | null;
+}
+
+export interface ApiGenealogyLink {
+  id: string;
+  quantityUsedKg: string | null;
+  notes: string | null;
+  parentPassport: ApiGenealogyParentSummary;
+}
+
+export interface ApiCarbonFootprintCalculation {
+  id: string;
+  weightKg: string;
+  transportDistanceKm: string;
+  transportMode: "TRUCK" | "RAIL" | "SEA" | "AIR";
+  scope1KgCO2e: string;
+  scope2KgCO2e: string;
+  scope3KgCO2e: string;
+  totalKgCO2e: string;
+  emissionFactorVersion: string;
+  calculatedAt: string;
+}
+
 export interface ApiPassport {
   id: string;
   polymerType: string;
@@ -67,6 +104,8 @@ export interface ApiPassport {
   status: DppStatusValue;
   certifications: ApiCertification[];
   certificationAlert: ApiCertificationAlert;
+  parentLinks: ApiGenealogyLink[];
+  carbonFootprintCalculation: ApiCarbonFootprintCalculation | null;
   createdAt: string;
 }
 
@@ -156,6 +195,36 @@ export function usePassports() {
     [refetch]
   );
 
+  const linkParentBatch = useCallback(
+    async (childBatchId: string, input: { parentBatchId: string; quantityUsedKg?: number; notes?: string }) => {
+      // Same Server Action pattern as createPassport above — runs
+      // server-side only, never needs the RBAC key that POST
+      // /api/passports/[batchId]/parents requires for external callers.
+      const result = await linkBatchGenealogyAction(childBatchId, input);
+      if (!result.ok) {
+        throw new Error(result.error || "Failed to link parent batch");
+      }
+      await refetch();
+      return result.data;
+    },
+    [refetch]
+  );
+
+  const calculateCarbonFootprint = useCallback(
+    async (
+      batchId: string,
+      input: { weightKg: number; transportDistanceKm?: number; transportMode?: "TRUCK" | "RAIL" | "SEA" | "AIR" }
+    ) => {
+      const result = await calculateCarbonFootprintAction(batchId, input);
+      if (!result.ok) {
+        throw new Error(result.error || "Failed to calculate carbon footprint");
+      }
+      await refetch();
+      return result.data;
+    },
+    [refetch]
+  );
+
   return {
     data,
     loading,
@@ -163,5 +232,7 @@ export function usePassports() {
     hasLoadedOnce: hasLoadedOnce.current,
     refetch,
     createPassport,
+    linkParentBatch,
+    calculateCarbonFootprint,
   };
 }

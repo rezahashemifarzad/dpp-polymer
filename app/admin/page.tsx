@@ -36,15 +36,19 @@ import {
   RefreshCw,
   ExternalLink,
   Layers,
+  Settings2,
 } from "lucide-react";
 import Link from "next/link";
 import { ToastProvider } from "@/lib/hooks/use-toast";
-import { usePassports } from "@/lib/hooks/use-passports";
+import { usePassports, type ApiPassport } from "@/lib/hooks/use-passports";
 import { CreatePassportModal } from "@/components/dashboard/create-passport-modal";
+import { BatchDetailsModal } from "@/components/dashboard/batch-details-modal";
 
 function AdminDashboardInner() {
-  const { data: passports, loading, refetch, createPassport } = usePassports();
+  const { data: passports, loading, refetch, createPassport, linkParentBatch, calculateCarbonFootprint } =
+    usePassports();
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [manageTarget, setManageTarget] = useState<ApiPassport | null>(null);
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 p-6 font-sans">
@@ -154,12 +158,13 @@ function AdminDashboardInner() {
                   <th className="p-3 text-center">Status</th>
                   <th className="p-3 text-center">Compliance</th>
                   <th className="p-3 text-center">Direct Link</th>
+                  <th className="p-3 text-center">Genealogy / Carbon</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-800/60">
                 {passports.length === 0 ? (
                   <tr>
-                    <td colSpan={9} className="text-center p-6 text-slate-500">
+                    <td colSpan={10} className="text-center p-6 text-slate-500">
                       {loading ? "Fetching records from database..." : "No passports issued yet. Create your first passport above."}
                     </td>
                   </tr>
@@ -213,6 +218,18 @@ function AdminDashboardInner() {
                           <span className="text-slate-600">—</span>
                         )}
                       </td>
+                      <td className="p-3 text-center">
+                        <button
+                          onClick={() => setManageTarget(item)}
+                          className="inline-flex items-center gap-1 text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 px-2.5 py-1 rounded-lg transition-all"
+                        >
+                          <Settings2 className="w-3 h-3" />
+                          Manage
+                          {(item.parentLinks.length > 0 || item.carbonFootprintCalculation) && (
+                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                          )}
+                        </button>
+                      </td>
                     </tr>
                   ))
                 )}
@@ -227,6 +244,18 @@ function AdminDashboardInner() {
         onClose={() => setShowCreateModal(false)}
         onCreated={() => refetch()}
         onCreate={createPassport}
+      />
+
+      <BatchDetailsModal
+        open={manageTarget !== null}
+        onClose={() => setManageTarget(null)}
+        // Re-derive from the live list rather than holding a stale snapshot
+        // — after linkParentBatch / calculateCarbonFootprint each refetch()
+        // the list, so this keeps the modal showing the just-saved state.
+        passport={manageTarget ? passports.find((p) => p.id === manageTarget.id) ?? null : null}
+        allPassports={passports}
+        onLinkParent={linkParentBatch}
+        onCalculateCarbon={calculateCarbonFootprint}
       />
     </div>
   );

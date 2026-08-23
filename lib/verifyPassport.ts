@@ -16,11 +16,32 @@
 
 import { prisma } from "./prisma";
 import { hashRecord, computeTotalRecycledPercent } from "./types";
-import type { PolymerPassport, Certification } from "@prisma/client";
+import type { PolymerPassport, Certification, CarbonFootprintCalculation } from "@prisma/client";
+
+// Circular Economy Platform Upgrade (Step 4) — genealogy parent summaries are
+// intentionally a narrow `select`, not the full PolymerPassport, since the
+// public scan page only ever renders a lineage list, never a parent's full
+// dossier (a parent batch may belong to a different manufacturer entirely).
+export interface GenealogyParentSummary {
+  id: string;
+  batchId: string;
+  gtin: string;
+  polymerType: string;
+  grade: string;
+  recycledContentPercent: unknown; // Prisma.Decimal — convert with Number() at the UI boundary
+  qrCodePayloadUrl: string | null;
+}
 
 export type PassportWithRelations = PolymerPassport & {
   certifications: Certification[];
   manufacturer: { id: string; legalName: string; country: string; gln: string | null };
+  parentLinks: Array<{
+    id: string;
+    quantityUsedKg: unknown; // Prisma.Decimal | null
+    notes: string | null;
+    parentPassport: GenealogyParentSummary;
+  }>;
+  carbonFootprintCalculation: CarbonFootprintCalculation | null;
 };
 
 export interface VerifiedPassportResult {
@@ -31,7 +52,26 @@ export interface VerifiedPassportResult {
 export async function getVerifiedPassport(batchId: string): Promise<VerifiedPassportResult | null> {
   const passport = await prisma.polymerPassport.findUnique({
     where: { batchId },
-    include: { certifications: true, manufacturer: true },
+    include: {
+      certifications: true,
+      manufacturer: true,
+      parentLinks: {
+        include: {
+          parentPassport: {
+            select: {
+              id: true,
+              batchId: true,
+              gtin: true,
+              polymerType: true,
+              grade: true,
+              recycledContentPercent: true,
+              qrCodePayloadUrl: true,
+            },
+          },
+        },
+      },
+      carbonFootprintCalculation: true,
+    },
   });
   if (!passport) return null;
 

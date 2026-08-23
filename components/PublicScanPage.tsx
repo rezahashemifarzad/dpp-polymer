@@ -22,7 +22,7 @@ import { useState, useMemo } from "react";
 import {
   ShieldCheck, ShieldAlert, Leaf, Recycle, Layers, Gauge, Hash,
   BadgeCheck, ExternalLink, Download, Copy, Check, AlertTriangle,
-  Factory, CalendarDays, Clock, CheckCircle2,
+  Factory, CalendarDays, Clock, CheckCircle2, GitBranch, FileText,
 } from "lucide-react";
 
 /* ---------------------------------------------------------------------------
@@ -36,6 +36,38 @@ interface CertificationView {
   validFrom: string;
   validUntil: string;
   documentUrl: string | null;
+}
+
+// Circular Economy Platform Upgrade (Step 4) additions — a slimmer summary
+// of each parent batch than the admin view uses (see
+// lib/verifyPassport.ts's GenealogyParentSummary), since a scanner should
+// see enough to identify the upstream batch, not its full internal record.
+interface GenealogyParentView {
+  batchId: string;
+  gtin: string;
+  polymerType: string;
+  grade: string;
+  recycledContentPercent: number;
+}
+
+interface GenealogyLinkView {
+  id: string;
+  quantityUsedKg: number | null;
+  notes: string | null;
+  parentPassport: GenealogyParentView;
+}
+
+// Deliberately a distinct, narrower type than the admin dashboard's
+// ApiCarbonFootprintCalculation — the public page only ever renders the
+// breakdown + methodology version, never raw calculator inputs.
+interface CarbonFootprintCalculationView {
+  scope1KgCO2e: number;
+  scope2KgCO2e: number;
+  scope3KgCO2e: number;
+  totalKgCO2e: number;
+  weightKg: number;
+  transportMode: "TRUCK" | "RAIL" | "SEA" | "AIR";
+  emissionFactorVersion: string;
 }
 
 interface PassportView {
@@ -63,6 +95,8 @@ interface PassportView {
   hashAlgorithm: string;
   previousRecordHash: string | null;
   signedAt: string | null;
+  parentLinks: GenealogyLinkView[];
+  carbonFootprintCalculation: CarbonFootprintCalculationView | null;
 }
 
 interface PublicScanPageProps {
@@ -236,20 +270,86 @@ export default function PublicScanPage({ passport, integrityVerified, linkTruste
         </section>
 
         {/* Carbon footprint */}
-        <section className="rounded-xl bg-white border border-slate-200 p-4 flex items-center justify-between">
-          <div>
-            <h2 className="f-display text-sm font-semibold text-slate-900 flex items-center gap-1.5">
-              <Leaf className="w-4 h-4 text-emerald-600" /> Carbon Footprint
-            </h2>
-            <div className="text-[10px] text-slate-400 f-body mt-0.5">
-              {passport.lcaMethodology} · {passport.lcaScope}
-              {passport.lcaThirdPartyVerified && ` · verified by ${passport.lcaVerifierName ?? "third party"}`}
+        <section className="rounded-xl bg-white border border-slate-200 p-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="f-display text-sm font-semibold text-slate-900 flex items-center gap-1.5">
+                <Leaf className="w-4 h-4 text-emerald-600" /> Carbon Footprint
+              </h2>
+              <div className="text-[10px] text-slate-400 f-body mt-0.5">
+                {passport.lcaMethodology} · {passport.lcaScope}
+                {passport.lcaThirdPartyVerified && ` · verified by ${passport.lcaVerifierName ?? "third party"}`}
+              </div>
             </div>
+            <span className="f-mono text-lg font-medium text-slate-900">
+              {passport.carbonFootprintKgCO2ePerKg} <span className="text-xs text-slate-400">kgCO₂e/kg</span>
+            </span>
           </div>
-          <span className="f-mono text-lg font-medium text-slate-900">
-            {passport.carbonFootprintKgCO2ePerKg} <span className="text-xs text-slate-400">kgCO₂e/kg</span>
-          </span>
+
+          {/* Illustrative Scope 1/2/3 estimate — deliberately visually
+              subordinate (smaller, muted, clearly labeled) to the verified
+              LCA figure above. This is a rough calculator output from
+              generic emission factors, never a substitute for the
+              manufacturer's own (optionally third-party-verified) figure —
+              see lib/utils/carbon-footprint-calculator.ts and the
+              greenwashing-risk note in lib/services/calculate-carbon-footprint.ts. */}
+          {passport.carbonFootprintCalculation && (
+            <div className="mt-3 pt-3 border-t border-dashed border-slate-200">
+              <div className="text-[10px] text-slate-400 f-body mb-2">
+                Estimated Scope 1/2/3 breakdown (illustrative — {passport.carbonFootprintCalculation.emissionFactorVersion})
+              </div>
+              <div className="grid grid-cols-4 gap-2 text-center">
+                <div>
+                  <div className="f-mono text-xs font-medium text-slate-600">
+                    {passport.carbonFootprintCalculation.scope1KgCO2e}
+                  </div>
+                  <div className="text-[9px] text-slate-400 f-body">Scope 1</div>
+                </div>
+                <div>
+                  <div className="f-mono text-xs font-medium text-slate-600">
+                    {passport.carbonFootprintCalculation.scope2KgCO2e}
+                  </div>
+                  <div className="text-[9px] text-slate-400 f-body">Scope 2</div>
+                </div>
+                <div>
+                  <div className="f-mono text-xs font-medium text-slate-600">
+                    {passport.carbonFootprintCalculation.scope3KgCO2e}
+                  </div>
+                  <div className="text-[9px] text-slate-400 f-body">Scope 3</div>
+                </div>
+                <div>
+                  <div className="f-mono text-xs font-semibold text-slate-700">
+                    {passport.carbonFootprintCalculation.totalKgCO2e}
+                  </div>
+                  <div className="text-[9px] text-slate-400 f-body">Total (kg)</div>
+                </div>
+              </div>
+            </div>
+          )}
         </section>
+
+        {/* Batch Lineage / Supply-Chain Genealogy */}
+        {passport.parentLinks.length > 0 && (
+          <section className="rounded-xl bg-white border border-slate-200 p-4">
+            <h2 className="f-display text-sm font-semibold text-slate-900 flex items-center gap-1.5 mb-3">
+              <GitBranch className="w-4 h-4 text-teal-700" /> Batch Lineage
+            </h2>
+            <div className="space-y-2">
+              {passport.parentLinks.map((link) => (
+                <div key={link.id} className="rounded-lg bg-slate-50 p-3 flex items-center justify-between">
+                  <div>
+                    <div className="f-mono text-xs font-medium text-slate-900">{link.parentPassport.batchId}</div>
+                    <div className="text-[10px] text-slate-400 f-body mt-0.5">
+                      {link.parentPassport.polymerType} · {link.parentPassport.grade} ·{" "}
+                      {link.parentPassport.recycledContentPercent}% recycled
+                      {link.quantityUsedKg ? ` · ${link.quantityUsedKg} kg used` : ""}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
 
         {/* Certifications */}
         <section>
@@ -350,6 +450,20 @@ export default function PublicScanPage({ passport, integrityVerified, linkTruste
             )}
           </div>
         </section>
+
+        {/* PDF Certificate of Conformity export (Circular Economy Platform
+            Upgrade, Step 4) — streamed server-side by
+            app/api/passports/[batchId]/certificate.pdf/route.ts, a public
+            GET (no RBAC key: this is the same data already shown on this
+            page, just as a signed, printable document). */}
+        <a
+          href={`/api/passports/${encodeURIComponent(passport.batchId)}/certificate.pdf`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex items-center justify-center gap-2 rounded-xl bg-slate-900 text-white text-xs f-body font-medium py-3 hover:bg-slate-800 transition-colors"
+        >
+          <FileText className="w-4 h-4" /> Download Official Certificate (PDF)
+        </a>
 
         <div className="text-center pt-1 pb-4">
           <a href="https://gs1.org/standards/digital-link" target="_blank" rel="noopener noreferrer"
