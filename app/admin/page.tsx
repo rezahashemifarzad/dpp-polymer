@@ -40,6 +40,7 @@ import {
   BarChart3,
   KeyRound,
   Building2,
+  Coins,
   Printer,
   FileSpreadsheet,
   Loader2,
@@ -168,6 +169,13 @@ function AdminDashboardInner() {
           >
             <Building2 className="w-4 h-4" />
             Client Portal
+          </Link>
+          <Link
+            href="/admin/green-accounting"
+            className="flex items-center gap-2 text-xs font-medium bg-lime-500/10 hover:bg-lime-500/20 border border-lime-500/30 text-lime-400 px-4 py-2 rounded-lg transition-all"
+          >
+            <Coins className="w-4 h-4" />
+            Green Accounting
           </Link>
           <Link
             href="/"

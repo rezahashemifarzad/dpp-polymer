@@ -97,6 +97,14 @@ enum AuditAction {
   COC_VERIFIED
   COC_FLAGGED
   COC_REJECTED
+  // Green Accounting & EU Plastic Tax Tracker — additive, existing values
+  // and rows untouched. Written whenever a locked, auditable
+  // BatchGreenValuation snapshot is saved for a passport (see
+  // lib/services/plastic-tax-calculator.ts). Deliberately distinct from
+  // CARBON_CALCULATED — a green valuation is a financial/tax figure, not
+  // an emissions estimate, even though both derive from the same recorded
+  // batch weight.
+  GREEN_VALUATION_SAVED
 }
 
 // Compliance & Green Certifications Module (docs/COMPLIANCE_CERTIFICATIONS_MODULE_SPEC.md
@@ -265,6 +273,14 @@ model PolymerPassport {
   // every raw material supplier, recycler, and compounder tier that fed
   // into this batch, each independently reviewable by an Auditor.
   chainOfCustodyRecords ChainOfCustodyRecord[]
+
+  // --- 12. Green Accounting & EU Plastic Tax Tracker --------------------------
+  // See BatchGreenValuation below. Optional, user-triggered snapshot of this
+  // batch's plastic-tax financial assessment — the live dashboard/API
+  // always computes fresh figures by default (lib/services/
+  // plastic-tax-calculator.ts); this relation only exists once someone
+  // explicitly locks a valuation for audit/filing purposes.
+  greenValuation BatchGreenValuation?
 
   // --- Lifecycle / meta --------------------------------------------------
   status           DppStatus @default(ISSUED)
@@ -677,4 +693,85 @@ model ChainOfCustodyRecord {
   @@index([passportId])
   @@index([status])
   @@index([tier])
+}
+
+// =============================================================================
+// 13. Green Accounting & EU Plastic Tax Tracker
+// -----------------------------------------------------------------------------
+// Fully additive — no existing model, field, or enum value is changed. Two
+// new models:
+//   - PlasticTaxParameter: a configurable, versioned tax rate (defaults to
+//     the EU Plastic Packaging Tax's real-world benchmark of EUR 800/tonne
+//     on non-recycled plastic packaging mass — see the pre-existing
+//     EU_PLASTIC_TAX_RATE_EUR_PER_TONNE constant in lib/services/
+//     esg-analytics.ts, which this model deliberately does not touch or
+//     replace; that constant remains the ESG dashboard's own existing
+//     illustrative figure, while this model powers the new dedicated
+//     Green Accounting feature).
+//   - BatchGreenValuation: an optional, user-triggered, locked snapshot of
+//     one passport's plastic-tax financial assessment — mirrors
+//     CarbonFootprintCalculation's "compute live by default, persist a
+//     snapshot only when explicitly saved" pattern. @@unique on passportId:
+//     latest snapshot only, upserted, not appended.
+// =============================================================================
+
+model PlasticTaxParameter {
+  id String @id @default(uuid())
+
+  jurisdiction String @default("EU")
+  label        String @default("EU Plastic Packaging Tax")
+
+  currency     String  @default("EUR")
+  ratePerTonne Decimal @db.Decimal(10, 2) // e.g. 800.00 for the EU benchmark
+
+  effectiveFrom DateTime  @default(now())
+  effectiveTo   DateTime?
+
+  active Boolean @default(true)
+
+  source String? @db.Text // e.g. citation for the rate (regulation, admin note)
+  notes  String? @db.Text
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  valuations BatchGreenValuation[]
+
+  @@index([jurisdiction])
+  @@index([active])
+}
+
+model BatchGreenValuation {
+  id String @id @default(uuid())
+
+  passportId String          @unique
+  passport   PolymerPassport @relation(fields: [passportId], references: [id])
+
+  taxParameterId String
+  taxParameter   PlasticTaxParameter @relation(fields: [taxParameterId], references: [id])
+
+  // Inputs snapshotted at valuation time, so a later change to the source
+  // batch weight or an updated tax parameter never silently redates a
+  // filed/locked valuation.
+  batchMassKg   Decimal @db.Decimal(10, 3)
+  pcrMassKg     Decimal @db.Decimal(10, 3)
+  taxableMassKg Decimal @db.Decimal(10, 3) // batchMassKg - pcrMassKg
+
+  ratePerTonneEurSnapshot Decimal @db.Decimal(10, 2)
+
+  // gross = full liability if 0% were recycled (batchMassKg * rate)
+  // savings = financial offset attributable to PCR mass (pcrMassKg * rate)
+  // net = gross - savings (liability on the actual taxable mass)
+  grossLiabilityEur Decimal @db.Decimal(12, 2)
+  pcrTaxSavingsEur  Decimal @db.Decimal(12, 2)
+  netLiabilityEur   Decimal @db.Decimal(12, 2)
+
+  valuedAt DateTime @default(now())
+  valuedBy String // "ADMIN", same convention as other actor fields in this app
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([passportId])
+  @@index([taxParameterId])
 }

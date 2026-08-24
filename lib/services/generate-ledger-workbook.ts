@@ -25,13 +25,53 @@
  * rule generate-compliance-report-pdf.tsx follows, per that model's own
  * schema comment ("Admin+portal-only... never surfaced on the public
  * passport page").
+ *
+ * Sprint 3.2 (Green Tax & Audit Reports Export) addition: a SECOND,
+ * separate workbook export — generateGreenTaxWorkbook() — living in this
+ * same file so it can reuse the styling helpers above (styleHeaderRow,
+ * addNoteRow, HEADER_FILL/HEADER_FONT), but built and exposed
+ * independently of generateLedgerWorkbook(). Two sheets:
+ *
+ *   3. "Green Accounting" — one row per active batch's live plastic-tax
+ *      figures (mass, PCR mass, taxable mass, gross/savings/net
+ *      liability, whether locked), reusing lib/services/
+ *      plastic-tax-calculator.ts's computePortfolioGreenAccounting() so
+ *      this sheet can never disagree with the /admin/green-accounting
+ *      dashboard for the same portfolio.
+ *   4. "Green Valuation History" — every AuditLog row where
+ *      action = "GREEN_VALUATION_SAVED", each row's `metadata` JSON
+ *      unpacked into its own columns (netLiabilityEur,
+ *      pcrTaxSavingsEur, ratePerTonneEur at the time of that save). This
+ *      is the genuine append-only "historical snapshots for regulatory
+ *      reviews" the request asks for — BatchGreenValuation itself is
+ *      deliberately "latest only" (see its own schema comment, mirroring
+ *      CarbonFootprintCalculation's upsert pattern), so it cannot show a
+ *      batch's valuation history by itself; the AuditLog trail this
+ *      sheet reads from is written in the same $transaction as every
+ *      BatchGreenValuation upsert (see
+ *      lib/services/plastic-tax-calculator.ts's saveBatchGreenValuation)
+ *      and is never overwritten, so it already IS that history.
+ *
+ * Kept as a separate, green-tax-only export (not folded into the four-
+ * sheet Material Ledger workbook) because the UI's own "Export Tax &
+ * Financial Excel" button on /admin/green-accounting is a focused,
+ * green-tax-specific deliverable, distinct from the full-ledger
+ * "Download Ledger Excel" button elsewhere in the admin console —
+ * exactly the same reasoning that keeps
+ * generate-green-tax-report-pdf.tsx a separate PDF from
+ * generate-compliance-report-pdf.tsx rather than one document trying to
+ * serve two different audiences/purposes. generateLedgerWorkbook() and
+ * its existing two sheets are completely untouched by this addition.
  */
 
 import ExcelJS from "exceljs";
 import { prisma } from "@/lib/prisma";
+import { computePortfolioGreenAccounting } from "@/lib/services/plastic-tax-calculator";
 
 const MAX_LEDGER_ROWS = 5000;
 const MAX_AUDIT_ROWS = 5000;
+const MAX_GREEN_BATCH_ROWS = 5000;
+const MAX_GREEN_HISTORY_ROWS = 5000;
 
 const HEADER_FILL: ExcelJS.Fill = {
   type: "pattern",
@@ -212,6 +252,146 @@ export async function generateLedgerWorkbook(): Promise<Buffer> {
 
   await buildMaterialLedgerSheet(workbook);
   await buildAuditTrailSheet(workbook);
+
+  const arrayBuffer = await workbook.xlsx.writeBuffer();
+  return Buffer.from(arrayBuffer);
+}
+
+// =============================================================================
+// Sprint 3.2 — Green Tax & Audit Reports Export (Excel Workbook Extension)
+// =============================================================================
+
+async function buildGreenAccountingSheet(workbook: ExcelJS.Workbook) {
+  const sheet = workbook.addWorksheet("Green Accounting", {
+    views: [{ state: "frozen", ySplit: 1 }],
+  });
+
+  sheet.columns = [
+    { header: "Batch ID", key: "batchId", width: 20 },
+    { header: "Polymer Type", key: "polymerType", width: 14 },
+    { header: "Grade", key: "grade", width: 24 },
+    { header: "Manufacturer", key: "manufacturer", width: 24 },
+    { header: "Status", key: "status", width: 20 },
+    { header: "Has Weight Data", key: "hasWeightData", width: 16 },
+    { header: "Batch Mass (kg)", key: "batchMassKg", width: 16 },
+    { header: "PCR Mass (kg)", key: "pcrMassKg", width: 16 },
+    { header: "Taxable Mass (kg)", key: "taxableMassKg", width: 16 },
+    { header: "Rate (EUR/tonne)", key: "ratePerTonneEur", width: 16 },
+    { header: "Gross Liability (EUR)", key: "grossLiabilityEur", width: 18 },
+    { header: "PCR Tax Savings (EUR)", key: "pcrTaxSavingsEur", width: 18 },
+    { header: "Net Liability (EUR)", key: "netLiabilityEur", width: 18 },
+    { header: "Locked Valuation", key: "hasLockedValuation", width: 16 },
+  ];
+  styleHeaderRow(sheet.getRow(1));
+
+  const summary = await computePortfolioGreenAccounting();
+  const rows = summary.batches.slice(0, MAX_GREEN_BATCH_ROWS);
+
+  for (const b of rows) {
+    sheet.addRow({
+      batchId: b.batchId,
+      polymerType: b.polymerType,
+      grade: b.grade,
+      manufacturer: b.manufacturerName ?? "—",
+      status: b.status,
+      hasWeightData: b.hasWeightData ? "Yes" : "No",
+      batchMassKg: b.batchMassKg,
+      pcrMassKg: b.pcrMassKg,
+      taxableMassKg: b.taxableMassKg,
+      ratePerTonneEur: summary.ratePerTonneEur,
+      grossLiabilityEur: b.grossLiabilityEur,
+      pcrTaxSavingsEur: b.pcrTaxSavingsEur,
+      netLiabilityEur: b.netLiabilityEur,
+      hasLockedValuation: b.hasLockedValuation ? "Yes" : "No",
+    });
+  }
+
+  addNoteRow(
+    sheet,
+    sheet.columns.length,
+    `Portfolio totals — Gross: €${summary.totalGrossLiabilityEur.toLocaleString()} · PCR Savings: €${summary.totalPcrTaxSavingsEur.toLocaleString()} · Net: €${summary.totalNetLiabilityEur.toLocaleString()}. ${summary.disclaimer}`
+  );
+  if (rows.length < summary.batches.length) {
+    addNoteRow(
+      sheet,
+      sheet.columns.length,
+      `Showing the ${MAX_GREEN_BATCH_ROWS} most recent of ${summary.batches.length} active batches.`
+    );
+  }
+
+  sheet.autoFilter = { from: { row: 1, column: 1 }, to: { row: 1, column: sheet.columns.length } };
+  return rows.length;
+}
+
+async function buildGreenValuationHistorySheet(workbook: ExcelJS.Workbook) {
+  const sheet = workbook.addWorksheet("Green Valuation History", {
+    views: [{ state: "frozen", ySplit: 1 }],
+  });
+
+  sheet.columns = [
+    { header: "Timestamp", key: "createdAt", width: 20 },
+    { header: "Batch ID", key: "batchId", width: 20 },
+    { header: "Actor", key: "actor", width: 22 },
+    { header: "Net Liability (EUR)", key: "netLiabilityEur", width: 18 },
+    { header: "PCR Tax Savings (EUR)", key: "pcrTaxSavingsEur", width: 18 },
+    { header: "Rate (EUR/tonne)", key: "ratePerTonneEur", width: 16 },
+  ];
+  styleHeaderRow(sheet.getRow(1));
+
+  // Every past GREEN_VALUATION_SAVED audit entry, oldest snapshot data
+  // preserved exactly as recorded at save time — this is the genuine
+  // append-only history (see this file's own banner comment). A
+  // BatchGreenValuation row itself is only ever "latest" per passport, so
+  // this AuditLog trail is the only place a batch's prior valuations
+  // (before being re-locked at a new rate, or re-locked after a weight
+  // correction) remain visible for a regulator to review.
+  const total = await prisma.auditLog.count({ where: { action: "GREEN_VALUATION_SAVED" } });
+  const logs = await prisma.auditLog.findMany({
+    where: { action: "GREEN_VALUATION_SAVED" },
+    orderBy: { createdAt: "desc" },
+    take: MAX_GREEN_HISTORY_ROWS,
+    select: {
+      createdAt: true,
+      actor: true,
+      metadata: true,
+      passport: { select: { batchId: true } },
+    },
+  });
+
+  for (const log of logs) {
+    const meta = (log.metadata ?? {}) as Record<string, unknown>;
+    sheet.addRow({
+      createdAt: log.createdAt.toISOString().replace("T", " ").slice(0, 19),
+      batchId: log.passport?.batchId ?? "—",
+      actor: log.actor,
+      netLiabilityEur: typeof meta.netLiabilityEur === "number" ? meta.netLiabilityEur : "—",
+      pcrTaxSavingsEur: typeof meta.pcrTaxSavingsEur === "number" ? meta.pcrTaxSavingsEur : "—",
+      ratePerTonneEur: typeof meta.ratePerTonneEur === "number" ? meta.ratePerTonneEur : "—",
+    });
+  }
+
+  if (logs.length < total) {
+    addNoteRow(
+      sheet,
+      sheet.columns.length,
+      `Showing the ${MAX_GREEN_HISTORY_ROWS} most recent of ${total} total valuation-lock events.`
+    );
+  }
+  if (logs.length === 0) {
+    addNoteRow(sheet, sheet.columns.length, "No valuations have been locked yet — see the Green Accounting sheet for live (unlocked) figures.");
+  }
+
+  sheet.autoFilter = { from: { row: 1, column: 1 }, to: { row: 1, column: sheet.columns.length } };
+  return logs.length;
+}
+
+export async function generateGreenTaxWorkbook(): Promise<Buffer> {
+  const workbook = new ExcelJS.Workbook();
+  workbook.creator = "Polymer DPP";
+  workbook.created = new Date();
+
+  await buildGreenAccountingSheet(workbook);
+  await buildGreenValuationHistorySheet(workbook);
 
   const arrayBuffer = await workbook.xlsx.writeBuffer();
   return Buffer.from(arrayBuffer);

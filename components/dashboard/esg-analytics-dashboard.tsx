@@ -49,8 +49,13 @@ import {
   Layers,
   Gauge,
   Info,
+  Coins,
+  Lock,
+  ArrowUpRight,
+  FileSpreadsheet,
 } from "lucide-react";
 import type { EsgAnalyticsSummary } from "@/lib/services/esg-analytics";
+import type { PortfolioGreenAccountingSummary } from "@/lib/services/plastic-tax-calculator";
 
 const STATUS_LABELS: Record<string, string> = {
   DRAFT: "Draft",
@@ -214,7 +219,16 @@ function StackedStatusBar({ segments }: { segments: StatusSegment[] }) {
   );
 }
 
-export function EsgAnalyticsDashboard({ summary }: { summary: EsgAnalyticsSummary }) {
+export function EsgAnalyticsDashboard({
+  summary,
+  greenAccounting,
+}: {
+  summary: EsgAnalyticsSummary;
+  // Optional so this component still renders correctly if ever called
+  // without the Sprint 3.1 data (e.g. an older caller) — the widget below
+  // simply doesn't render rather than crashing on a missing prop.
+  greenAccounting?: PortfolioGreenAccountingSummary;
+}) {
   const router = useRouter();
   const [refreshing, setRefreshing] = useState(false);
   // Sprint 2.3 (Enterprise Compliance Reporting & PDF/Excel Export Module)
@@ -225,6 +239,64 @@ export function EsgAnalyticsDashboard({ summary }: { summary: EsgAnalyticsSummar
   // needs a real fetch+blob round trip with its own loading/error state.
   const [pdfExporting, setPdfExporting] = useState(false);
   const [pdfError, setPdfError] = useState<string | null>(null);
+
+  // Sprint 3.2 (Green Tax & Audit Reports Export) — the widget's own two
+  // export buttons, distinct state from the Compliance PDF export above
+  // since they hit different routes and can be in flight independently.
+  const [greenPdfExporting, setGreenPdfExporting] = useState(false);
+  const [greenPdfError, setGreenPdfError] = useState<string | null>(null);
+  const [greenXlsxExporting, setGreenXlsxExporting] = useState(false);
+  const [greenXlsxError, setGreenXlsxError] = useState<string | null>(null);
+
+  const handleExportGreenPdf = async () => {
+    setGreenPdfError(null);
+    setGreenPdfExporting(true);
+    try {
+      const res = await fetch("/api/passports/green-tax-report.pdf");
+      if (!res.ok) {
+        const json = await res.json().catch(() => null);
+        throw new Error(json?.error || `Request failed with status ${res.status}`);
+      }
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `polymer-dpp-green-tax-report-${summary.generatedAt.slice(0, 10)}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      setGreenPdfError(err instanceof Error ? err.message : "Failed to generate green tax report PDF");
+    } finally {
+      setGreenPdfExporting(false);
+    }
+  };
+
+  const handleExportGreenXlsx = async () => {
+    setGreenXlsxError(null);
+    setGreenXlsxExporting(true);
+    try {
+      const res = await fetch("/api/passports/green-tax-export.xlsx");
+      if (!res.ok) {
+        const json = await res.json().catch(() => null);
+        throw new Error(json?.error || `Request failed with status ${res.status}`);
+      }
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `polymer-dpp-green-tax-export-${summary.generatedAt.slice(0, 10)}.xlsx`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      setGreenXlsxError(err instanceof Error ? err.message : "Failed to generate tax & financial Excel export");
+    } finally {
+      setGreenXlsxExporting(false);
+    }
+  };
 
   const pcrTrendData = useMemo(
     () => summary.monthlyTrend.map((p) => ({ month: p.month, avgPcr: p.avgRecycledContentPercent })),
@@ -630,6 +702,105 @@ export function EsgAnalyticsDashboard({ summary }: { summary: EsgAnalyticsSummar
             )}
           </div>
         </div>
+
+        {/* Green Accounting & Plastic Tax widget (Sprint 3.1) — a compact
+            summary of lib/services/plastic-tax-calculator.ts's portfolio
+            figures, computed server-side alongside this page's own ESG
+            summary (see app/admin/esg-analytics/page.tsx) so the two never
+            disagree. Full detail — per-batch breakdown, locking a
+            valuation, tax-parameter configuration — lives on the
+            dedicated /admin/green-accounting page this links to. */}
+        {greenAccounting && (
+          <div className="bg-slate-900/60 border border-slate-800 rounded-3xl p-6 backdrop-blur-xl">
+            <div className="flex items-center justify-between mb-4 gap-2 flex-wrap">
+              <div>
+                <h3 className="text-sm font-bold text-white flex items-center gap-1.5">
+                  <Coins className="w-4 h-4 text-lime-400" /> Green Accounting &amp; Plastic Tax
+                </h3>
+                <p className="text-[11px] text-slate-400 font-mono">
+                  {greenAccounting.ratePerTonneEur} EUR/t · {greenAccounting.jurisdiction} ·{" "}
+                  {greenAccounting.batchesWithWeightData} of {greenAccounting.activeBatches} active batches valued
+                </p>
+              </div>
+              <Link
+                href="/admin/green-accounting"
+                className="flex items-center gap-1.5 text-xs bg-lime-500/10 hover:bg-lime-500/20 border border-lime-500/30 text-lime-400 px-3 py-2 rounded-lg transition-all whitespace-nowrap"
+              >
+                View Full Green Accounting
+                <ArrowUpRight className="w-3.5 h-3.5" />
+              </Link>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div className="bg-slate-950 border border-slate-800 rounded-xl p-4">
+                <div className="text-[10px] font-mono text-slate-500 uppercase tracking-wider">Gross Liability</div>
+                <div className="text-xl font-extrabold font-mono mt-1 text-amber-400">
+                  €{numberFmt(greenAccounting.totalGrossLiabilityEur, 0)}
+                </div>
+              </div>
+              <div className="bg-slate-950 border border-slate-800 rounded-xl p-4">
+                <div className="text-[10px] font-mono text-slate-500 uppercase tracking-wider">PCR Tax Savings</div>
+                <div className="text-xl font-extrabold font-mono mt-1 text-emerald-400">
+                  €{numberFmt(greenAccounting.totalPcrTaxSavingsEur, 0)}
+                </div>
+              </div>
+              <div className="bg-slate-950 border border-slate-800 rounded-xl p-4">
+                <div className="text-[10px] font-mono text-slate-500 uppercase tracking-wider flex items-center gap-1">
+                  Net Liability
+                  <Lock className="w-2.5 h-2.5 text-slate-600" />
+                </div>
+                <div className="text-xl font-extrabold font-mono mt-1 text-rose-400">
+                  €{numberFmt(greenAccounting.totalNetLiabilityEur, 0)}
+                </div>
+              </div>
+            </div>
+
+            {/* Sprint 3.2 export buttons — same routes/logic as the
+                dedicated /admin/green-accounting page's header buttons,
+                compact form for this widget's tighter footprint. */}
+            <div className="flex flex-wrap items-center gap-2 mt-4">
+              <button
+                onClick={handleExportGreenXlsx}
+                disabled={greenXlsxExporting}
+                className="flex items-center gap-1.5 text-xs bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold px-3 py-2 rounded-lg transition-all whitespace-nowrap"
+              >
+                {greenXlsxExporting ? (
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                ) : (
+                  <FileSpreadsheet className="w-3.5 h-3.5" />
+                )}
+                Export Tax &amp; Financial Excel
+              </button>
+              <button
+                onClick={handleExportGreenPdf}
+                disabled={greenPdfExporting}
+                className="flex items-center gap-1.5 text-xs bg-slate-100 hover:bg-white disabled:opacity-50 disabled:cursor-not-allowed text-slate-900 font-bold px-3 py-2 rounded-lg transition-all whitespace-nowrap"
+              >
+                {greenPdfExporting ? (
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                ) : (
+                  <FileText className="w-3.5 h-3.5" />
+                )}
+                Export Green Tax PDF
+              </button>
+            </div>
+            {(greenPdfError || greenXlsxError) && (
+              <div className="mt-2 space-y-1.5">
+                {greenPdfError && (
+                  <div className="flex items-start gap-1.5 text-[11px] text-red-400 font-mono bg-red-500/10 border border-red-500/20 rounded-lg px-3 py-2">
+                    <AlertTriangle className="w-3.5 h-3.5 mt-0.5 shrink-0" />
+                    <span>{greenPdfError}</span>
+                  </div>
+                )}
+                {greenXlsxError && (
+                  <div className="flex items-start gap-1.5 text-[11px] text-red-400 font-mono bg-red-500/10 border border-red-500/20 rounded-lg px-3 py-2">
+                    <AlertTriangle className="w-3.5 h-3.5 mt-0.5 shrink-0" />
+                    <span>{greenXlsxError}</span>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Caveats footer — mirrors the "never present unverified/estimated
             data as fact" principle used throughout this app (certifications,

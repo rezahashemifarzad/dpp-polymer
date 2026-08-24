@@ -14,11 +14,20 @@
  */
 
 import { getEsgAnalytics } from "@/lib/services/esg-analytics";
+import { computePortfolioGreenAccounting } from "@/lib/services/plastic-tax-calculator";
 import { EsgAnalyticsDashboard } from "@/components/dashboard/esg-analytics-dashboard";
 
 export const dynamic = "force-dynamic";
 
 export default async function EsgAnalyticsPage() {
-  const summary = await getEsgAnalytics();
-  return <EsgAnalyticsDashboard summary={summary} />;
+  // Green Accounting & EU Plastic Tax Tracker (Sprint 3.1) — fetched
+  // alongside the existing ESG summary so this page's own compact widget
+  // (see EsgAnalyticsDashboard's "Green Accounting & Plastic Tax" section)
+  // never disagrees with the dedicated /admin/green-accounting page, both
+  // being server-computed from the same live ledger on every request.
+  const [summary, greenAccounting] = await Promise.all([
+    getEsgAnalytics(),
+    computePortfolioGreenAccounting(),
+  ]);
+  return <EsgAnalyticsDashboard summary={summary} greenAccounting={greenAccounting} />;
 }
