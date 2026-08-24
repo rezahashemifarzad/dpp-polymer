@@ -25,7 +25,20 @@
  */
 
 import React, { useMemo, useState } from "react";
-import { X, Loader2, GitBranch, Leaf, AlertTriangle, ArrowUpRight, Link2, BadgeCheck } from "lucide-react";
+import NextLink from "next/link";
+import {
+  X,
+  Loader2,
+  GitBranch,
+  Leaf,
+  AlertTriangle,
+  ArrowUpRight,
+  Link2,
+  BadgeCheck,
+  FileBadge,
+  LayoutGrid,
+} from "lucide-react";
+import { QRCodeSVG } from "qrcode.react";
 import { useToast } from "@/lib/hooks/use-toast";
 import type { ApiPassport, ChainOfCustodyTierValue } from "@/lib/hooks/use-passports";
 import { ChainOfCustodyTimeline } from "@/components/dashboard/chain-of-custody-timeline";
@@ -256,6 +269,58 @@ export function BatchDetailsModal({
         <p className="text-xs text-slate-400 mb-4 font-mono">
           Supply-chain genealogy and an illustrative Scope 1/2/3 carbon footprint estimate for this batch.
         </p>
+
+        {/* Certificate & QR panel — Phase 6 (Batch Certificate & Dynamic QR
+            Generator Suite). This is the ONE insertion point shared by both
+            app/page.tsx's Material Ledger tab and app/admin/page.tsx (both
+            render this modal), satisfying Phase 6's "link certificate
+            generation actions from... Batch Details modals" ask without a
+            second copy to keep in sync — same pattern already used below
+            for the Chain-of-Custody panel. Inline QR preview mirrors
+            QrCodeModal's own rendering (qrcode.react's <QRCodeSVG>, same
+            batch qrCodePayloadUrl) but stays small/read-only here; the
+            "Open Generator Suite" link hands off to the dedicated
+            /admin/generator page for the full preview/customize/print
+            workflow (layout presets, copies-per-batch, bulk label sheets). */}
+        <div className="border border-slate-800 rounded-2xl p-4 mb-4">
+          <div className="flex items-center gap-2 mb-3">
+            <FileBadge className="w-4 h-4 text-emerald-400" />
+            <h4 className="text-sm font-semibold text-slate-100">Certificate &amp; QR</h4>
+          </div>
+          <div className="flex flex-col sm:flex-row items-center sm:items-start gap-4">
+            <div className="p-3 bg-white rounded-xl w-fit shrink-0">
+              {passport.qrCodePayloadUrl ? (
+                <QRCodeSVG value={passport.qrCodePayloadUrl} size={88} bgColor="#FFFFFF" fgColor="#0f172a" level="M" />
+              ) : (
+                <div className="w-[88px] h-[88px] flex items-center justify-center text-slate-400 text-[9px] font-mono text-center px-2">
+                  No QR link recorded
+                </div>
+              )}
+            </div>
+            <div className="flex-1 min-w-0 w-full space-y-2">
+              <p className="text-[11px] text-slate-500 font-mono leading-relaxed">
+                Download this batch&apos;s official compliance certificate (with embedded verification QR), or open
+                the Generator Suite for print-ready label sheets and industrial layouts.
+              </p>
+              <div className="flex flex-col sm:flex-row gap-2">
+                <a
+                  href={`/api/passports/${encodeURIComponent(passport.batchId)}/certificate.pdf`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="flex items-center justify-center gap-1.5 px-3 py-2 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold rounded-xl transition text-[11px] font-mono"
+                >
+                  <FileBadge className="w-3.5 h-3.5" /> Download Certificate PDF
+                </a>
+                <NextLink
+                  href={`/admin/generator?batchId=${encodeURIComponent(passport.batchId)}`}
+                  className="flex items-center justify-center gap-1.5 px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold rounded-xl transition text-[11px] font-mono"
+                >
+                  <LayoutGrid className="w-3.5 h-3.5" /> Open Generator Suite
+                </NextLink>
+              </div>
+            </div>
+          </div>
+        </div>
 
         {/* Certifications panel — Phase 4 - Step 1 (Automated Expiry &
             Compliance Alerts). Read-only: attaching/verifying a

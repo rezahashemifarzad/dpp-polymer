@@ -23,10 +23,26 @@
  * export const runtime = "nodejs" is required: @react-pdf/renderer uses
  * Node APIs (streams, fontkit) not available on the Edge runtime — same
  * requirement as the certificate.pdf route.
+ *
+ * Phase 6 (Batch Certificate & Dynamic QR Generator Suite) additions:
+ * two new optional query params, both passed straight through to
+ * generateQrLabelSheetPdf's own `options` (which does the actual
+ * validation/clamping — this route only narrows the raw string to the
+ * union type it accepts):
+ *   - `layout=grid|large` — omitted or any other value falls back to
+ *     "grid", matching the service's own default.
+ *   - `copiesPerBatch=<n>` — omitted or non-numeric falls back to
+ *     undefined so the service applies its own default (1).
+ * Neither changes this route's existing behavior for callers that don't
+ * pass them (the admin "Print Labels" button, currently unaware of
+ * these params).
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import { generateQrLabelSheetPdf } from "@/lib/services/generate-qr-label-sheet-pdf";
+import {
+  generateQrLabelSheetPdf,
+  type LabelSheetLayout,
+} from "@/lib/services/generate-qr-label-sheet-pdf";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -66,8 +82,16 @@ export async function GET(req: NextRequest) {
     );
   }
 
+  const layoutParam = searchParams.get("layout");
+  const layout: LabelSheetLayout | undefined = layoutParam === "large" ? "large" : layoutParam === "grid" ? "grid" : undefined;
+
+  const copiesParam = searchParams.get("copiesPerBatch");
+  const copiesPerBatch = copiesParam !== null && copiesParam.trim() !== "" && !Number.isNaN(Number(copiesParam))
+    ? Number(copiesParam)
+    : undefined;
+
   try {
-    const pdfBuffer = await generateQrLabelSheetPdf(batchIds);
+    const pdfBuffer = await generateQrLabelSheetPdf(batchIds, { layout, copiesPerBatch });
     if (!pdfBuffer) {
       return NextResponse.json(
         { success: false, error: "None of the requested batches have a recorded QR link yet" },

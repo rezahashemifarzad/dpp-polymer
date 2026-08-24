@@ -32,10 +32,23 @@
  * (contrast with the bulk PDF sheet in qr-label-sheet-modal.tsx, which
  * does need the server to composite many labels onto print-accurate A4
  * pages).
+ *
+ * Phase 6 (Batch Certificate & Dynamic QR Generator Suite) addition: a
+ * "Download Certificate PDF" action, linking to the existing
+ * GET /api/passports/{batchId}/certificate.pdf route (see
+ * lib/services/generate-certificate-pdf.tsx). That route already existed
+ * (Circular Economy Platform Upgrade, Step 4) and was reachable from the
+ * public scan page and the Client Portal, but from *neither* Material
+ * Ledger UI — this is the shared insertion point that fixes that gap for
+ * both app/page.tsx and app/admin/page.tsx at once, satisfying Phase 6's
+ * "link certificate generation actions from the Material Ledger" ask. A
+ * plain <a> (not fetch+blob) is deliberate here, matching the route's own
+ * `inline` Content-Disposition — same pattern as the "Open Public
+ * Verification Page" link directly below it.
  */
 
 import { useRef } from "react";
-import { X, Download, ExternalLink } from "lucide-react";
+import { X, Download, ExternalLink, FileBadge } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 
 interface QrCodeModalProps {
@@ -174,6 +187,15 @@ export function QrCodeModal({ open, onClose, batchId, label, qrUrl, details }: Q
             <Download className="w-3.5 h-3.5" /> SVG
           </button>
         </div>
+
+        <a
+          href={`/api/passports/${encodeURIComponent(batchId)}/certificate.pdf`}
+          target="_blank"
+          rel="noreferrer"
+          className="flex items-center justify-center gap-1.5 w-full py-2.5 mb-2 bg-slate-800 hover:bg-slate-700 text-slate-200 font-mono font-bold text-xs rounded-xl transition"
+        >
+          <FileBadge className="w-3.5 h-3.5" /> Download Certificate PDF
+        </a>
 
         <a
           href={qrUrl || "#"}

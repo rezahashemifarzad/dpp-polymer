@@ -15,10 +15,21 @@
  * mirroring the same rule just applied to the public scan page — a
  * PENDING_REVIEW or REJECTED certification must never appear on a document
  * literally titled "Certificate of Conformity".
+ *
+ * Phase 6 (Batch Certificate & Dynamic QR Generator Suite) addition: the
+ * header now embeds an actual scannable QR code (via lib/qr-image.ts,
+ * encoding the passport's already-persisted qrCodePayloadUrl — the same
+ * GS1 Digital Link every other QR surface in this app uses, built once at
+ * passport creation by lib/qr.ts). Previously this document only
+ * mentioned the resolver path as plain text in the footer — a real gap
+ * for a document meant to be printed and attached to physical goods.
+ * Falls back to no image (not a broken placeholder) when a passport has
+ * no recorded qrCodePayloadUrl (pre-Sprint-2.2 batches).
  */
 
-import { Document, Page, Text, View, StyleSheet, renderToBuffer } from "@react-pdf/renderer";
+import { Document, Page, Text, View, Image, StyleSheet, renderToBuffer } from "@react-pdf/renderer";
 import { getVerifiedPassport } from "@/lib/verifyPassport";
+import { generateQrPngDataUrl } from "@/lib/qr-image";
 
 const styles = StyleSheet.create({
   page: { padding: 40, fontSize: 10, fontFamily: "Helvetica", color: "#1e293b" },
@@ -41,6 +52,9 @@ const styles = StyleSheet.create({
   },
   badgeVerified: { backgroundColor: "#d1fae5", color: "#065f46" },
   badgeUnverified: { backgroundColor: "#fee2e2", color: "#991b1b" },
+  headerRight: { alignItems: "flex-end" },
+  qrImage: { width: 64, height: 64, marginTop: 8 },
+  qrCaption: { fontSize: 6, color: "#94a3b8", marginTop: 3, textAlign: "center", width: 64 },
   section: { marginBottom: 14 },
   sectionTitle: {
     fontSize: 10,
@@ -108,6 +122,7 @@ function CertificateDocument({
   hashAlgorithm,
   integrityVerified,
   auditorSignOff,
+  qrDataUrl,
   generatedAt,
 }: {
   batchId: string;
@@ -134,6 +149,7 @@ function CertificateDocument({
   hashAlgorithm: string;
   integrityVerified: boolean;
   auditorSignOff: { auditorName: string; auditorOrganization: string; signedAt: string } | null;
+  qrDataUrl: string | null;
   generatedAt: string;
 }) {
   return (
@@ -144,9 +160,17 @@ function CertificateDocument({
             <Text style={styles.title}>Certificate of Conformity</Text>
             <Text style={styles.subtitle}>Digital Product Passport — Batch {batchId}</Text>
           </View>
-          <Text style={[styles.badge, integrityVerified ? styles.badgeVerified : styles.badgeUnverified]}>
-            {integrityVerified ? "Integrity Verified" : "Integrity Unverified"}
-          </Text>
+          <View style={styles.headerRight}>
+            <Text style={[styles.badge, integrityVerified ? styles.badgeVerified : styles.badgeUnverified]}>
+              {integrityVerified ? "Integrity Verified" : "Integrity Unverified"}
+            </Text>
+            {qrDataUrl && (
+              <>
+                <Image src={qrDataUrl} style={styles.qrImage} />
+                <Text style={styles.qrCaption}>Scan to verify</Text>
+              </>
+            )}
+          </View>
         </View>
 
         <View style={styles.section}>
@@ -321,6 +345,13 @@ export async function generateCertificatePdf(batchId: string): Promise<Buffer | 
         }
       : null;
 
+  // Phase 6 — embed the real GS1 Digital Link QR, same source URL every
+  // other QR surface in this app renders. `passport.qrCodePayloadUrl` is
+  // null only for pre-Sprint-2.2 batches created before this column
+  // existed; the document renders without an image in that case rather
+  // than a broken/placeholder graphic.
+  const qrDataUrl = passport.qrCodePayloadUrl ? await generateQrPngDataUrl(passport.qrCodePayloadUrl, { size: 240 }) : null;
+
   // renderToBuffer (not the deprecated renderToStream) — resolves directly
   // to a Node Buffer, which NextResponse can hand back as the response
   // body with no manual stream-collection step.
@@ -350,6 +381,7 @@ export async function generateCertificatePdf(batchId: string): Promise<Buffer | 
       hashAlgorithm={passport.hashAlgorithm}
       integrityVerified={integrityVerified}
       auditorSignOff={auditorSignOff}
+      qrDataUrl={qrDataUrl}
       generatedAt={new Date().toISOString()}
     />
   );

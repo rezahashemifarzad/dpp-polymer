@@ -44,6 +44,8 @@ import {
   Printer,
   FileSpreadsheet,
   Loader2,
+  ScrollText,
+  LayoutGrid,
 } from "lucide-react";
 import Link from "next/link";
 import { ToastProvider, useToast } from "@/lib/hooks/use-toast";
@@ -185,6 +187,25 @@ function AdminDashboardInner() {
           >
             <Coins className="w-4 h-4" />
             Green Accounting
+          </Link>
+          <Link
+            href="/admin/audit"
+            className="flex items-center gap-2 text-xs font-medium bg-fuchsia-500/10 hover:bg-fuchsia-500/20 border border-fuchsia-500/30 text-fuchsia-400 px-4 py-2 rounded-lg transition-all"
+          >
+            <ScrollText className="w-4 h-4" />
+            Audit Log
+          </Link>
+          {/* Phase 6 (Batch Certificate & Dynamic QR Generator Suite) —
+              same nav-pill slot as every other /admin/* destination above;
+              added here AND to app/page.tsx's own nav row per the "two
+              independent Material Ledger UIs" rule (a QR/labeling-related
+              UI change reaches both — see qr-code-modal.tsx's banner). */}
+          <Link
+            href="/admin/generator"
+            className="flex items-center gap-2 text-xs font-medium bg-violet-500/10 hover:bg-violet-500/20 border border-violet-500/30 text-violet-400 px-4 py-2 rounded-lg transition-all"
+          >
+            <LayoutGrid className="w-4 h-4" />
+            Generator Suite
           </Link>
           <Link
             href="/"

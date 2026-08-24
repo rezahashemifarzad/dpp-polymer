@@ -20,7 +20,15 @@
  * fonts, same row/label/value pattern) — this repo's one established PDF
  * design language — rather than introducing a second visual style.
  *
- * Two data sections beyond the ESG summary:
+ * Four data sections beyond the ESG summary:
+ *   - "Sustainability Readiness Index" (Phase 5 addition): the composite
+ *     score + per-component breakdown from esg.readinessIndex, compact
+ *     form (score/weight/detail per row) matching this PDF's existing
+ *     row/label/value pattern.
+ *   - "PPWR Regulatory Target Compliance" (Phase 5 addition): the 2030/
+ *     2040 recycled-content target comparison from
+ *     esg.regulatoryCompliance, same table style as the batch register
+ *     below.
  *   - "Batch Tracking Register": every active batch (REVOKED/SUPERSEDED
  *     excluded, matching esg-analytics.ts's own EXCLUDED_STATUSES), most
  *     recently produced first, capped at MAX_BATCH_ROWS with an explicit
@@ -224,6 +232,48 @@ function ComplianceReportDocument({
             {esg.taxRelief.pcrMassTonnes} t PCR = €{esg.taxRelief.estimatedReliefEur.toLocaleString()}) is
             illustrative only, not tax or legal advice — {esg.taxRelief.disclaimer}
           </Text>
+        </View>
+
+        {/* --- Sustainability Readiness Index (Phase 5) --- */}
+        <View style={styles.section} wrap={false}>
+          <Text style={styles.sectionTitle}>Sustainability Readiness Index</Text>
+          <View style={styles.row}>
+            <Text style={styles.label}>Overall Score</Text>
+            <Text style={styles.value}>{esg.readinessIndex.overallScore} / 100 — {esg.readinessIndex.rating}</Text>
+          </View>
+          {esg.readinessIndex.components.map((c) => (
+            <View style={styles.row} key={c.key}>
+              <Text style={styles.label}>{c.label} ({Math.round(c.weight * 100)}% weight)</Text>
+              <Text style={styles.value}>{c.score} / 100</Text>
+            </View>
+          ))}
+          <Text style={styles.disclaimer}>{esg.readinessIndex.methodologyNote}</Text>
+        </View>
+
+        {/* --- PPWR Regulatory Target Compliance (Phase 5) --- */}
+        <View style={styles.section} wrap={false}>
+          <Text style={styles.sectionTitle}>PPWR Regulatory Target Compliance</Text>
+          <View style={styles.table}>
+            <View style={styles.tableHeaderRow}>
+              <Text style={styles.tableHeaderCell}>Category</Text>
+              <Text style={styles.tableHeaderCell}>Year</Text>
+              <Text style={styles.tableHeaderCell}>Target %</Text>
+              <Text style={styles.tableHeaderCell}>Actual %</Text>
+              <Text style={styles.tableHeaderCell}>Gap (pp)</Text>
+              <Text style={styles.tableHeaderCell}>Status</Text>
+            </View>
+            {esg.regulatoryCompliance.targets.map((t) => (
+              <View style={styles.tableRow} key={t.year}>
+                <Text style={styles.tableCell}>{t.category}</Text>
+                <Text style={styles.tableCell}>{t.year}</Text>
+                <Text style={styles.tableCell}>{t.targetPercent}%</Text>
+                <Text style={styles.tableCell}>{t.actualPercent}%</Text>
+                <Text style={styles.tableCell}>{t.gapPercentagePoints >= 0 ? "+" : ""}{t.gapPercentagePoints}</Text>
+                <Text style={styles.tableCell}>{t.onTrack ? "On Track" : "Below Target"}</Text>
+              </View>
+            ))}
+          </View>
+          <Text style={styles.disclaimer}>{esg.regulatoryCompliance.disclaimer}</Text>
         </View>
 
         {/* --- Batch Tracking Register --- */}

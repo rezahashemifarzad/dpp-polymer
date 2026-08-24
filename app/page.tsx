@@ -26,6 +26,7 @@ import {
   Printer,
   FileSpreadsheet,
   Loader2,
+  LayoutGrid,
 } from 'lucide-react';
 import Link from 'next/link';
 import { ToastProvider, useToast } from '@/lib/hooks/use-toast';
@@ -485,6 +486,20 @@ function CompletePolymerDPPInner() {
               <BarChart3 className="w-3.5 h-3.5" />
               <span>ESG Analytics</span>
             </Link>
+
+            {/* Phase 6 (Batch Certificate & Dynamic QR Generator Suite) —
+                same real-route <Link> pattern as ESG Analytics above
+                (a Next.js page, not a client-side tab). Added here AND to
+                app/admin/page.tsx's nav row per the "two independent
+                Material Ledger UIs" rule — see qr-code-modal.tsx's banner
+                for why QR/labeling UI changes reach both. */}
+            <Link
+              href="/admin/generator"
+              className="shrink-0 whitespace-nowrap px-3.5 py-1.5 rounded-lg text-xs font-semibold font-mono flex items-center gap-1.5 transition text-slate-400 hover:text-white"
+            >
+              <LayoutGrid className="w-3.5 h-3.5" />
+              <span>Generator Suite</span>
+            </Link>
           </div>
 
           {/* Language Picker & DB Status — shrink-0 so the flex-wrap on the
@@ -584,6 +599,14 @@ function CompletePolymerDPPInner() {
             >
               <BarChart3 className="w-3.5 h-3.5" />
               <span>ESG Analytics</span>
+            </Link>
+
+            <Link
+              href="/admin/generator"
+              className="shrink-0 whitespace-nowrap px-3.5 py-1.5 rounded-lg text-xs font-semibold font-mono flex items-center gap-1.5 transition text-slate-400"
+            >
+              <LayoutGrid className="w-3.5 h-3.5" />
+              <span>Generator Suite</span>
             </Link>
           </div>
         </div>
@@ -1016,6 +1039,19 @@ function CompletePolymerDPPInner() {
                 Sandbox preview only — issuing a real passport via &quot;New Passport&quot; in the Material Ledger tab
                 generates the persisted, hash-sealed GS1 Digital Link automatically.
               </p>
+              {/* Phase 6 — this sandbox has no real batch data or export
+                  capability by design (see file banner); point admins at
+                  the real, production Generator Suite for actual
+                  certificate/label-sheet output instead of expanding this
+                  demo widget into something it was never meant to be. */}
+              <Link
+                href="/admin/generator"
+                className="inline-flex items-center gap-1.5 text-[11px] font-mono font-semibold text-emerald-400 hover:text-emerald-300"
+              >
+                <LayoutGrid className="w-3 h-3" />
+                Generate a real certificate or label sheet in the Generator Suite
+                <ChevronRight className="w-3 h-3" />
+              </Link>
 
               <div className="space-y-3 font-mono text-xs">
                 <div>

@@ -53,8 +53,12 @@ import {
   Lock,
   ArrowUpRight,
   FileSpreadsheet,
+  Award,
+  Target,
+  Factory,
+  Boxes,
 } from "lucide-react";
-import type { EsgAnalyticsSummary } from "@/lib/services/esg-analytics";
+import type { EsgAnalyticsSummary, EsgReadinessComponent } from "@/lib/services/esg-analytics";
 import type { PortfolioGreenAccountingSummary } from "@/lib/services/plastic-tax-calculator";
 
 const STATUS_LABELS: Record<string, string> = {
@@ -137,7 +141,38 @@ function buildCsv(summary: EsgAnalyticsSummary): string {
     );
   }
   lines.push("");
+  lines.push("Sustainability Readiness Index");
+  lines.push(`Overall Score,${summary.readinessIndex.overallScore},/100`);
+  lines.push(`Rating,${csvEscape(summary.readinessIndex.rating)}`);
+  lines.push("Component,Score,Weight,Detail");
+  for (const c of summary.readinessIndex.components) {
+    lines.push(`${csvEscape(c.label)},${c.score},${c.weight * 100}%,${csvEscape(c.detail)}`);
+  }
+  lines.push("");
+  lines.push("PPWR Regulatory Target Comparison");
+  lines.push("Category,Year,Target %,Actual %,Gap (pp),On Track");
+  for (const t of summary.regulatoryCompliance.targets) {
+    lines.push(
+      `${csvEscape(t.category)},${t.year},${t.targetPercent},${t.actualPercent},${t.gapPercentagePoints},${t.onTrack ? "Yes" : "No"}`
+    );
+  }
+  lines.push("");
+  lines.push("Manufacturer Distribution");
+  lines.push("Manufacturer,Country,Batches,% of Portfolio,Avg Recycled %,Avg Verified Carbon (kg/kg),Mass (kg)");
+  for (const m of summary.manufacturerDistribution) {
+    lines.push(
+      `${csvEscape(m.manufacturerName)},${csvEscape(m.country ?? "—")},${m.batchCount},${m.batchCountPercent},${m.avgRecycledContentPercent},${m.avgVerifiedCarbonIntensityKgCO2ePerKg ?? "n/a"},${m.totalMassKg}`
+    );
+  }
+  lines.push("");
+  lines.push("Material Grade Distribution");
+  lines.push("Polymer Type,Grade,Batches,% of Portfolio,Avg Recycled %");
+  for (const g of summary.gradeDistribution) {
+    lines.push(`${csvEscape(g.polymerType)},${csvEscape(g.grade)},${g.batchCount},${g.batchCountPercent},${g.avgRecycledContentPercent}`);
+  }
+  lines.push("");
   lines.push(`Disclaimer,${csvEscape(summary.taxRelief.disclaimer)}`);
+  lines.push(`PPWR Disclaimer,${csvEscape(summary.regulatoryCompliance.disclaimer)}`);
   return lines.join("\n");
 }
 
@@ -239,6 +274,15 @@ export function EsgAnalyticsDashboard({
   // needs a real fetch+blob round trip with its own loading/error state.
   const [pdfExporting, setPdfExporting] = useState(false);
   const [pdfError, setPdfError] = useState<string | null>(null);
+
+  // Phase 5 (Advanced ESG & Carbon Analytics Dashboard) — the dedicated
+  // "ESG Data Sheets" workbook (manufacturer distribution, grade
+  // distribution, PPWR target comparison, readiness index breakdown; see
+  // lib/services/generate-esg-analytics-workbook.ts). Server-rendered like
+  // the Compliance PDF above, so it gets its own independent loading/error
+  // state rather than reusing pdfExporting/pdfError.
+  const [esgXlsxExporting, setEsgXlsxExporting] = useState(false);
+  const [esgXlsxError, setEsgXlsxError] = useState<string | null>(null);
 
   // Sprint 3.2 (Green Tax & Audit Reports Export) — the widget's own two
   // export buttons, distinct state from the Compliance PDF export above
@@ -353,6 +397,31 @@ export function EsgAnalyticsDashboard({
     }
   };
 
+  const handleExportEsgXlsx = async () => {
+    setEsgXlsxError(null);
+    setEsgXlsxExporting(true);
+    try {
+      const res = await fetch("/api/passports/esg-analytics-export.xlsx");
+      if (!res.ok) {
+        const json = await res.json().catch(() => null);
+        throw new Error(json?.error || `Request failed with status ${res.status}`);
+      }
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `polymer-dpp-esg-data-sheets-${summary.generatedAt.slice(0, 10)}.xlsx`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      setEsgXlsxError(err instanceof Error ? err.message : "Failed to generate ESG data sheets workbook");
+    } finally {
+      setEsgXlsxExporting(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-[#020617] text-slate-100 font-sans overflow-x-hidden">
       {/* Header — was a fixed h-16 row with a back-link+title block and a
@@ -402,6 +471,19 @@ export function EsgAnalyticsDashboard({
               JSON
             </button>
             <button
+              onClick={handleExportEsgXlsx}
+              disabled={esgXlsxExporting}
+              className="flex items-center gap-1.5 text-xs bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold px-3 py-2 rounded-lg transition-all whitespace-nowrap"
+              title="Export manufacturer, grade, PPWR target, and readiness-index data sheets as an Excel workbook"
+            >
+              {esgXlsxExporting ? (
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+              ) : (
+                <FileSpreadsheet className="w-3.5 h-3.5" />
+              )}
+              {esgXlsxExporting ? "Generating..." : "Export ESG Data Sheets"}
+            </button>
+            <button
               onClick={handleExportPdf}
               disabled={pdfExporting}
               className="flex items-center gap-1.5 text-xs bg-slate-100 hover:bg-white disabled:opacity-50 disabled:cursor-not-allowed text-slate-900 font-bold px-3 py-2 rounded-lg transition-all whitespace-nowrap"
@@ -416,12 +498,20 @@ export function EsgAnalyticsDashboard({
             </button>
           </div>
         </div>
-        {pdfError && (
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 pb-3 -mt-1">
-            <div className="flex items-start gap-1.5 text-[11px] text-red-400 font-mono bg-red-500/10 border border-red-500/20 rounded-lg px-3 py-2">
-              <AlertTriangle className="w-3.5 h-3.5 mt-0.5 shrink-0" />
-              <span>{pdfError}</span>
-            </div>
+        {(pdfError || esgXlsxError) && (
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 pb-3 -mt-1 space-y-1.5">
+            {pdfError && (
+              <div className="flex items-start gap-1.5 text-[11px] text-red-400 font-mono bg-red-500/10 border border-red-500/20 rounded-lg px-3 py-2">
+                <AlertTriangle className="w-3.5 h-3.5 mt-0.5 shrink-0" />
+                <span>{pdfError}</span>
+              </div>
+            )}
+            {esgXlsxError && (
+              <div className="flex items-start gap-1.5 text-[11px] text-red-400 font-mono bg-red-500/10 border border-red-500/20 rounded-lg px-3 py-2">
+                <AlertTriangle className="w-3.5 h-3.5 mt-0.5 shrink-0" />
+                <span>{esgXlsxError}</span>
+              </div>
+            )}
           </div>
         )}
       </header>
@@ -476,6 +566,17 @@ export function EsgAnalyticsDashboard({
             }
           />
         </div>
+
+        {/* Phase 5 — Sustainability Readiness Index. A composite 0-100
+            score built from 5 already-shown figures (see
+            lib/services/esg-analytics.ts's computeReadinessIndex) —
+            rendered as a ring + a fully transparent component breakdown,
+            never just a bare number, so a viewer can see exactly what
+            moved it. */}
+        <ReadinessIndexSection readinessIndex={summary.readinessIndex} totalBatches={summary.totalBatches} />
+
+        {/* Phase 5 — PPWR regulatory target comparison. */}
+        <RegulatoryComplianceSection regulatoryCompliance={summary.regulatoryCompliance} />
 
         {/* Trend charts — two single-axis charts, never one dual-axis chart
             (PCR % and kg CO2e/kg are different units/scales). */}
@@ -703,6 +804,12 @@ export function EsgAnalyticsDashboard({
           </div>
         </div>
 
+        {/* Phase 5 — Manufacturer distribution + Material grade distribution. */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <ManufacturerDistributionCard manufacturers={summary.manufacturerDistribution} />
+          <GradeDistributionCard grades={summary.gradeDistribution} />
+        </div>
+
         {/* Green Accounting & Plastic Tax widget (Sprint 3.1) — a compact
             summary of lib/services/plastic-tax-calculator.ts's portfolio
             figures, computed server-side alongside this page's own ESG
@@ -840,4 +947,265 @@ function EmptyChartState() {
 
 function pct(part: number, total: number): number {
   return total > 0 ? Math.round((part / total) * 10000) / 100 : 0;
+}
+
+// ----------------------------------------------------------------------------
+// Phase 5 (Advanced ESG & Carbon Analytics Dashboard) additions
+// ----------------------------------------------------------------------------
+
+// Rating → color mapping used by both the gauge stroke (a raw SVG
+// attribute, not a Tailwind class, so an inline hex is correct here — not
+// the "always pass literal Tailwind class strings" JIT concern that
+// applies to barColorClass/textColorClass above) and the rating badge.
+const RATING_META: Record<
+  EsgReadinessIndexRating,
+  { hex: string; badgeClass: string; icon: typeof Award }
+> = {
+  Leading: { hex: "#10b981", badgeClass: "bg-emerald-500/10 text-emerald-400 border-emerald-500/30", icon: Award },
+  Advancing: { hex: "#14b8a6", badgeClass: "bg-teal-500/10 text-teal-400 border-teal-500/30", icon: TrendingUp },
+  Developing: { hex: "#f59e0b", badgeClass: "bg-amber-500/10 text-amber-400 border-amber-500/30", icon: Clock },
+  "Early Stage": { hex: "#f43f5e", badgeClass: "bg-rose-500/10 text-rose-400 border-rose-500/30", icon: AlertTriangle },
+};
+
+type EsgReadinessIndexRating = "Leading" | "Advancing" | "Developing" | "Early Stage";
+
+function ReadinessGauge({ score, hex }: { score: number; hex: string }) {
+  const size = 140;
+  const strokeWidth = 12;
+  const radius = (size - strokeWidth) / 2;
+  const circumference = 2 * Math.PI * radius;
+  const offset = circumference * (1 - Math.min(100, Math.max(0, score)) / 100);
+
+  return (
+    <div className="relative shrink-0" style={{ width: size, height: size }}>
+      <svg width={size} height={size} className="-rotate-90">
+        <circle cx={size / 2} cy={size / 2} r={radius} fill="none" stroke="#1e293b" strokeWidth={strokeWidth} />
+        <circle
+          cx={size / 2}
+          cy={size / 2}
+          r={radius}
+          fill="none"
+          stroke={hex}
+          strokeWidth={strokeWidth}
+          strokeLinecap="round"
+          strokeDasharray={circumference}
+          strokeDashoffset={offset}
+          style={{ transition: "stroke-dashoffset 0.6s ease" }}
+        />
+      </svg>
+      <div className="absolute inset-0 flex flex-col items-center justify-center">
+        <span className="text-3xl font-extrabold font-mono text-white">{score}</span>
+        <span className="text-[10px] text-slate-500 font-mono">/ 100</span>
+      </div>
+    </div>
+  );
+}
+
+function ReadinessIndexSection({
+  readinessIndex,
+  totalBatches,
+}: {
+  readinessIndex: EsgAnalyticsSummary["readinessIndex"];
+  totalBatches: number;
+}) {
+  const meta = RATING_META[readinessIndex.rating];
+  const RatingIcon = meta.icon;
+
+  return (
+    <div className="bg-slate-900/60 border border-slate-800 rounded-3xl p-6 backdrop-blur-xl">
+      <div className="flex items-center justify-between mb-4 gap-2 flex-wrap">
+        <h3 className="text-sm font-bold text-white flex items-center gap-1.5">
+          <Award className="w-4 h-4 text-amber-400" /> Sustainability Readiness Index
+        </h3>
+        <span className={`inline-flex items-center gap-1.5 text-[11px] px-2.5 py-1 border rounded-full font-semibold ${meta.badgeClass}`}>
+          <RatingIcon className="w-3 h-3" />
+          {readinessIndex.rating}
+        </span>
+      </div>
+
+      {totalBatches === 0 ? (
+        <EmptyChartState />
+      ) : (
+        <div className="flex flex-col md:flex-row items-center md:items-start gap-6">
+          <ReadinessGauge score={readinessIndex.overallScore} hex={meta.hex} />
+          <div className="flex-1 w-full space-y-3">
+            {readinessIndex.components.map((c: EsgReadinessComponent) => (
+              <div key={c.key}>
+                <div className="flex items-center justify-between gap-2 text-[11px] mb-1">
+                  <span className="text-slate-300 font-semibold">{c.label}</span>
+                  <span className="text-slate-500 font-mono shrink-0">
+                    {c.score}/100 · {Math.round(c.weight * 100)}% weight
+                  </span>
+                </div>
+                <div className="w-full h-2 rounded-full bg-slate-950 overflow-hidden">
+                  <div
+                    className="h-full rounded-full"
+                    style={{ width: `${Math.min(100, Math.max(0, c.score))}%`, backgroundColor: meta.hex }}
+                  />
+                </div>
+                <p className="text-[10px] text-slate-500 font-mono mt-1">{c.detail}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+      <p className="text-[10px] text-slate-500 font-mono mt-4 pt-4 border-t border-slate-800/60">
+        {readinessIndex.methodologyNote}
+      </p>
+    </div>
+  );
+}
+
+function RegulatoryComplianceSection({
+  regulatoryCompliance,
+}: {
+  regulatoryCompliance: EsgAnalyticsSummary["regulatoryCompliance"];
+}) {
+  return (
+    <div className="bg-slate-900/60 border border-slate-800 rounded-3xl p-6 backdrop-blur-xl">
+      <h3 className="text-sm font-bold text-white flex items-center gap-1.5 mb-1">
+        <Target className="w-4 h-4 text-cyan-400" /> PPWR Regulatory Target Compliance
+      </h3>
+      <p className="text-[11px] text-slate-400 font-mono mb-4">
+        Mass-weighted PCR adoption vs. the EU Packaging &amp; Packaging Waste Regulation baseline target
+      </p>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        {regulatoryCompliance.targets.map((t) => {
+          const barPercent = Math.min(100, t.actualPercent);
+          const targetMarkerPercent = Math.min(100, t.targetPercent);
+          return (
+            <div key={t.year} className="bg-slate-950 border border-slate-800 rounded-xl p-4">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-xs font-bold text-white">{t.year} Target</span>
+                <span
+                  className={`inline-flex items-center gap-1 text-[10px] px-2 py-0.5 border rounded-full font-semibold ${
+                    t.onTrack
+                      ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/30"
+                      : "bg-amber-500/10 text-amber-400 border-amber-500/30"
+                  }`}
+                >
+                  {t.onTrack ? <CheckCircle2 className="w-3 h-3" /> : <AlertTriangle className="w-3 h-3" />}
+                  {t.onTrack ? "On Track" : "Below Target"}
+                </span>
+              </div>
+              <div className="relative w-full h-3 rounded-full bg-slate-900 overflow-hidden mb-2">
+                <div
+                  className={`h-full rounded-full ${t.onTrack ? "bg-emerald-500" : "bg-amber-500"}`}
+                  style={{ width: `${barPercent}%` }}
+                />
+                <div
+                  className="absolute top-0 bottom-0 w-0.5 bg-slate-100"
+                  style={{ left: `${targetMarkerPercent}%` }}
+                  title={`${t.targetPercent}% target`}
+                />
+              </div>
+              <div className="flex items-center justify-between text-[11px] font-mono">
+                <span className="text-slate-400">
+                  Actual <span className="text-white font-bold">{t.actualPercent}%</span>
+                </span>
+                <span className="text-slate-400">
+                  Target <span className="text-slate-200 font-bold">{t.targetPercent}%</span>
+                </span>
+                <span className={t.gapPercentagePoints >= 0 ? "text-emerald-400" : "text-amber-400"}>
+                  {t.gapPercentagePoints >= 0 ? "+" : ""}
+                  {t.gapPercentagePoints}pp
+                </span>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+      <p className="text-[10px] text-slate-500 font-mono mt-4 pt-4 border-t border-slate-800/60">
+        {regulatoryCompliance.disclaimer}
+      </p>
+    </div>
+  );
+}
+
+function ManufacturerDistributionCard({
+  manufacturers,
+}: {
+  manufacturers: EsgAnalyticsSummary["manufacturerDistribution"];
+}) {
+  return (
+    <div className="bg-slate-900/60 border border-slate-800 rounded-3xl p-6 backdrop-blur-xl">
+      <h3 className="text-sm font-bold text-white flex items-center gap-1.5 mb-1">
+        <Factory className="w-4 h-4 text-indigo-400" /> Manufacturer Distribution
+      </h3>
+      <p className="text-[11px] text-slate-400 font-mono mb-4">{manufacturers.length} manufacturer bucket(s) across active batches</p>
+      {manufacturers.length === 0 ? (
+        <EmptyChartState />
+      ) : (
+        <div className="max-h-72 overflow-y-auto overflow-x-auto -mx-1 px-1">
+          <table className="w-full text-left font-mono text-xs min-w-[480px]">
+            <thead className="sticky top-0 bg-slate-900">
+              <tr className="text-slate-500 uppercase text-[10px] border-b border-slate-800">
+                <th className="py-2">Manufacturer</th>
+                <th className="py-2 text-right">Batches</th>
+                <th className="py-2 text-right">Avg PCR %</th>
+                <th className="py-2 text-right">Avg Carbon</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-800/60">
+              {manufacturers.map((m) => (
+                <tr key={m.manufacturerId ?? "unassigned"}>
+                  <td className="py-2 text-slate-300">
+                    <div className="text-slate-200">{m.manufacturerName}</div>
+                    {m.country && <div className="text-[10px] text-slate-500">{m.country}</div>}
+                  </td>
+                  <td className="py-2 text-right text-white">
+                    {m.batchCount} <span className="text-slate-500">({m.batchCountPercent}%)</span>
+                  </td>
+                  <td className="py-2 text-right text-emerald-400">{m.avgRecycledContentPercent}%</td>
+                  <td className="py-2 text-right text-teal-400">
+                    {m.avgVerifiedCarbonIntensityKgCO2ePerKg !== null ? m.avgVerifiedCarbonIntensityKgCO2ePerKg : "—"}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function GradeDistributionCard({ grades }: { grades: EsgAnalyticsSummary["gradeDistribution"] }) {
+  return (
+    <div className="bg-slate-900/60 border border-slate-800 rounded-3xl p-6 backdrop-blur-xl">
+      <h3 className="text-sm font-bold text-white flex items-center gap-1.5 mb-1">
+        <Boxes className="w-4 h-4 text-fuchsia-400" /> Material Grade Distribution
+      </h3>
+      <p className="text-[11px] text-slate-400 font-mono mb-4">{grades.length} distinct polymer/grade combination(s)</p>
+      {grades.length === 0 ? (
+        <EmptyChartState />
+      ) : (
+        <div className="max-h-72 overflow-y-auto overflow-x-auto -mx-1 px-1">
+          <table className="w-full text-left font-mono text-xs min-w-[420px]">
+            <thead className="sticky top-0 bg-slate-900">
+              <tr className="text-slate-500 uppercase text-[10px] border-b border-slate-800">
+                <th className="py-2">Polymer / Grade</th>
+                <th className="py-2 text-right">Batches</th>
+                <th className="py-2 text-right">Avg PCR %</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-800/60">
+              {grades.map((g) => (
+                <tr key={`${g.polymerType}::${g.grade}`}>
+                  <td className="py-2 text-slate-300">
+                    <div className="text-slate-200">{g.grade}</div>
+                    <div className="text-[10px] text-slate-500">{g.polymerType}</div>
+                  </td>
+                  <td className="py-2 text-right text-white">
+                    {g.batchCount} <span className="text-slate-500">({g.batchCountPercent}%)</span>
+                  </td>
+                  <td className="py-2 text-right text-emerald-400">{g.avgRecycledContentPercent}%</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  );
 }

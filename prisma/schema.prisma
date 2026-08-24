@@ -437,23 +437,67 @@ model Certification {
 // AUDIT LOG (STEP 5 addition — new model, no existing model touched)
 // ----------------------------------------------------------------------------
 
+// Phase 4 - Step 3: Immutable Audit Trail / Ledger Log. AuditLog was
+// already append-only in PRACTICE (lib/audit.ts's writeAuditLog is the
+// sole write path in this codebase, and it only ever calls .create() —
+// grep confirms no .update()/.delete() call against this model anywhere)
+// but nothing made that guarantee verifiable after the fact. Two
+// additions close that gap:
+//
+//   - sequence: a monotonic, gapless-per-writer integer assigned by
+//     lib/audit.ts itself (NOT a DB @default(autoincrement()) — the
+//     entryHash below has to be computable BEFORE the row is inserted,
+//     which means every value it's built from, sequence included, has to
+//     be known in application code first). @unique also gives this
+//     column a real btree index for the ORDER BY sequence queries the
+//     ledger UI and integrity verifier both run.
+//   - entryHash / previousEntryHash: a SHA-256 hash chain over every row,
+//     in insertion order — the same "link this record to the one before
+//     it" idea as PolymerPassport.recordHash/previousRecordHash, but
+//     applied to the audit trail itself rather than to one passport's
+//     lineage. Each row's entryHash is a canonical hash (via
+//     lib/types.ts's hashRecord) of its own fields PLUS the previous
+//     row's entryHash; verifyAuditLogChainIntegrity()
+//     (lib/services/audit-log-service.ts) walks the whole table
+//     recomputing every hash and comparing it against what's stored —
+//     any edited value, reordered row, or deleted-and-gap in the
+//     sequence breaks the chain at that exact point and is detectable,
+//     not just theoretically prevented.
+//
+// This is a detection mechanism, not a database permission — it proves
+// tampering happened, it doesn't stop a superuser from attempting it. For
+// that, prisma/sql/append_only_audit_log.sql adds a Postgres trigger that
+// rejects any UPDATE/DELETE against this table outright (applied as a
+// manual SQL step — Prisma's schema language has no way to express
+// "append-only" declaratively). Together: the trigger stops ordinary
+// mutation, the hash chain proves it if the trigger is ever bypassed.
 model AuditLog {
   id String @id @default(uuid())
+
+  sequence Int @unique
 
   passportId String
   passport   PolymerPassport @relation(fields: [passportId], references: [id])
 
   action       AuditAction
   actor        String // role or service identity that performed the action
-  // (e.g. "manufacturer:<uuid>", "AUDITOR", "ADMIN")
+  // (e.g. "manufacturer:<uuid>", "AUDITOR", "ADMIN", "SYSTEM:CRON")
   previousHash String?
   newHash      String?
   metadata     Json?
+
+  // Hash-chain integrity — see this model's own comment above. Computed
+  // and set exclusively by lib/audit.ts's writeAuditLog; nothing else
+  // should ever write to these two columns.
+  entryHash         String  @unique
+  previousEntryHash String?
 
   createdAt DateTime @default(now())
 
   @@index([passportId])
   @@index([action])
+  @@index([actor])
+  @@index([createdAt])
 }
 
 // ----------------------------------------------------------------------------
