@@ -25,10 +25,17 @@
  */
 
 import React, { useMemo, useState } from "react";
-import { X, Loader2, GitBranch, Leaf, AlertTriangle, ArrowUpRight, Link2 } from "lucide-react";
+import { X, Loader2, GitBranch, Leaf, AlertTriangle, ArrowUpRight, Link2, BadgeCheck } from "lucide-react";
 import { useToast } from "@/lib/hooks/use-toast";
 import type { ApiPassport, ChainOfCustodyTierValue } from "@/lib/hooks/use-passports";
 import { ChainOfCustodyTimeline } from "@/components/dashboard/chain-of-custody-timeline";
+// Phase 4 - Step 1 (Automated Expiry & Compliance Alerts) — this modal
+// previously showed no per-certification detail at all, only the
+// rolled-up ledger-row badge (see app/admin/page.tsx). Reuses the same
+// pure classifier and shared badge component the ledger and the
+// portfolio-wide alert widget both use, so all three surfaces agree.
+import { getExpiryAlertTier } from "@/lib/utils/certification-status";
+import { ExpiryAlertBadge } from "@/components/dashboard/expiry-alert-badge";
 
 const TRANSPORT_MODES: Array<"TRUCK" | "RAIL" | "SEA" | "AIR"> = ["TRUCK", "RAIL", "SEA", "AIR"];
 
@@ -249,6 +256,41 @@ export function BatchDetailsModal({
         <p className="text-xs text-slate-400 mb-4 font-mono">
           Supply-chain genealogy and an illustrative Scope 1/2/3 carbon footprint estimate for this batch.
         </p>
+
+        {/* Certifications panel — Phase 4 - Step 1 (Automated Expiry &
+            Compliance Alerts). Read-only: attaching/verifying a
+            certification here is a separate, larger feature
+            (docs/COMPLIANCE_CERTIFICATIONS_MODULE_SPEC.md §3/§4 Phase 3,
+            not yet built) — this panel closes the "no certificate
+            management view shows badges" gap for expiry specifically. */}
+        <div className="border border-slate-800 rounded-2xl p-4 mb-4">
+          <div className="flex items-center gap-2 mb-3">
+            <BadgeCheck className="w-4 h-4 text-emerald-400" />
+            <h4 className="text-sm font-semibold text-slate-100">Certifications</h4>
+          </div>
+          {passport.certifications.length > 0 ? (
+            <ul className="space-y-1.5 font-mono text-xs">
+              {passport.certifications.map((cert) => (
+                <li
+                  key={cert.id}
+                  className="flex flex-wrap items-center justify-between gap-2 bg-slate-950 border border-slate-800 rounded-xl px-3 py-2"
+                >
+                  <div className="min-w-0">
+                    <div className="text-slate-200 font-semibold">
+                      {cert.scheme} <span className="text-slate-500 font-normal">· {cert.certificateId}</span>
+                    </div>
+                    <div className="text-slate-500 text-[10px] mt-0.5">
+                      {cert.issuingBody} · valid until {new Date(cert.validUntil).toLocaleDateString()}
+                    </div>
+                  </div>
+                  <ExpiryAlertBadge tier={getExpiryAlertTier(cert.validUntil)} />
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="text-xs text-slate-500 font-mono">No certifications attached to this batch yet.</p>
+          )}
+        </div>
 
         {/* Batch Genealogy panel */}
         <div className="border border-slate-800 rounded-2xl p-4 mb-4">

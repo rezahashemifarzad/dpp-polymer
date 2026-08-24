@@ -186,6 +186,101 @@ export const PolymerPassportInputSchema = z
 export type PolymerPassportInput = z.infer<typeof PolymerPassportInputSchema>;
 
 // ----------------------------------------------------------------------------
+// Supplier Onboarding Portal — public submission payload
+// ----------------------------------------------------------------------------
+// Deliberately looser than PolymerPassportInputSchema above: an external
+// supplier submitting through /supplier/submit/[token] doesn't have (and
+// shouldn't need) a manufacturerId UUID, doesn't reliably know this
+// system's existing batchIds or hold a GS1-assigned GTIN, and may not yet
+// have every certification detail to hand. meltFlowIndex/density/GTIN/
+// batchId/certification are all optional here — the admin review step
+// (lib/services/supplier-submission.ts's approveSupplierSubmission)
+// requires the ones PolymerPassportInputSchema itself requires before a
+// submission can actually become a passport, filling gaps via reviewer
+// overrides where needed. Certification document handling follows the
+// exact same convention as CertificationInputSchema above: a URL plus a
+// client-computed SHA-256 hash, never fetched server-side.
+export const SupplierSubmissionInputSchema = z
+  .object({
+    polymerType: z.enum(PolymerType),
+    grade: z.string().min(1, "grade is required").max(120),
+    meltFlowIndex: z.coerce.number().positive().max(9999.99).optional(),
+    density: z.coerce.number().positive().max(99.999).optional(),
+
+    // Supplier-suggested only — not validated against the GS1 mod-10
+    // check digit or checked for uniqueness here. The admin confirms or
+    // overrides both at approval time, when createPassport()'s own
+    // PolymerPassportInputSchema enforces those rules for real.
+    proposedGtin: z
+      .string()
+      .regex(/^\d{1,14}$/, "proposedGtin must contain only digits")
+      .optional(),
+    proposedBatchId: z
+      .string()
+      .max(64)
+      .regex(/^[A-Za-z0-9._-]+$/, "proposedBatchId may only contain letters, numbers, '.', '_' and '-'")
+      .optional(),
+
+    recycledContentSource: z.enum(RecycledContentSource).optional(),
+    recycledContentPercent: z.coerce.number().min(0).max(100).default(0),
+    bioBasedPercent: z.coerce.number().min(0).max(100).default(0),
+    carbonFootprintKgCO2ePerKg: z.coerce.number().min(0).max(999999.999).default(0),
+    // Batch weight context — not itself a PolymerPassport column; informs
+    // the admin's review, matching SupplierSubmission.weightKg's own
+    // schema-comment rationale.
+    weightKg: z.coerce.number().positive().max(9999999.999).optional(),
+
+    // Proposed certification — a single block, same shape as
+    // CertificationInputSchema. All fields optional individually, but the
+    // refine() below requires the full set together the moment any one of
+    // them is provided, mirroring ChainOfCustodyInputSchema's own
+    // "certificateId implies certificationScheme" rule.
+    certScheme: z.enum(CertificationScheme).optional(),
+    certificateId: z.string().min(1).max(120).optional(),
+    issuingBody: z.string().min(1).max(200).optional(),
+    certValidFrom: z.coerce.date().optional(),
+    certValidUntil: z.coerce.date().optional(),
+    certDocumentUrl: z.string().url().optional(),
+    certDocumentHash: z
+      .string()
+      .regex(/^[a-f0-9]{64}$/i, "certDocumentHash must be a 64-character hex SHA-256 digest")
+      .optional(),
+
+    supplierNotes: z.string().max(2000).optional(),
+  })
+  .refine((d) => d.recycledContentPercent + d.bioBasedPercent <= 100, {
+    message: "recycledContentPercent + bioBasedPercent cannot exceed 100%",
+    path: ["bioBasedPercent"],
+  })
+  .refine((d) => !(d.recycledContentPercent > 0 && !d.recycledContentSource), {
+    // Mirrors PolymerPassportInputSchema's own rule above — enforced here
+    // too (not left to fail later at approveSupplierSubmission's call
+    // into createPassport) because ApproveSupplierSubmissionOverrides has
+    // no recycledContentSource override: if a submission got this far
+    // without one, the admin would have no way to fix it at review time.
+    message: "recycledContentSource is required when recycledContentPercent > 0",
+    path: ["recycledContentSource"],
+  })
+  .refine(
+    (d) => {
+      const anyCertField = d.certScheme || d.certificateId || d.issuingBody || d.certValidFrom || d.certValidUntil;
+      const allCertFields = d.certScheme && d.certificateId && d.issuingBody && d.certValidFrom && d.certValidUntil;
+      return !anyCertField || allCertFields;
+    },
+    {
+      message:
+        "certScheme, certificateId, issuingBody, certValidFrom and certValidUntil must all be provided together",
+      path: ["certScheme"],
+    }
+  )
+  .refine((d) => !(d.certValidFrom && d.certValidUntil) || d.certValidUntil > d.certValidFrom, {
+    message: "certValidUntil must be after certValidFrom",
+    path: ["certValidUntil"],
+  });
+
+export type SupplierSubmissionInput = z.infer<typeof SupplierSubmissionInputSchema>;
+
+// ----------------------------------------------------------------------------
 // Derived numeric helpers — always return Prisma.Decimal
 // ----------------------------------------------------------------------------
 

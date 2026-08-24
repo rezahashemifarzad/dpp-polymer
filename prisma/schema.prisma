@@ -105,6 +105,29 @@ enum AuditAction {
   // an emissions estimate, even though both derive from the same recorded
   // batch weight.
   GREEN_VALUATION_SAVED
+  // Phase 4 - Step 1: Automated Expiry & Compliance Alerts — additive,
+  // existing values and rows untouched. CERT_EXPIRY_ALERT_RAISED is
+  // written by the background check (lib/services/expiry-alert-service.ts)
+  // whenever a certification's computed expiry tier escalates past what
+  // was last notified; CERT_EXPIRY_ALERT_ACKNOWLEDGED is written when an
+  // admin dismisses a raised alert from the compliance dashboard.
+  CERT_EXPIRY_ALERT_RAISED
+  CERT_EXPIRY_ALERT_ACKNOWLEDGED
+  // Phase 4 - Step 2: Supplier Onboarding Portal — additive, existing
+  // values and rows untouched. Written ONLY at the moment an admin
+  // approves a pending SupplierSubmission and it becomes a real
+  // PolymerPassport (see lib/services/supplier-submission.ts). Everything
+  // that happens before approval (an invite being created, a submission
+  // being received or rejected) has no PolymerPassport row yet to attach
+  // an AuditLog entry to — writeAuditLog() requires a non-nullable
+  // passportId — so those pre-approval events are tracked on
+  // SupplierInvite/SupplierSubmission's own fields instead (invitedBy/
+  // invitedAt, reviewedBy/reviewedAt/reviewNotes/status). Deliberately
+  // distinct from the plain CREATED action so the audit trail can always
+  // tell "a manufacturer created this directly via the API" apart from
+  // "this passport originated from an external supplier's onboarding
+  // submission and was approved by an admin."
+  SUPPLIER_SUBMISSION_APPROVED
 }
 
 // Compliance & Green Certifications Module (docs/COMPLIANCE_CERTIFICATIONS_MODULE_SPEC.md
@@ -117,6 +140,23 @@ enum CertificationVerificationStatus {
   PENDING_REVIEW
   VERIFIED
   REJECTED
+}
+
+// Phase 4 - Step 1: Automated Expiry & Compliance Alerts. Distinct from
+// CertificationVerificationStatus on purpose: this tracks NOTIFICATION
+// bookkeeping (has an alert already been raised, and at what severity),
+// not the underlying fact of expiry itself — that fact is still always
+// computed live from validUntil (see lib/utils/certification-status.ts's
+// getExpiryAlertTier), never stored, for the same "don't let a stored
+// value silently go stale" reason CertificationVerificationStatus has no
+// EXPIRED member. What can't be recomputed live is whether an alert has
+// already been surfaced/acknowledged — that's state, not a re-derivable
+// fact, and has to persist somewhere for "don't re-notify a dismissed
+// alert, but do re-notify on escalation" to be possible at all.
+enum ExpiryAlertLevel {
+  EXPIRING_SOON // <= 30 days remaining
+  EXPIRING_URGENT // <= 7 days remaining
+  EXPIRED // already past validUntil
 }
 
 // Circular Economy Platform Upgrade (docs/CIRCULAR_ECONOMY_PLATFORM_UPGRADE_SPEC.md
@@ -172,6 +212,18 @@ enum ChainOfCustodyStatus {
   PENDING_REVIEW
   VERIFIED
   FLAGGED
+  REJECTED
+}
+
+// Supplier Onboarding Portal — new enum, additive, no existing enum
+// touched. Mirrors CertificationVerificationStatus/ChainOfCustodyStatus's
+// own "start unreviewed, moved only by a separate reviewer" shape, kept as
+// its own type (not a reuse of DppStatus) since a SupplierSubmission is a
+// proposal that may never become a passport at all, not a passport whose
+// status is changing.
+enum SupplierSubmissionStatus {
+  PENDING
+  APPROVED
   REJECTED
 }
 
@@ -282,6 +334,14 @@ model PolymerPassport {
   // explicitly locks a valuation for audit/filing purposes.
   greenValuation BatchGreenValuation?
 
+  // --- 13. Supplier Onboarding Portal -----------------------------------------
+  // See SupplierSubmission below. Optional 1:1 back-relation: set only when
+  // this passport originated from an admin-approved external supplier
+  // submission rather than a direct manufacturer/admin API call. Absent
+  // (null) for every passport created the ordinary way — this is purely
+  // provenance metadata, never required.
+  originatingSupplierSubmission SupplierSubmission?
+
   // --- Lifecycle / meta --------------------------------------------------
   status           DppStatus @default(ISSUED)
   qrCodePayloadUrl String?
@@ -307,6 +367,12 @@ model Manufacturer {
   country   String
   passports PolymerPassport[]
   createdAt DateTime          @default(now())
+
+  // Supplier Onboarding Portal — back-relation only. A Manufacturer row
+  // resolved/cached for a given supplier (or auto-created at first
+  // approval — see lib/services/supplier-submission.ts) may have zero or
+  // more standing SupplierInvite rows pointing at it.
+  supplierInvites SupplierInvite[]
 }
 
 model Certification {
@@ -343,12 +409,28 @@ model Certification {
   // column stays usable for every scheme.
   massBalanceAllocationPercent Decimal? @db.Decimal(5, 2)
 
+  // --- Phase 4 - Step 1: Automated Expiry & Compliance Alerts -------------
+  // Notification bookkeeping only — see the ExpiryAlertLevel enum comment
+  // above for why this is state, not a re-derivable fact, and therefore
+  // has to be stored unlike verificationStatus's own expiry handling.
+  // lastNotifiedLevel/lastNotifiedAt are written by the background check
+  // (lib/services/expiry-alert-service.ts's runExpiryAlertCheck) whenever
+  // a cert's live-computed tier escalates past what was last notified;
+  // that same escalation also clears alertAcknowledgedAt/By, so a
+  // previously-dismissed alert resurfaces if the situation gets worse.
+  lastNotifiedLevel   ExpiryAlertLevel?
+  lastNotifiedAt      DateTime?
+  alertAcknowledgedAt DateTime?
+  alertAcknowledgedBy String? // actor identity, same convention as AuditLog.actor
+
   passportId String
   passport   PolymerPassport @relation(fields: [passportId], references: [id])
 
   @@index([passportId])
   @@index([scheme])
   @@index([verificationStatus]) // admin "pending review" queue filters on this
+  @@index([validUntil]) // Phase 4 - Step 1: background check + dashboard widget query directly on this
+  @@index([lastNotifiedLevel]) // Phase 4 - Step 1: "what's currently flagged" queries
 }
 
 // ----------------------------------------------------------------------------
@@ -775,4 +857,159 @@ model BatchGreenValuation {
 
   @@index([passportId])
   @@index([taxParameterId])
+}
+
+// =============================================================================
+// 14. Supplier Onboarding Portal
+// -----------------------------------------------------------------------------
+// Fully additive — no existing model, field, or enum value is changed
+// (only the new SUPPLIER_SUBMISSION_APPROVED AuditAction value and the two
+// new back-relation fields above). Two new models, mirroring the
+// established Auditor/AuditorVerification and Client/ClientPassportAccess
+// "credential model" + "event/record model" pattern used elsewhere in this
+// schema:
+//   - SupplierInvite: a standing, reusable credential for one external
+//     supplier company, created by an admin. Same auth shape as
+//     Auditor.apiKeyHash/Client.apiKeyHash — tokenHash stores a SHA-256
+//     hash of the raw token, never the raw value itself; the raw token is
+//     shown to the admin exactly once at creation time (see
+//     lib/services/supplier-submission.ts's createSupplierInvite) and is
+//     embedded in the public submission URL
+//     (/supplier/submit/[token]) rather than sent as a header, since this
+//     credential is handed to someone outside the system entirely, not
+//     configured into a server-to-server client.
+//   - SupplierSubmission: one row per individual batch proposal submitted
+//     through an invite's link. Starts PENDING — same "never implicitly
+//     trust a self-submission" convention as Certification.verificationStatus
+//     and ChainOfCustodyRecord.status — and is moved to APPROVED/REJECTED
+//     only by an admin review action. An APPROVED submission's data is used
+//     to call the existing, canonical lib/services/create-passport.ts
+//     (never duplicated — this repo has already been bitten once by two
+//     divergent copies of passport-creation logic drifting apart), and the
+//     resulting PolymerPassport.id is recorded on resultingPassportId.
+//
+// Deliberately does NOT introduce any new file-upload/blob-storage
+// infrastructure: proposedCertDocumentUrl/proposedCertDocumentHash follow
+// the exact same convention as Certification.documentUrl/documentHash
+// elsewhere in this schema — a URL text field plus a client-computed
+// SHA-256 hash, never fetched server-side (SSRF avoidance).
+// =============================================================================
+
+model SupplierInvite {
+  id String @id @default(uuid())
+
+  // --- Supplier company details, collected at invite time -------------------
+  companyName  String
+  contactName  String
+  contactEmail String
+  contactPhone String?
+  country      String // required — Manufacturer.country is itself required, and this is what backs an auto-created Manufacturer row at approval time
+
+  // Cached once a submission through this invite is first approved and a
+  // Manufacturer row is resolved/created for this supplier (see
+  // lib/services/supplier-submission.ts's approveSupplierSubmission), so
+  // every later approval from the same supplier reuses the same
+  // Manufacturer row instead of creating a duplicate one. Null until then.
+  manufacturerId String?
+  manufacturer   Manufacturer? @relation(fields: [manufacturerId], references: [id])
+
+  // SHA-256 hash of the raw invite token embedded in the public submission
+  // URL — same "hash at rest, raw value shown once" principle as
+  // Auditor.apiKeyHash/Client.apiKeyHash. Looked up via lib/supplier-invite-auth.ts.
+  tokenHash String @unique
+
+  // Soft-revoke, same convention as Auditor.active/Client.active — flip
+  // false to disable a link without deleting submission history.
+  active Boolean @default(true)
+
+  invitedBy String // actor identity, same convention as AuditLog.actor (e.g. "ADMIN")
+  invitedAt DateTime @default(now())
+
+  // Optional expiry for the invite link itself (distinct from any
+  // individual certification's own validUntil). Null = no expiry.
+  expiresAt DateTime?
+
+  submissions SupplierSubmission[]
+
+  createdAt DateTime @default(now())
+
+  @@index([tokenHash])
+  @@index([active])
+  @@index([manufacturerId])
+}
+
+// One row per batch proposal a supplier submits through their invite link.
+// Field shape deliberately mirrors a subset of PolymerPassport's own
+// "Material Identification" / "Sustainability & Recycled Content" /
+// "Supply Chain & Certification" sections plus a single proposed
+// certification (matching ChainOfCustodyRecord's own "one certificate
+// block per record" convention, rather than PolymerPassport's full
+// certifications[] relation) — an admin can add further certifications
+// after approval through the existing certificate management flow if a
+// batch genuinely needs more than one.
+//
+// proposedBatchId/proposedGtin are supplier-suggested only, deliberately
+// NOT validated against PolymerPassportInputSchema's uniqueness/GS1
+// check-digit rules at submission time — external suppliers don't reliably
+// know this system's existing batchIds or hold their own GTINs. The admin
+// confirms or overrides both at approval time, when the real
+// createPassport() call enforces those rules for real.
+model SupplierSubmission {
+  id String @id @default(uuid())
+
+  inviteId String
+  invite   SupplierInvite @relation(fields: [inviteId], references: [id])
+
+  // --- Proposed material identification --------------------------------------
+  polymerType     PolymerType
+  grade           String
+  meltFlowIndex   Decimal? @db.Decimal(6, 2)
+  density         Decimal? @db.Decimal(5, 3)
+  proposedGtin    String?
+  proposedBatchId String?
+
+  // --- Proposed sustainability & recycled content -----------------------------
+  recycledContentSource      RecycledContentSource?
+  recycledContentPercent     Decimal                @default(0) @db.Decimal(5, 2)
+  bioBasedPercent            Decimal                @default(0) @db.Decimal(5, 2)
+  carbonFootprintKgCO2ePerKg Decimal                @default(0) @db.Decimal(8, 3)
+
+  // Batch weight context (not itself a PolymerPassport column — informs
+  // the admin's review, and can seed a CarbonFootprintCalculation after
+  // approval the same way the manual dashboard flow does).
+  weightKg Decimal? @db.Decimal(10, 3)
+
+  // --- Proposed certification (single block, see model banner above) --------
+  certScheme          CertificationScheme?
+  certificateId        String?
+  issuingBody          String?
+  certValidFrom        DateTime?
+  certValidUntil       DateTime?
+  certDocumentUrl      String? // mirrors Certification.documentUrl — never fetched server-side
+  certDocumentHash     String? // mirrors Certification.documentHash — client-computed SHA-256
+
+  supplierNotes String? @db.Text
+
+  status SupplierSubmissionStatus @default(PENDING)
+
+  submittedAt DateTime @default(now())
+
+  // Review outcome — set together, only by the admin review action.
+  // reviewNotes is required by the API when moving to REJECTED (mirrors
+  // Certification.rejectionReason's "required by the API, not enforced at
+  // the DB layer" convention).
+  reviewedBy  String?
+  reviewedAt  DateTime?
+  reviewNotes String? @db.Text
+
+  // Set only on approval, once the real PolymerPassport row exists.
+  resultingPassportId String?          @unique
+  resultingPassport   PolymerPassport? @relation(fields: [resultingPassportId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([inviteId])
+  @@index([status])
+  @@index([submittedAt])
 }

@@ -58,6 +58,15 @@ import { BatchDetailsModal } from "@/components/dashboard/batch-details-modal";
 // components already wired into app/page.tsx.
 import { QrCodeModal } from "@/components/dashboard/qr-code-modal";
 import { QrLabelSheetModal, type QrLabelCandidate } from "@/components/dashboard/qr-label-sheet-modal";
+// Phase 4 - Step 1 (Automated Expiry & Compliance Alerts) — portfolio-wide
+// widget, and the shared badge it (and the Material Ledger's own
+// "Compliance" column below) both use for consistent styling.
+import { ExpiryAlertBanner } from "@/components/dashboard/expiry-alert-banner";
+import { ExpiryAlertBadge } from "@/components/dashboard/expiry-alert-badge";
+// Phase 4 - Step 2 (Supplier Onboarding Portal) — review queue + invite
+// management widget, same "portfolio-wide widget below the header" slot
+// as ExpiryAlertBanner above.
+import { SupplierReviewPanel } from "@/components/dashboard/supplier-review-panel";
 
 function AdminDashboardInner() {
   const {
@@ -188,6 +197,18 @@ function AdminDashboardInner() {
       </div>
 
       <div className="max-w-7xl mx-auto space-y-8">
+        {/* Phase 4 - Step 1 — Automated Expiry & Compliance Alerts.
+            Portfolio-wide widget, first thing an admin sees below the
+            header: expired/urgent/soon counts, an expandable detail list,
+            and a manual "Run Check Now" trigger for the background check
+            that otherwise runs on Vercel Cron's daily schedule. */}
+        <ExpiryAlertBanner />
+
+        {/* Phase 4 - Step 2 — Supplier Onboarding Portal. Pending
+            submission review queue plus "Invite Supplier" / "Manage
+            Invites" controls. */}
+        <SupplierReviewPanel />
+
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Issue action */}
           <div className="lg:col-span-2 bg-slate-900/60 border border-slate-800 rounded-xl p-6 backdrop-blur-md flex flex-col items-start justify-center gap-4">
@@ -324,23 +345,23 @@ function AdminDashboardInner() {
                         </span>
                       </td>
                       <td className="p-3 text-center">
-                        {item.certificationAlert.level === "EXPIRED" ? (
-                          <span
-                            className="text-[10px] bg-red-500/10 text-red-400 border border-red-500/30 px-2 py-0.5 rounded-full font-semibold"
-                            title={`${item.certificationAlert.expiredCount} certification(s) past their validUntil date`}
-                          >
-                            Expired ({item.certificationAlert.expiredCount})
-                          </span>
-                        ) : item.certificationAlert.level === "EXPIRING_SOON" ? (
-                          <span
-                            className="text-[10px] bg-amber-500/10 text-amber-400 border border-amber-500/30 px-2 py-0.5 rounded-full font-semibold"
-                            title={`${item.certificationAlert.expiringSoonCount} certification(s) expiring within 30 days`}
-                          >
-                            Expiring Soon ({item.certificationAlert.expiringSoonCount})
-                          </span>
-                        ) : (
-                          <span className="text-slate-600">—</span>
-                        )}
+                        <ExpiryAlertBadge
+                          tier={item.certificationAlert.level}
+                          count={
+                            item.certificationAlert.level === "EXPIRED"
+                              ? item.certificationAlert.expiredCount
+                              : item.certificationAlert.level === "EXPIRING_SOON"
+                                ? item.certificationAlert.expiringSoonCount
+                                : undefined
+                          }
+                          title={
+                            item.certificationAlert.level === "EXPIRED"
+                              ? `${item.certificationAlert.expiredCount} certification(s) past their validUntil date`
+                              : item.certificationAlert.level === "EXPIRING_SOON"
+                                ? `${item.certificationAlert.expiringSoonCount} certification(s) expiring within 30 days`
+                                : undefined
+                          }
+                        />
                       </td>
                       <td className="p-3 text-center">
                         {item.qrCodePayloadUrl ? (
