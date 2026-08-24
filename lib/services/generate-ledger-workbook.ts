@@ -390,8 +390,34 @@ export async function generateGreenTaxWorkbook(): Promise<Buffer> {
   workbook.creator = "Polymer DPP";
   workbook.created = new Date();
 
+  // Primary data — a failure here means the workbook has nothing
+  // meaningful to offer (this sheet carries every active batch's current
+  // live figures), so let it propagate rather than silently shipping an
+  // empty/misleading file.
   await buildGreenAccountingSheet(workbook);
-  await buildGreenValuationHistorySheet(workbook);
+
+  // Supplementary — final Polish & Stability Sprint: the audit-trail
+  // history sheet is valuable but not essential (the Green Accounting
+  // sheet above already carries every batch's current live figures), so
+  // a failure building it must not lose the whole export. Degrades to a
+  // clearly-labeled placeholder sheet instead of failing the download,
+  // same "essential vs. supplementary" split as generateGreenTaxReportPdf()'s
+  // auditor sign-off query.
+  try {
+    await buildGreenValuationHistorySheet(workbook);
+  } catch (err) {
+    console.error(
+      "generateGreenTaxWorkbook: failed to build Green Valuation History sheet — degrading gracefully, Green Accounting sheet unaffected",
+      err
+    );
+    const fallback = workbook.addWorksheet("Green Valuation History");
+    fallback.columns = [{ header: "Notice", key: "notice", width: 110 }];
+    styleHeaderRow(fallback.getRow(1));
+    fallback.addRow({
+      notice:
+        "This sheet could not be generated for this export due to a transient error. The Green Accounting sheet's figures are unaffected and complete. Re-generate the export to retry.",
+    });
+  }
 
   const arrayBuffer = await workbook.xlsx.writeBuffer();
   return Buffer.from(arrayBuffer);

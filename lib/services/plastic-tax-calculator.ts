@@ -276,12 +276,26 @@ export function deriveMassFigures(
   return { hasWeightData: true, batchMassKg: weightKg, pcrMassKg };
 }
 
-/** Exported for the same reason as deriveMassFigures above. */
+/**
+ * Exported for the same reason as deriveMassFigures above.
+ *
+ * Final Polish & Stability Sprint fix: netLiabilityEur is now derived from
+ * the two ALREADY-ROUNDED gross/savings figures (gross − savings) instead
+ * of being recomputed independently from taxableMassKg. Previously all
+ * three figures were rounded independently from their own raw inputs —
+ * mathematically equivalent before rounding, but not guaranteed to satisfy
+ * gross − savings === net at the displayed-cent level afterward (a classic
+ * three-independent-roundings drift, off by ±€0.01 in edge cases). An
+ * auditor reading a "Gross / Savings / Net" report will sanity-check that
+ * subtraction by hand, so this identity has to hold exactly, not just
+ * approximately. This mirrors green-tax-trend-forecast.ts's forecast path,
+ * which already derived net this way for the same reason.
+ */
 export function computeLiability(batchMassKg: number, pcrMassKg: number, ratePerTonneEur: number) {
   const taxableMassKg = Math.max(0, batchMassKg - pcrMassKg);
   const grossLiabilityEur = round2((batchMassKg / 1000) * ratePerTonneEur);
   const pcrTaxSavingsEur = round2((pcrMassKg / 1000) * ratePerTonneEur);
-  const netLiabilityEur = round2((taxableMassKg / 1000) * ratePerTonneEur);
+  const netLiabilityEur = round2(grossLiabilityEur - pcrTaxSavingsEur);
   return { taxableMassKg: round3(taxableMassKg), grossLiabilityEur, pcrTaxSavingsEur, netLiabilityEur };
 }
 
@@ -336,24 +350,31 @@ export async function computeBatchGreenAccounting(
 export async function computePortfolioGreenAccounting(
   jurisdiction: string = DEFAULT_JURISDICTION
 ): Promise<PortfolioGreenAccountingSummary> {
-  const taxParam = await getActiveTaxParameter(jurisdiction);
+  // Final Polish & Stability Sprint: status exclusion now happens in the
+  // WHERE clause (indexed — PolymerPassport.status already has @@index)
+  // instead of fetching every row (including REVOKED/SUPERSEDED ones,
+  // which are never displayed) and filtering in JS. totalBatches comes
+  // from a separate, cheap count() rather than a second full fetch —
+  // counting is index-only and doesn't pull row data at all.
+  const [taxParam, totalBatches, active] = await Promise.all([
+    getActiveTaxParameter(jurisdiction),
+    prisma.polymerPassport.count(),
+    prisma.polymerPassport.findMany({
+      where: { status: { notIn: Array.from(EXCLUDED_STATUSES) } },
+      select: {
+        batchId: true,
+        polymerType: true,
+        grade: true,
+        status: true,
+        recycledContentSource: true,
+        recycledContentPercent: true,
+        manufacturer: { select: { legalName: true } },
+        carbonFootprintCalculation: { select: { weightKg: true } },
+        greenValuation: { select: { id: true } },
+      },
+    }),
+  ]);
 
-  const passports = await prisma.polymerPassport.findMany({
-    select: {
-      batchId: true,
-      polymerType: true,
-      grade: true,
-      status: true,
-      recycledContentSource: true,
-      recycledContentPercent: true,
-      manufacturer: { select: { legalName: true } },
-      carbonFootprintCalculation: { select: { weightKg: true } },
-      greenValuation: { select: { id: true } },
-    },
-  });
-
-  const totalBatches = passports.length;
-  const active = passports.filter((p) => !EXCLUDED_STATUSES.has(p.status));
   const activeBatches = active.length;
 
   let batchesWithWeightData = 0;

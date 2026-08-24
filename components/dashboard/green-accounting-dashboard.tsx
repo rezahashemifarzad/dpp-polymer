@@ -201,14 +201,25 @@ function TaxParameterPanel({ taxParameters }: { taxParameters: TaxParameterSumma
   const submit = async () => {
     setSaving(true);
     setError(null);
-    const result = await upsertTaxParameterAction(form);
-    setSaving(false);
-    if (!result.ok) {
-      setError(result.error ?? "Failed to save tax parameter");
-      return;
+    // Final Polish & Stability Sprint: wrapped in try/catch/finally — a
+    // Server Action call can reject outright (a dropped connection, not
+    // just the action's own handled `ok:false` result), and without this
+    // the button was left stuck showing "Saving..." forever with no error
+    // surfaced, since setSaving(false) was only ever reached on the
+    // success path below it.
+    try {
+      const result = await upsertTaxParameterAction(form);
+      if (!result.ok) {
+        setError(result.error ?? "Failed to save tax parameter");
+        return;
+      }
+      setOpen(false);
+      router.refresh();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to save tax parameter");
+    } finally {
+      setSaving(false);
     }
-    setOpen(false);
-    router.refresh();
   };
 
   return (
@@ -349,13 +360,21 @@ function BatchRow({
   const handleLock = async () => {
     setLocking(true);
     setError(null);
-    const result = await saveGreenValuationAction(batch.batchId);
-    setLocking(false);
-    if (!result.ok) {
-      setError(result.error ?? "Failed to lock valuation");
-      return;
+    // Same try/catch/finally fix as TaxParameterPanel's submit() above —
+    // an outright Server Action rejection must not leave the Lock button
+    // stuck spinning with no feedback.
+    try {
+      const result = await saveGreenValuationAction(batch.batchId);
+      if (!result.ok) {
+        setError(result.error ?? "Failed to lock valuation");
+        return;
+      }
+      onLocked();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to lock valuation");
+    } finally {
+      setLocking(false);
     }
-    onLocked();
   };
 
   return (

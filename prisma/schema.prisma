@@ -292,6 +292,7 @@ model PolymerPassport {
   @@index([status])
   @@index([gtin])
   @@index([manufacturerId]) // STEP 5: added — high-frequency filter in GET /api/passports
+  @@index([productionDate]) // Final Polish & Stability Sprint: green-tax-trend-forecast.ts and esg-analytics.ts's monthly trend both range-scan/bucket by this column
 }
 
 // ----------------------------------------------------------------------------

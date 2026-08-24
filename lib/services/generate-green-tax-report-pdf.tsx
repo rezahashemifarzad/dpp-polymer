@@ -167,11 +167,13 @@ function GreenTaxReportDocument({
   summary,
   signOffs,
   signOffsTotal,
+  signOffsFetchFailed,
   generatedAt,
 }: {
   summary: PortfolioGreenAccountingSummary;
   signOffs: SignOffRow[];
   signOffsTotal: number;
+  signOffsFetchFailed: boolean;
   generatedAt: string;
 }) {
   const batchesShown = summary.batches.slice(0, MAX_BATCH_ROWS);
@@ -330,11 +332,21 @@ function GreenTaxReportDocument({
             ))}
             {signOffs.length === 0 && (
               <View style={styles.tableRow}>
-                <Text style={styles.tableCell}>No auditor sign-offs on record yet.</Text>
+                <Text style={styles.tableCell}>
+                  {signOffsFetchFailed
+                    ? "Auditor sign-off data could not be retrieved for this report — this section is empty due to a transient error, not because no sign-offs exist. Re-generate the report to retry."
+                    : "No auditor sign-offs on record yet."}
+                </Text>
               </View>
             )}
           </View>
-          {signOffs.length < signOffsTotal && (
+          {signOffsFetchFailed && (
+            <Text style={[styles.sectionNote, { color: "#b45309" }]}>
+              This section could not be retrieved when this report was generated; all other figures in this report
+              (Portfolio Summary, Tax Calculation Breakdown, Per-Batch Green Valuation) are unaffected and complete.
+            </Text>
+          )}
+          {!signOffsFetchFailed && signOffs.length < signOffsTotal && (
             <Text style={styles.sectionNote}>
               Showing {signOffs.length} of {signOffsTotal} total sign-offs on record.
             </Text>
@@ -383,41 +395,63 @@ function GreenTaxReportDocument({
 }
 
 export async function generateGreenTaxReportPdf(): Promise<Buffer> {
+  // Essential data — computePortfolioGreenAccounting() already has its own
+  // "batches missing weight data are excluded, never silently zeroed"
+  // handling and works correctly for a zero-batch or zero-tax-parameter
+  // portfolio (see plastic-tax-calculator.ts), so a failure here is a real
+  // failure and should propagate: there is no meaningful report without it.
   const summary = await computePortfolioGreenAccounting();
 
-  // Reuses the exact query shape generate-compliance-report-pdf.tsx uses
-  // for its own "Third-Party Auditor Sign-Offs" table — same model, same
-  // cap, same "latest first" ordering — so the two reports never disagree
-  // about what a sign-off looked like.
-  const [signOffsTotal, rawSignOffs] = await Promise.all([
-    prisma.auditorVerification.count(),
-    prisma.auditorVerification.findMany({
-      orderBy: { signedAt: "desc" },
-      take: MAX_SIGNOFF_ROWS,
-      select: {
-        status: true,
-        signedAt: true,
-        signatureHash: true,
-        auditor: { select: { name: true, organization: true } },
-        passport: { select: { batchId: true } },
-      },
-    }),
-  ]);
-
-  const signOffs: SignOffRow[] = rawSignOffs.map((s) => ({
-    batchId: s.passport.batchId,
-    auditorName: s.auditor.name,
-    auditorOrganization: s.auditor.organization,
-    status: s.status,
-    signedAt: s.signedAt.toISOString(),
-    signatureHash: s.signatureHash,
-  }));
+  // Supplementary data — reuses the exact query shape
+  // generate-compliance-report-pdf.tsx uses for its own "Third-Party
+  // Auditor Sign-Offs" table (same model, same cap, same "latest first"
+  // ordering) so the two reports never disagree about what a sign-off
+  // looked like. Final Polish & Stability Sprint: this is explicitly
+  // labeled supporting portfolio context, not a tax-specific attestation
+  // (see the section's own note), so a failure fetching it must not take
+  // down the whole report — the primary tax figures already succeeded
+  // above. Degrades to an empty, clearly-labeled section instead.
+  let signOffsTotal = 0;
+  let signOffs: SignOffRow[] = [];
+  let signOffsFetchFailed = false;
+  try {
+    const [total, rawSignOffs] = await Promise.all([
+      prisma.auditorVerification.count(),
+      prisma.auditorVerification.findMany({
+        orderBy: { signedAt: "desc" },
+        take: MAX_SIGNOFF_ROWS,
+        select: {
+          status: true,
+          signedAt: true,
+          signatureHash: true,
+          auditor: { select: { name: true, organization: true } },
+          passport: { select: { batchId: true } },
+        },
+      }),
+    ]);
+    signOffsTotal = total;
+    signOffs = rawSignOffs.map((s) => ({
+      batchId: s.passport.batchId,
+      auditorName: s.auditor.name,
+      auditorOrganization: s.auditor.organization,
+      status: s.status,
+      signedAt: s.signedAt.toISOString(),
+      signatureHash: s.signatureHash,
+    }));
+  } catch (err) {
+    signOffsFetchFailed = true;
+    console.error(
+      "generateGreenTaxReportPdf: failed to fetch auditor sign-offs — degrading gracefully, rest of report unaffected",
+      err
+    );
+  }
 
   return renderToBuffer(
     <GreenTaxReportDocument
       summary={summary}
       signOffs={signOffs}
       signOffsTotal={signOffsTotal}
+      signOffsFetchFailed={signOffsFetchFailed}
       generatedAt={new Date().toLocaleString()}
     />
   );

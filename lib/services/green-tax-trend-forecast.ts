@@ -21,8 +21,16 @@
  * METHODOLOGY (kept deliberately simple for this MVP — see DISCLAIMER):
  *   1. Every active batch (REVOKED/SUPERSEDED excluded, same
  *      EXCLUDED_STATUSES convention as esg-analytics.ts and
- *      plastic-tax-calculator.ts) with recorded weight data is bucketed
- *      by the calendar quarter of its productionDate ("YYYY-QN").
+ *      plastic-tax-calculator.ts) produced within the trailing
+ *      LOOKBACK_QUARTERS quarters (a rolling window, currently 3 years)
+ *      with recorded weight data is bucketed by the calendar quarter of
+ *      its productionDate ("YYYY-QN"). The window bound is applied in the
+ *      DB query itself (an indexed productionDate range scan), not a JS
+ *      filter after fetching everything — this keeps the trend fast and
+ *      the chart readable regardless of how far back the ledger goes.
+ *      computePortfolioGreenAccounting()'s own current-state totals are
+ *      unaffected — they still consider every active batch regardless of
+ *      age.
  *   2. Each batch's liability is computed using the PlasticTaxParameter
  *      rate that was actually effective on ITS OWN productionDate (not
  *      today's rate) — this is what lets a historical rate change show
@@ -61,6 +69,18 @@ const MIN_QUARTERS_FOR_FORECAST = 3;
 const FORECAST_QUARTERS = 4;
 const TRAILING_WINDOW_QUARTERS = 4;
 
+// Final Polish & Stability Sprint: bound both the DB query and the
+// resulting chart/table to a rolling window of recent quarters instead of
+// scanning and rendering a portfolio's entire production history. This is
+// both a genuine query optimization (an indexed productionDate range scan
+// instead of a full-table fetch, see the new @@index([productionDate]) on
+// PolymerPassport) and a UX fix — nobody wants a 15-year, 60-bar quarterly
+// chart. 12 quarters = 3 years, a reasonable planning horizon for an
+// annual/quarterly tax tracker. This does NOT affect
+// computePortfolioGreenAccounting()'s own current-state totals above,
+// which correctly still consider every active batch regardless of age.
+const LOOKBACK_QUARTERS = 12;
+
 const EXCLUDED_STATUSES = new Set(["REVOKED", "SUPERSEDED"]);
 
 export const FORECAST_METHODOLOGY =
@@ -70,9 +90,10 @@ export const FORECAST_METHODOLOGY =
 
 export const FORECAST_DISCLAIMER =
   "Illustrative planning indicator only, not tax or legal advice or a financial projection. Based on a simple " +
-  "linear extrapolation of past production volume, PCR mass, and the tax rate effective at each batch's " +
-  "production date — it does not model future production changes, PCR adoption shifts, or tax-rate changes " +
-  "beyond the currently active rate. Consult a qualified tax advisor before relying on these figures.";
+  "linear extrapolation of the trailing 3 years of production volume, PCR mass, and the tax rate effective at " +
+  "each batch's production date — it does not model future production changes, PCR adoption shifts, or tax-rate " +
+  "changes beyond the currently active rate, and does not include batches produced further back than 3 years. " +
+  "Consult a qualified tax advisor before relying on these figures.";
 
 export interface GreenTaxQuarterPoint {
   quarter: string; // "2026-Q3"
@@ -139,6 +160,23 @@ function yearOfQuarterKey(key: string): string {
   return key.split("-Q")[0];
 }
 
+function startOfQuarterDate(key: string): Date {
+  const [yStr, qStr] = key.split("-Q");
+  return new Date(Date.UTC(Number(yStr), (Number(qStr) - 1) * 3, 1));
+}
+
+/**
+ * The first instant of the rolling LOOKBACK_QUARTERS-quarter window that
+ * ends with (and includes) the current quarter. Used to bound both the
+ * batch and audit-log queries to an indexed date range instead of an
+ * unbounded full-table scan.
+ */
+function computeLookbackCutoffDate(now: Date, lookbackQuarters: number): Date {
+  const currentIdx = quarterIndex(quarterKeyOfDate(now));
+  const cutoffKey = quarterKeyFromIndex(currentIdx - (lookbackQuarters - 1));
+  return startOfQuarterDate(cutoffKey);
+}
+
 interface RateWindow {
   ratePerTonne: number;
   effectiveFrom: Date;
@@ -180,10 +218,21 @@ function fitLinearTrend(values: number[]): { slope: number; intercept: number } 
 export async function computeGreenTaxTrendForecast(
   jurisdiction: string = DEFAULT_JURISDICTION
 ): Promise<GreenTaxTrendForecastSummary> {
+  // Final Polish & Stability Sprint: both queries below are bounded to the
+  // rolling LOOKBACK_QUARTERS window (indexed range scans — see the new
+  // @@index([productionDate]) on PolymerPassport, and AuditLog already
+  // indexes [action]) instead of unbounded full-table fetches. Status
+  // exclusion also moved into the WHERE clause rather than a JS filter
+  // afterward, same fix as computePortfolioGreenAccounting.
+  const cutoffDate = computeLookbackCutoffDate(new Date(), LOOKBACK_QUARTERS);
+
   const [passports, taxParams, lockedValuationLogs] = await Promise.all([
     prisma.polymerPassport.findMany({
+      where: {
+        status: { notIn: Array.from(EXCLUDED_STATUSES) },
+        productionDate: { gte: cutoffDate },
+      },
       select: {
-        status: true,
         productionDate: true,
         recycledContentSource: true,
         recycledContentPercent: true,
@@ -192,7 +241,7 @@ export async function computeGreenTaxTrendForecast(
     }),
     listTaxParameters(jurisdiction),
     prisma.auditLog.findMany({
-      where: { action: "GREEN_VALUATION_SAVED" },
+      where: { action: "GREEN_VALUATION_SAVED", createdAt: { gte: cutoffDate } },
       select: { createdAt: true },
     }),
   ]);
@@ -217,7 +266,7 @@ export async function computeGreenTaxTrendForecast(
   const buckets = new Map<string, Accumulator>();
 
   for (const p of passports) {
-    if (EXCLUDED_STATUSES.has(p.status)) continue;
+    // Status exclusion already applied in the WHERE clause above.
     const weightKg = p.carbonFootprintCalculation ? Number(p.carbonFootprintCalculation.weightKg) : null;
     const { hasWeightData, batchMassKg, pcrMassKg } = deriveMassFigures(
       weightKg,
