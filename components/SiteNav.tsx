@@ -9,11 +9,11 @@
  * instead of being hand-copied into each page's own header, which is
  * exactly the pattern that already caused real bugs this project: the
  * "Manage" button and the ESG Analytics / Auditor Portal / Client Portal
- * links each had to be independently re-added to more than one
- * un-synced page (see claude/circular-economy-platform-upgrade-notes.md's
- * "two independent Material Ledger tables" note). One nav, defined here
- * once, removes that whole class of drift for cross-page navigation links
- * going forward — it does not fix the existing per-page ledger/table
+ * links each had to be independently re-added to more than one un-synced
+ * page (see claude/circular-economy-platform-upgrade-notes.md's "two
+ * independent Material Ledger tables" note). One nav, defined here once,
+ * removes that whole class of drift for cross-page navigation links going
+ * forward — it does not fix the existing per-page ledger/table
  * duplication, which is a separate, larger issue.
  *
  * Deliberately does NOT render on the public GS1/QR scan page
@@ -24,11 +24,29 @@
  * "Admin Console" / "Auditor Portal" / "Client Portal" links to a random
  * end consumer scanning a product, which is a page meant to build trust
  * in the product data, not surface internal tooling.
+ *
+ * Theme: dark slate/zinc, matching every internal page this nav actually
+ * appears above (app/page.tsx, app/admin/page.tsx, app/auditor/page.tsx,
+ * app/client-portal/page.tsx are all bg-slate-950). An earlier version of
+ * this file used a light gray/white theme, which read as a mismatched bar
+ * stacked on top of those pages — fixed here.
+ *
+ * Responsive behavior:
+ *   - >= lg: full horizontal pill nav, icon + label per link.
+ *   - md .. lg: same horizontal nav, icon-only (label in a `title` tooltip)
+ *     so five links + the brand mark never wrap or overflow in that
+ *     narrower-but-still-"desktop" band.
+ *   - < md: a compact bar (brand + hamburger button) that expands a
+ *     slide-down panel with every link stacked, full-width, comfortable
+ *     touch targets. Closes on: selecting a link, a route change,
+ *     clicking the backdrop, or Escape. Background scroll is locked while
+ *     it's open so the panel doesn't visually fight page content behind it.
  */
 
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, ShieldCheck, BarChart3, KeyRound, Building2 } from "lucide-react";
+import { Home, ShieldCheck, BarChart3, KeyRound, Building2, Menu, X } from "lucide-react";
 
 const NAV_LINKS = [
   { href: "/", label: "Home", icon: Home },
@@ -40,31 +58,135 @@ const NAV_LINKS = [
 
 export default function SiteNav() {
   const pathname = usePathname();
+  const [mobileOpen, setMobileOpen] = useState(false);
+  const panelRef = useRef<HTMLDivElement>(null);
+
+  // Auto-close on every route change — the primary mechanism for "clicking
+  // a link closes the menu" (belt-and-suspenders with each Link's own
+  // onClick below, which also covers re-clicking the already-active link,
+  // where pathname doesn't change).
+  useEffect(() => {
+    setMobileOpen(false);
+  }, [pathname]);
+
+  // Escape-to-close + background scroll lock while the mobile panel is
+  // open, so it doesn't visually fight the page scrolling behind it —
+  // standard polish for any slide-over/dropdown menu.
+  useEffect(() => {
+    if (!mobileOpen) return;
+
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setMobileOpen(false);
+    };
+    document.addEventListener("keydown", onKeyDown);
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
+    return () => {
+      document.removeEventListener("keydown", onKeyDown);
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [mobileOpen]);
 
   if (pathname?.startsWith("/01/")) return null;
 
   return (
-    <header className="bg-white border-b border-gray-200 px-6 py-3 flex items-center justify-between">
-      <Link href="/" className="text-sm font-bold text-black tracking-tight">
-        Polymer<span className="text-emerald-600">.DPP</span>
-      </Link>
-      <nav className="flex items-center gap-5">
-        {NAV_LINKS.map(({ href, label, icon: Icon }) => {
-          const active = pathname === href;
-          return (
-            <Link
-              key={href}
-              href={href}
-              className={`flex items-center gap-1.5 text-sm font-medium transition-colors ${
-                active ? "text-black" : "text-gray-600 hover:text-black"
-              }`}
-            >
-              <Icon className="w-3.5 h-3.5" />
-              {label}
-            </Link>
-          );
-        })}
-      </nav>
+    <header className="relative z-50 bg-slate-950 border-b border-slate-800">
+      <div className="px-4 sm:px-6 h-14 flex items-center justify-between gap-4">
+        <Link
+          href="/"
+          className="shrink-0 text-sm font-bold tracking-tight text-white hover:text-slate-200 transition-colors"
+        >
+          Polymer<span className="text-emerald-400">.DPP</span>
+        </Link>
+
+        {/* Desktop / tablet nav — md and up. Icon-only from md to lg (a
+            `title` attribute stands in as the accessible/hover label) so
+            five links never wrap at exactly the md breakpoint; full
+            icon+label from lg up. */}
+        <nav className="hidden md:flex items-center gap-1 bg-slate-900 border border-slate-800 p-1 rounded-xl">
+          {NAV_LINKS.map(({ href, label, icon: Icon }) => {
+            const active = pathname === href;
+            return (
+              <Link
+                key={href}
+                href={href}
+                title={label}
+                aria-current={active ? "page" : undefined}
+                className={`flex items-center gap-1.5 px-2.5 lg:px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
+                  active
+                    ? "bg-emerald-500 text-slate-950 shadow-sm"
+                    : "text-slate-400 hover:text-white hover:bg-slate-800/60"
+                }`}
+              >
+                <Icon className="w-3.5 h-3.5 shrink-0" />
+                <span className="hidden lg:inline whitespace-nowrap">{label}</span>
+              </Link>
+            );
+          })}
+        </nav>
+
+        {/* Mobile hamburger — below md only */}
+        <button
+          type="button"
+          onClick={() => setMobileOpen((v) => !v)}
+          aria-expanded={mobileOpen}
+          aria-controls="site-nav-mobile-panel"
+          aria-label={mobileOpen ? "Close navigation menu" : "Open navigation menu"}
+          className="md:hidden shrink-0 p-2 rounded-lg text-slate-300 hover:text-white hover:bg-slate-800 transition-colors"
+        >
+          {mobileOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+        </button>
+      </div>
+
+      {/* Mobile panel + backdrop — rendered only below md (the button that
+          triggers it is md:hidden, so this can never open on wider
+          viewports). Backdrop is a separate element positioned beneath the
+          panel; clicking it (i.e. anywhere outside the panel) closes the
+          menu, while clicks inside the panel land on the panel itself and
+          never reach the backdrop. */}
+      {mobileOpen && (
+        <>
+          <div
+            className="md:hidden fixed inset-0 top-14 z-40 bg-black/50 backdrop-blur-[1px] animate-[fadeIn_150ms_ease-out]"
+            onClick={() => setMobileOpen(false)}
+            aria-hidden="true"
+          />
+          <div
+            id="site-nav-mobile-panel"
+            ref={panelRef}
+            className="md:hidden absolute inset-x-0 top-full z-50 bg-slate-950 border-b border-slate-800 shadow-xl shadow-black/40 animate-[slideDown_180ms_ease-out]"
+          >
+            <nav className="px-3 py-3 space-y-1">
+              {NAV_LINKS.map(({ href, label, icon: Icon }) => {
+                const active = pathname === href;
+                return (
+                  <Link
+                    key={href}
+                    href={href}
+                    onClick={() => setMobileOpen(false)}
+                    aria-current={active ? "page" : undefined}
+                    className={`flex items-center gap-3 px-4 py-3.5 rounded-lg text-sm font-medium transition-colors ${
+                      active
+                        ? "bg-emerald-500 text-slate-950 font-semibold"
+                        : "text-slate-300 hover:text-white hover:bg-slate-800/80"
+                    }`}
+                  >
+                    <Icon className="w-4.5 h-4.5 shrink-0" />
+                    {label}
+                  </Link>
+                );
+              })}
+            </nav>
+          </div>
+        </>
+      )}
+
+      <style>{`
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes slideDown { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: translateY(0); } }
+      `}</style>
     </header>
   );
 }
