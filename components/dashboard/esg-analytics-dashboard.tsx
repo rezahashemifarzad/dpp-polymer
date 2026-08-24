@@ -247,23 +247,29 @@ export function EsgAnalyticsDashboard({ summary }: { summary: EsgAnalyticsSummar
   };
 
   return (
-    <div className="min-h-screen bg-[#020617] text-slate-100 font-sans">
+    <div className="min-h-screen bg-[#020617] text-slate-100 font-sans overflow-x-hidden">
+      {/* Header — was a fixed h-16 row with a back-link+title block and a
+          timestamp+3-button block crammed side by side; at phone widths the
+          two blocks together are wider than the viewport. min-h-16 + flex-wrap
+          (instead of a fixed height + no-wrap) lets the button block drop to
+          its own line instead of forcing horizontal overflow, and the button
+          block itself also wraps as a safety net for in-between widths. */}
       <header className="border-b border-slate-800/80 bg-[#070c18]/90 backdrop-blur-2xl sticky top-0 z-40">
-        <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-4">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 min-h-16 py-3 flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
+          <div className="flex items-center gap-4 min-w-0">
             <Link
               href="/admin"
-              className="flex items-center gap-2 text-xs font-medium bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 px-3 py-2 rounded-lg transition-all"
+              className="shrink-0 flex items-center gap-2 text-xs font-medium bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 px-3 py-2 rounded-lg transition-all"
             >
               <ArrowLeft className="w-3.5 h-3.5" />
               Admin Console
             </Link>
-            <div>
+            <div className="min-w-0">
               <h1 className="text-base font-bold text-white tracking-tight">Corporate ESG Analytics</h1>
               <p className="text-[11px] text-slate-400 font-mono">Sustainability &amp; Circular Economy Summary</p>
             </div>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <span className="text-[10px] text-slate-500 font-mono hidden md:inline">
               Generated {new Date(summary.generatedAt).toLocaleString()}
             </span>

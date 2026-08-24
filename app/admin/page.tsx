@@ -54,20 +54,24 @@ function AdminDashboardInner() {
   const [manageTarget, setManageTarget] = useState<ApiPassport | null>(null);
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 p-6 font-sans">
-      {/* Header */}
-      <div className="max-w-7xl mx-auto flex justify-between items-center pb-6 mb-8 border-b border-slate-800">
-        <div className="flex items-center gap-3">
-          <div className="p-2 bg-emerald-500/10 text-emerald-400 rounded-lg border border-emerald-500/20">
+    <div className="min-h-screen bg-slate-950 text-slate-100 p-4 sm:p-6 font-sans overflow-x-hidden">
+      {/* Header — stacks title above the action-link row below md so four
+          pill links never force horizontal overflow on a phone; the link
+          row itself also wraps (flex-wrap) as a safety net for the
+          in-between widths where four links still don't fit one line even
+          after stacking. */}
+      <div className="max-w-7xl mx-auto flex flex-col md:flex-row md:items-center md:justify-between gap-4 pb-6 mb-8 border-b border-slate-800">
+        <div className="flex items-center gap-3 min-w-0">
+          <div className="p-2 bg-emerald-500/10 text-emerald-400 rounded-lg border border-emerald-500/20 shrink-0">
             <ShieldCheck className="w-6 h-6" />
           </div>
-          <div>
+          <div className="min-w-0">
             <h1 className="text-xl font-bold tracking-wide">DPP Industrial Admin Console</h1>
             <p className="text-xs text-slate-400">Compounder &amp; Material Lifecycle Management (ESPR Compliance)</p>
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <Link
             href="/admin/esg-analytics"
             className="flex items-center gap-2 text-xs font-medium bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 text-emerald-400 px-4 py-2 rounded-lg transition-all"

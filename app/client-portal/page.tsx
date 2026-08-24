@@ -239,13 +239,17 @@ function ClientPortal({
   }, [fetchPortfolio]);
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 p-6 font-sans">
-      <div className="max-w-6xl mx-auto flex justify-between items-center pb-6 mb-6 border-b border-slate-800">
-        <div className="flex items-center gap-3">
-          <div className="p-2 bg-cyan-500/10 text-cyan-400 rounded-lg border border-cyan-500/20">
+    <div className="min-h-screen bg-slate-950 text-slate-100 p-4 sm:p-6 font-sans overflow-x-hidden">
+      {/* Header — stacks below md; the company-name identity line has no
+          length limit (buyer-supplied at provisioning time), so it and the
+          two action buttons are given their own rows on narrow screens
+          instead of being squeezed into one. */}
+      <div className="max-w-6xl mx-auto flex flex-col md:flex-row md:items-center md:justify-between gap-4 pb-6 mb-6 border-b border-slate-800">
+        <div className="flex items-center gap-3 min-w-0">
+          <div className="p-2 bg-cyan-500/10 text-cyan-400 rounded-lg border border-cyan-500/20 shrink-0">
             <Building2 className="w-6 h-6" />
           </div>
-          <div>
+          <div className="min-w-0">
             <h1 className="text-xl font-bold tracking-wide">Client Portal</h1>
             <p className="text-xs text-slate-400">
               <span className="text-cyan-400 font-medium">{identity.companyName}</span>
@@ -253,7 +257,7 @@ function ClientPortal({
             </p>
           </div>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <button
             onClick={() => fetchPortfolio()}
             className="flex items-center gap-2 text-xs font-medium bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 px-4 py-2 rounded-lg transition-all"

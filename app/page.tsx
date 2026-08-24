@@ -23,6 +23,7 @@ import {
   AlertTriangle,
   Settings2,
   BarChart3,
+  BadgeCheck,
 } from 'lucide-react';
 import Link from 'next/link';
 import { ToastProvider, useToast } from '@/lib/hooks/use-toast';
@@ -303,35 +304,63 @@ function CompletePolymerDPPInner() {
   };
 
   return (
-    <div className="min-h-screen bg-[#020617] text-slate-100 font-sans selection:bg-emerald-500 selection:text-black">
+    <div className="min-h-screen bg-[#020617] text-slate-100 font-sans selection:bg-emerald-500 selection:text-black overflow-x-hidden">
 
-      {/* Top Navigation Bar */}
+      {/* Top Navigation Bar. Row 1 (logo + language/DB status) uses
+          min-h-16 + flex-wrap instead of a fixed h-16 + no-wrap, so the
+          right-hand cluster drops to its own line rather than overflowing
+          the viewport on a phone; Row 2 (the six view-switch tabs, added
+          below) is desktop-unchanged (`hidden md:flex`) plus a new
+          `md:hidden` horizontally-scrollable mirror so phone users can
+          still reach every tab instead of losing them outright. */}
       <header className="border-b border-slate-800/80 bg-[#070c18]/90 backdrop-blur-2xl sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 min-h-16 py-3 flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
 
           {/* Logo */}
-          <div className="flex items-center space-x-3 cursor-pointer" onClick={() => setActiveTab('dashboard')}>
+          <div className="flex items-center space-x-3 cursor-pointer min-w-0" onClick={() => setActiveTab('dashboard')}>
             <div className="bg-gradient-to-tr from-emerald-500 to-teal-400 p-2.5 rounded-xl text-slate-950 font-bold shadow-lg shadow-emerald-500/20">
               <ShieldCheck className="w-5 h-5" />
             </div>
             <div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
                 <h1 className="font-extrabold text-base tracking-tight text-white font-mono">
                   POLYMER<span className="text-emerald-400">.DPP</span>
                 </h1>
-                <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 font-mono font-bold">
-                  EU ESPR 2026
+                {/* Regulatory compliance badge — deliberately muted/neutral
+                    rather than brand-emerald, so it reads as an official
+                    standards seal (like an ISO/CE mark) rather than another
+                    call-to-action pill competing with the brand accent.
+                    The BadgeCheck icon carries the one hint of accent color;
+                    the label itself stays soft slate. flex-wrap on the
+                    parent row lets this drop to its own line on very narrow
+                    viewports instead of forcing an overflow/squeeze. */}
+                <span className="inline-flex items-center gap-1.5 pl-1.5 pr-2.5 py-1 rounded-full bg-white/[0.04] border border-slate-600/50 whitespace-nowrap">
+                  <BadgeCheck className="w-3 h-3 text-emerald-400/80 shrink-0" />
+                  <span className="text-[10px] font-medium font-mono tracking-wide text-slate-300">
+                    EU ESPR 2026
+                  </span>
                 </span>
               </div>
               <p className="text-[11px] text-slate-400">Enterprise Circular Economy Platform</p>
             </div>
           </div>
 
-          {/* Navigation Links */}
-          <div className="hidden md:flex items-center space-x-1 bg-slate-900 border border-slate-800 p-1 rounded-xl">
+          {/* Navigation Links — audit finding: at exactly the md breakpoint
+              (roughly 768-950px, squarely inside the "tablet" band) this row
+              didn't have room for all six labels, and since neither the
+              buttons nor the row itself resisted shrinking, flexbox wrapped
+              each label internally ("AI Copilot" breaking after "AI", etc.)
+              instead of wrapping the row as a whole — a genuinely broken,
+              jumbled two-line button bar. shrink-0 + whitespace-nowrap on
+              every item (so a button's own content can never wrap) plus
+              shrink-0 on the container (so the row wraps as a single unit
+              onto its own line within Row 1's flex-wrap instead of
+              collapsing internally) fixes it without changing anything
+              about how this bar looks whenever it *does* fit on one line. */}
+          <div className="hidden md:flex items-center space-x-1 bg-slate-900 border border-slate-800 p-1 rounded-xl shrink-0">
             <button
               onClick={() => setActiveTab('dashboard')}
-              className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold font-mono flex items-center gap-1.5 transition ${
+              className={`shrink-0 whitespace-nowrap px-3.5 py-1.5 rounded-lg text-xs font-semibold font-mono flex items-center gap-1.5 transition ${
                 activeTab === 'dashboard' ? 'bg-emerald-500 text-slate-950 font-bold shadow-md' : 'text-slate-400 hover:text-white'
               }`}
             >
@@ -341,7 +370,7 @@ function CompletePolymerDPPInner() {
 
             <button
               onClick={() => setActiveTab('copilot')}
-              className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold font-mono flex items-center gap-1.5 transition ${
+              className={`shrink-0 whitespace-nowrap px-3.5 py-1.5 rounded-lg text-xs font-semibold font-mono flex items-center gap-1.5 transition ${
                 activeTab === 'copilot' ? 'bg-emerald-500 text-slate-950 font-bold shadow-md' : 'text-slate-400 hover:text-white'
               }`}
             >
@@ -351,7 +380,7 @@ function CompletePolymerDPPInner() {
 
             <button
               onClick={() => setActiveTab('ledger')}
-              className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold font-mono flex items-center gap-1.5 transition ${
+              className={`shrink-0 whitespace-nowrap px-3.5 py-1.5 rounded-lg text-xs font-semibold font-mono flex items-center gap-1.5 transition ${
                 activeTab === 'ledger' ? 'bg-emerald-500 text-slate-950 font-bold shadow-md' : 'text-slate-400 hover:text-white'
               }`}
             >
@@ -361,7 +390,7 @@ function CompletePolymerDPPInner() {
 
             <button
               onClick={() => setActiveTab('qr_generator')}
-              className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold font-mono flex items-center gap-1.5 transition ${
+              className={`shrink-0 whitespace-nowrap px-3.5 py-1.5 rounded-lg text-xs font-semibold font-mono flex items-center gap-1.5 transition ${
                 activeTab === 'qr_generator' ? 'bg-emerald-500 text-slate-950 font-bold shadow-md' : 'text-slate-400 hover:text-white'
               }`}
             >
@@ -371,7 +400,7 @@ function CompletePolymerDPPInner() {
 
             <button
               onClick={() => setActiveTab('audit')}
-              className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold font-mono transition ${
+              className={`shrink-0 whitespace-nowrap px-3.5 py-1.5 rounded-lg text-xs font-semibold font-mono transition ${
                 activeTab === 'audit' ? 'bg-emerald-500 text-slate-950 font-bold shadow-md' : 'text-slate-400 hover:text-white'
               }`}
             >
@@ -384,15 +413,19 @@ function CompletePolymerDPPInner() {
                 navigation rather than a setActiveTab() call. */}
             <Link
               href="/admin/esg-analytics"
-              className="px-3.5 py-1.5 rounded-lg text-xs font-semibold font-mono flex items-center gap-1.5 transition text-slate-400 hover:text-white"
+              className="shrink-0 whitespace-nowrap px-3.5 py-1.5 rounded-lg text-xs font-semibold font-mono flex items-center gap-1.5 transition text-slate-400 hover:text-white"
             >
               <BarChart3 className="w-3.5 h-3.5" />
               <span>ESG Analytics</span>
             </Link>
           </div>
 
-          {/* Language Picker & DB Status */}
-          <div className="flex items-center space-x-3">
+          {/* Language Picker & DB Status — shrink-0 so the flex-wrap on the
+              row above moves this whole cluster to its own line rather than
+              compressing it; the "Neon DB Active/Error" label collapses to
+              just the status dot below sm, since the label text alone was
+              ~110-130px this couldn't otherwise spare on a 360px phone. */}
+          <div className="flex items-center gap-2 sm:gap-3 shrink-0">
             <div className="flex items-center space-x-1 bg-slate-900 border border-slate-800 rounded-xl px-2.5 py-1 text-xs font-mono text-slate-300">
               <Languages className="w-3.5 h-3.5 text-emerald-400" />
               <select
@@ -407,17 +440,85 @@ function CompletePolymerDPPInner() {
             </div>
 
             <div
-              className={`flex items-center gap-2 px-3 py-1 rounded-xl border text-xs font-mono ${
+              className={`flex items-center gap-2 px-2.5 sm:px-3 py-1 rounded-xl border text-xs font-mono ${
                 error
                   ? 'bg-red-500/10 border-red-500/20 text-red-400'
                   : 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400'
               }`}
             >
-              <span className={`w-2 h-2 rounded-full ${error ? 'bg-red-400' : 'bg-emerald-400 animate-pulse'}`}></span>
-              <span>{error ? 'Neon DB Error' : 'Neon DB Active'}</span>
+              <span className={`w-2 h-2 rounded-full shrink-0 ${error ? 'bg-red-400' : 'bg-emerald-400 animate-pulse'}`}></span>
+              <span className="hidden sm:inline whitespace-nowrap">{error ? 'Neon DB Error' : 'Neon DB Active'}</span>
             </div>
           </div>
 
+        </div>
+
+        {/* Row 2 (mobile only) — the exact same six destinations as the
+            desktop pill nav above, mirrored rather than reused so the
+            desktop block above is completely untouched. A horizontally
+            scrollable strip is the standard mobile pattern for a tab bar
+            wider than the viewport (GitHub/Twitter use the same approach)
+            and avoids ever wrapping a tab's label mid-word or clipping a
+            tab off the edge of the screen. */}
+        <div className="md:hidden max-w-7xl mx-auto px-4 pb-3">
+          <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-hide bg-slate-900 border border-slate-800 p-1 rounded-xl">
+            <button
+              onClick={() => setActiveTab('dashboard')}
+              className={`shrink-0 whitespace-nowrap px-3.5 py-1.5 rounded-lg text-xs font-semibold font-mono flex items-center gap-1.5 transition ${
+                activeTab === 'dashboard' ? 'bg-emerald-500 text-slate-950 font-bold shadow-md' : 'text-slate-400'
+              }`}
+            >
+              <Home className="w-3.5 h-3.5" />
+              <span>{t.home}</span>
+            </button>
+
+            <button
+              onClick={() => setActiveTab('copilot')}
+              className={`shrink-0 whitespace-nowrap px-3.5 py-1.5 rounded-lg text-xs font-semibold font-mono flex items-center gap-1.5 transition ${
+                activeTab === 'copilot' ? 'bg-emerald-500 text-slate-950 font-bold shadow-md' : 'text-slate-400'
+              }`}
+            >
+              <Bot className="w-3.5 h-3.5" />
+              <span>{t.aiCopilot}</span>
+            </button>
+
+            <button
+              onClick={() => setActiveTab('ledger')}
+              className={`shrink-0 whitespace-nowrap px-3.5 py-1.5 rounded-lg text-xs font-semibold font-mono flex items-center gap-1.5 transition ${
+                activeTab === 'ledger' ? 'bg-emerald-500 text-slate-950 font-bold shadow-md' : 'text-slate-400'
+              }`}
+            >
+              <Table className="w-3.5 h-3.5" />
+              <span>{t.materialLedger}</span>
+            </button>
+
+            <button
+              onClick={() => setActiveTab('qr_generator')}
+              className={`shrink-0 whitespace-nowrap px-3.5 py-1.5 rounded-lg text-xs font-semibold font-mono flex items-center gap-1.5 transition ${
+                activeTab === 'qr_generator' ? 'bg-emerald-500 text-slate-950 font-bold shadow-md' : 'text-slate-400'
+              }`}
+            >
+              <QrCode className="w-3.5 h-3.5" />
+              <span>{t.qrGenerator}</span>
+            </button>
+
+            <button
+              onClick={() => setActiveTab('audit')}
+              className={`shrink-0 whitespace-nowrap px-3.5 py-1.5 rounded-lg text-xs font-semibold font-mono transition ${
+                activeTab === 'audit' ? 'bg-emerald-500 text-slate-950 font-bold shadow-md' : 'text-slate-400'
+              }`}
+            >
+              {t.esprReadiness}
+            </button>
+
+            <Link
+              href="/admin/esg-analytics"
+              className="shrink-0 whitespace-nowrap px-3.5 py-1.5 rounded-lg text-xs font-semibold font-mono flex items-center gap-1.5 transition text-slate-400"
+            >
+              <BarChart3 className="w-3.5 h-3.5" />
+              <span>ESG Analytics</span>
+            </Link>
+          </div>
         </div>
       </header>
 
