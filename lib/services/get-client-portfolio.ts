@@ -30,6 +30,23 @@
 import { prisma } from "@/lib/prisma";
 import { getPassportCertificationAlert, type PassportCertificationAlert } from "@/lib/utils/certification-status";
 
+// Multi-tier Supply Chain Verification & Auditor Portal Expansion — a
+// buyer-facing summary of one tier record. Same VERIFIED-only trust rule
+// as verifiedCertifications above: a client relying on this portal for
+// their own compliance reporting should never see a PENDING_REVIEW,
+// FLAGGED, or REJECTED tier read as a confirmed supply-chain fact.
+export interface ClientPortfolioChainOfCustodyRecord {
+  id: string;
+  sequence: number;
+  tier: string;
+  participantName: string;
+  participantCountry: string | null;
+  externalBatchId: string;
+  certificationScheme: string | null;
+  massBalanceAllocationPercent: number | null;
+  reviewedAt: string | null;
+}
+
 export interface ClientPortfolioBatch {
   batchId: string;
   gtin: string;
@@ -51,6 +68,7 @@ export interface ClientPortfolioBatch {
   certificationAlert: PassportCertificationAlert; // computed over VERIFIED certs only — see file banner
   qrCodePayloadUrl: string | null;
   certificatePdfUrl: string;
+  chainOfCustody: ClientPortfolioChainOfCustodyRecord[]; // VERIFIED-only, see this block's own comment
 }
 
 export interface ClientPortfolioPcrMass {
@@ -91,6 +109,21 @@ export async function getClientPortfolio(clientId: string): Promise<GetClientPor
           manufacturer: { select: { legalName: true, country: true } },
           certifications: { select: { verificationStatus: true, validUntil: true } },
           carbonFootprintCalculation: { select: { weightKg: true } },
+          chainOfCustodyRecords: {
+            where: { status: "VERIFIED" },
+            orderBy: { sequence: "asc" },
+            select: {
+              id: true,
+              sequence: true,
+              tier: true,
+              participantName: true,
+              participantCountry: true,
+              externalBatchId: true,
+              certificationScheme: true,
+              massBalanceAllocationPercent: true,
+              reviewedAt: true,
+            },
+          },
         },
       },
     },
@@ -140,6 +173,18 @@ export async function getClientPortfolio(clientId: string): Promise<GetClientPor
       certificationAlert: getPassportCertificationAlert(verifiedCerts),
       qrCodePayloadUrl: p.qrCodePayloadUrl,
       certificatePdfUrl: `/api/passports/${encodeURIComponent(p.batchId)}/certificate.pdf`,
+      chainOfCustody: p.chainOfCustodyRecords.map((r) => ({
+        id: r.id,
+        sequence: r.sequence,
+        tier: r.tier,
+        participantName: r.participantName,
+        participantCountry: r.participantCountry,
+        externalBatchId: r.externalBatchId,
+        certificationScheme: r.certificationScheme,
+        massBalanceAllocationPercent:
+          r.massBalanceAllocationPercent !== null ? Number(r.massBalanceAllocationPercent) : null,
+        reviewedAt: r.reviewedAt ? r.reviewedAt.toISOString() : null,
+      })),
     };
   });
 

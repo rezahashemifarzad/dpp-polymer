@@ -20,13 +20,14 @@
  * programmatically at GET /api/v1/client/passports for their ERP.
  */
 
-import { useCallback, useEffect, useState } from "react";
+import { Fragment, useCallback, useEffect, useState } from "react";
 import {
   ShieldCheck, KeyRound, Loader2, LogOut, RefreshCw, ArrowLeft,
   AlertTriangle, Building2, Package, Percent, Download, ExternalLink,
-  CalendarDays, Factory, Boxes,
+  CalendarDays, Factory, Boxes, Link2, ChevronDown, ChevronUp,
 } from "lucide-react";
 import Link from "next/link";
+import { ChainOfCustodyTimeline, type ChainOfCustodyTimelineRecord } from "@/components/dashboard/chain-of-custody-timeline";
 
 const SESSION_KEY_STORAGE = "dpp-client-key";
 const CLIENT_KEY_HEADER = "x-dpp-client-key";
@@ -65,6 +66,17 @@ interface PortfolioBatch {
   certificationAlert: { level: "EXPIRED" | "EXPIRING_SOON" | null; expiredCount: number; expiringSoonCount: number };
   qrCodePayloadUrl: string | null;
   certificatePdfUrl: string;
+  chainOfCustody: Array<{
+    id: string;
+    sequence: number;
+    tier: string;
+    participantName: string;
+    participantCountry: string | null;
+    externalBatchId: string;
+    certificationScheme: string | null;
+    massBalanceAllocationPercent: number | null;
+    reviewedAt: string | null;
+  }>;
 }
 
 interface PortfolioSummary {
@@ -215,6 +227,12 @@ function ClientPortal({
   const [portfolio, setPortfolio] = useState<PortfolioSummary | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  // Multi-tier Supply Chain Verification & Auditor Portal Expansion — which
+  // batch row's chain-of-custody timeline is expanded, at most one at a
+  // time (a simple accordion, not a per-row toggle set — this table can
+  // already run long, and only one buyer-side supply chain is usually
+  // being inspected at once).
+  const [expandedBatchId, setExpandedBatchId] = useState<string | null>(null);
 
   const fetchPortfolio = useCallback(async () => {
     setLoading(true);
@@ -336,11 +354,13 @@ function ClientPortal({
                         <th className="p-3 text-center">Certifications</th>
                         <th className="p-3 text-center">Public Passport</th>
                         <th className="p-3 text-center">Certificate</th>
+                        <th className="p-3 text-center">Chain of Custody</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-800/60">
                       {portfolio.batches.map((b) => (
-                        <tr key={b.batchId} className="hover:bg-slate-800/40 transition-colors">
+                        <Fragment key={b.batchId}>
+                        <tr className="hover:bg-slate-800/40 transition-colors">
                           <td className="p-3 font-mono font-medium text-cyan-400">{b.batchId}</td>
                           <td className="p-3">
                             <div className="text-slate-100">{b.polymerType}</div>
@@ -406,7 +426,50 @@ function ClientPortal({
                               <Download className="w-3 h-3" /> PDF
                             </a>
                           </td>
+                          <td className="p-3 text-center">
+                            <button
+                              onClick={() => setExpandedBatchId(expandedBatchId === b.batchId ? null : b.batchId)}
+                              disabled={b.chainOfCustody.length === 0}
+                              className="inline-flex items-center gap-1 text-xs bg-slate-800 hover:bg-slate-700 disabled:opacity-40 disabled:cursor-not-allowed text-slate-300 px-2.5 py-1 rounded-lg transition-all"
+                            >
+                              <Link2 className="w-3 h-3" /> {b.chainOfCustody.length}
+                              {expandedBatchId === b.batchId ? (
+                                <ChevronUp className="w-3 h-3" />
+                              ) : (
+                                <ChevronDown className="w-3 h-3" />
+                              )}
+                            </button>
+                          </td>
                         </tr>
+                        {expandedBatchId === b.batchId && (
+                          <tr>
+                            <td colSpan={9} className="p-3 bg-slate-950/60">
+                              <div className="max-w-2xl">
+                                <ChainOfCustodyTimeline
+                                  records={b.chainOfCustody.map(
+                                    (r): ChainOfCustodyTimelineRecord => ({
+                                      id: r.id,
+                                      sequence: r.sequence,
+                                      tier: r.tier as ChainOfCustodyTimelineRecord["tier"],
+                                      participantName: r.participantName,
+                                      participantCountry: r.participantCountry,
+                                      externalBatchId: r.externalBatchId,
+                                      certificationScheme: r.certificationScheme,
+                                      massBalanceAllocationPercent: r.massBalanceAllocationPercent,
+                                      // Server-side already filters this
+                                      // buyer's view to VERIFIED-only tier
+                                      // records — see
+                                      // lib/services/get-client-portfolio.ts.
+                                      status: "VERIFIED",
+                                    })
+                                  )}
+                                  mode="readonly"
+                                />
+                              </div>
+                            </td>
+                          </tr>
+                        )}
+                        </Fragment>
                       ))}
                     </tbody>
                   </table>

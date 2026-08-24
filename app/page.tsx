@@ -10,7 +10,6 @@ import {
   ArrowUpRight,
   Search,
   Sparkles,
-  X,
   TrendingUp,
   Languages,
   Bot,
@@ -24,10 +23,16 @@ import {
   Settings2,
   BarChart3,
   BadgeCheck,
+  Printer,
+  FileSpreadsheet,
+  Loader2,
 } from 'lucide-react';
 import Link from 'next/link';
 import { ToastProvider, useToast } from '@/lib/hooks/use-toast';
 import { usePassports, type ApiPassport } from '@/lib/hooks/use-passports';
+import { usePassportTrend } from '@/lib/hooks/use-passport-trend';
+import { QrCodeModal } from '@/components/dashboard/qr-code-modal';
+import { QrLabelSheetModal, type QrLabelCandidate } from '@/components/dashboard/qr-label-sheet-modal';
 import { PassportSkeleton, PassportRowSkeleton } from '@/components/dashboard/passport-skeleton';
 import { CreatePassportModal } from '@/components/dashboard/create-passport-modal';
 import { BatchDetailsModal } from '@/components/dashboard/batch-details-modal';
@@ -51,6 +56,7 @@ interface DisplayPassport {
   origin: string;
   hash: string;
   gs1Url: string;
+  gtin: string;
   batchId: string;
   status: ApiPassport['status'];
   // Circular Economy Platform Upgrade — used only to render the "Manage"
@@ -73,7 +79,7 @@ const translations = {
     europeanSites: "Manufacturer Sites",
     co2Avoided: "Avg. Carbon Intensity",
     pcrChartTitle: "PCR Scaling & Regulatory Readiness Index",
-    chartSubtitle: "Sample analytics — historical time-series endpoint pending",
+    chartSubtitle: "Live monthly trend, computed from recorded production dates",
     activePolymerPassports: "Active Polymer Grade Passports",
     viewFullLedger: "View Full Material Ledger →",
     aiStudioTitle: "AI Formulation Copilot",
@@ -113,7 +119,7 @@ const translations = {
     europeanSites: "Herstellerstandorte",
     co2Avoided: "Ø CO2-Intensität",
     pcrChartTitle: "PCR-Skalierung & Regulierungs-Readiness-Index",
-    chartSubtitle: "Beispielhafte Analyse — Zeitreihen-Endpunkt in Vorbereitung",
+    chartSubtitle: "Live-Monatstrend, berechnet aus erfassten Produktionsdaten",
     activePolymerPassports: "Aktive Polymer-Gütepässe",
     viewFullLedger: "Vollständiges Materialregister anzeigen →",
     aiStudioTitle: "KI-Formulierungs-Copilot",
@@ -153,7 +159,7 @@ const translations = {
     europeanSites: "Sites Fabricants",
     co2Avoided: "Intensité Carbone Moy.",
     pcrChartTitle: "Mise à l'échelle du PCR & Indice de Conformité",
-    chartSubtitle: "Données d'exemple — point de terminaison de série temporelle à venir",
+    chartSubtitle: "Tendance mensuelle en direct, calculée à partir des dates de production",
     activePolymerPassports: "Passeports Polymères Actifs",
     viewFullLedger: "Voir le registre complet des matériaux →",
     aiStudioTitle: "Copilote de Formulation IA",
@@ -184,18 +190,10 @@ const translations = {
   }
 };
 
-// Illustrative monthly series for the trend chart. There is no
-// /api/passports/analytics time-series endpoint yet — building one is
-// scoped for a follow-up step. Labeled honestly in chartSubtitle above
-// rather than presented as live regulatory data.
-const analyticsData = [
-  { month: 'Jan', avgPcr: 32, co2Saved: 12.1, compliance: 88 },
-  { month: 'Feb', avgPcr: 35, co2Saved: 13.4, compliance: 91 },
-  { month: 'Mar', avgPcr: 38, co2Saved: 14.8, compliance: 93 },
-  { month: 'Apr', avgPcr: 42, co2Saved: 16.2, compliance: 95 },
-  { month: 'May', avgPcr: 45, co2Saved: 17.1, compliance: 97 },
-  { month: 'Jun', avgPcr: 51.6, co2Saved: 18.4, compliance: 99 },
-];
+// Sprint 2.1: the trend chart below now reads from GET
+// /api/passports/analytics (lib/services/passport-monthly-trend.ts) via
+// usePassportTrend() instead of a hard-coded sample array — see that
+// hook's call site further down in this component.
 
 /**
  * UI-only heuristics — NOT certified compliance metrics. Derived client-side
@@ -237,6 +235,7 @@ function toDisplayPassport(p: ApiPassport): DisplayPassport {
     origin: p.manufacturer?.country ?? '—',
     hash: p.recordHash ?? '—',
     gs1Url: p.qrCodePayloadUrl ?? '',
+    gtin: p.gtin,
     batchId: p.batchId,
     status: p.status,
     hasGenealogyOrCarbon: p.parentLinks.length > 0 || p.carbonFootprintCalculation !== null,
@@ -250,6 +249,13 @@ function CompletePolymerDPPInner() {
   const [selectedLang, setSelectedLang] = useState<'EN' | 'DE' | 'FR'>('EN');
   const [showQrModal, setShowQrModal] = useState<boolean>(false);
   const [showCreateModal, setShowCreateModal] = useState<boolean>(false);
+  // Sprint 2.2 — Factory Batch Labeling: bulk QR label sheet picker,
+  // separate from the single-batch showQrModal above.
+  const [showLabelSheetModal, setShowLabelSheetModal] = useState<boolean>(false);
+  // Sprint 2.3 — Enterprise Compliance Reporting & PDF/Excel Export Module:
+  // "Download Ledger Excel" fetch+blob round trip against
+  // GET /api/passports/ledger-export.xlsx (see lib/services/generate-ledger-workbook.ts).
+  const [exportingLedger, setExportingLedger] = useState<boolean>(false);
   // Circular Economy Platform Upgrade (Step 3) — this was previously only
   // wired into app/admin/page.tsx. This root dashboard's "Material Ledger"
   // tab is a second, independent table over the same data (see the file
@@ -259,8 +265,21 @@ function CompletePolymerDPPInner() {
 
   const t = translations[selectedLang];
   const { push } = useToast();
-  const { data, loading, error, hasLoadedOnce, refetch, createPassport, linkParentBatch, calculateCarbonFootprint } =
-    usePassports();
+  const {
+    data,
+    loading,
+    error,
+    hasLoadedOnce,
+    refetch,
+    createPassport,
+    linkParentBatch,
+    calculateCarbonFootprint,
+    addChainOfCustodyRecord,
+  } = usePassports();
+  // Sprint 2.1 — live monthly trend for the chart below (replaces the old
+  // hard-coded analyticsData array). See lib/hooks/use-passport-trend.ts /
+  // lib/services/passport-monthly-trend.ts.
+  const { data: trendData, loading: trendLoading, error: trendError } = usePassportTrend();
 
   // Custom QR & GS1 Link Generator State (client-only design sandbox — does
   // not persist to the database; the real, persisted QR/GS1 link is
@@ -277,6 +296,21 @@ function CompletePolymerDPPInner() {
   );
 
   const passports: DisplayPassport[] = useMemo(() => data.map(toDisplayPassport), [data]);
+
+  // Sprint 2.2 — normalized shape for QrLabelSheetModal (page-shape-agnostic,
+  // see that component's file banner for why).
+  const qrLabelCandidates: QrLabelCandidate[] = useMemo(
+    () =>
+      passports.map((p) => ({
+        id: p.id,
+        batchId: p.batchId,
+        label: p.gradeName,
+        polymerType: p.polymerType,
+        gtin: p.gtin,
+        qrUrl: p.gs1Url || null,
+      })),
+    [passports]
+  );
 
   const filteredPassports = passports.filter(p =>
     p.gradeName.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -301,6 +335,39 @@ function CompletePolymerDPPInner() {
   const handleRefresh = async () => {
     await refetch();
     push({ variant: 'info', title: 'Ledger refreshed', description: 'Reloaded from /api/passports.' });
+  };
+
+  // Sprint 2.3 — fetch+blob (not a bare <a href> click) so a genuine
+  // failure surfaces as a toast instead of silently opening a JSON error
+  // body as if it were the workbook, matching the QrLabelSheetModal
+  // download pattern from Sprint 2.2.
+  const handleExportLedgerExcel = async () => {
+    setExportingLedger(true);
+    try {
+      const res = await fetch('/api/passports/ledger-export.xlsx');
+      if (!res.ok) {
+        const json = await res.json().catch(() => null);
+        throw new Error(json?.error || `Request failed with status ${res.status}`);
+      }
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `polymer-dpp-ledger-export-${new Date().toISOString().slice(0, 10)}.xlsx`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+      push({ variant: 'success', title: 'Ledger Excel exported', description: 'Material Ledger + Audit Trail workbook downloaded.' });
+    } catch (err) {
+      push({
+        variant: 'error',
+        title: 'Excel export failed',
+        description: err instanceof Error ? err.message : 'Failed to generate the ledger workbook.',
+      });
+    } finally {
+      setExportingLedger(false);
+    }
   };
 
   return (
@@ -613,26 +680,41 @@ function CompletePolymerDPPInner() {
               </div>
 
               <div className="h-64 w-full">
-                <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart data={analyticsData}>
-                    <defs>
-                      <linearGradient id="pcrColor" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#10b981" stopOpacity={0.4}/>
-                        <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
-                      </linearGradient>
-                      <linearGradient id="readinessColor" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.4}/>
-                        <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
-                      </linearGradient>
-                    </defs>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
-                    <XAxis dataKey="month" stroke="#64748b" fontSize={11} />
-                    <YAxis stroke="#64748b" fontSize={11} />
-                    <Tooltip contentStyle={{ backgroundColor: '#090d16', borderColor: '#1e293b', borderRadius: '12px', fontSize: '12px' }} />
-                    <Area type="monotone" dataKey="avgPcr" stroke="#10b981" strokeWidth={3} fillOpacity={1} fill="url(#pcrColor)" name="PCR Content %" />
-                    <Area type="monotone" dataKey="compliance" stroke="#3b82f6" strokeWidth={2} fillOpacity={1} fill="url(#readinessColor)" name="Compliance Score" />
-                  </AreaChart>
-                </ResponsiveContainer>
+                {trendLoading && trendData.length === 0 ? (
+                  <div className="h-full flex items-center justify-center gap-2 text-xs text-slate-500 font-mono">
+                    <RefreshCw className="w-4 h-4 animate-spin" /> Loading live trend from /api/passports/analytics…
+                  </div>
+                ) : trendError ? (
+                  <div className="h-full flex flex-col items-center justify-center gap-2 text-xs text-red-400 font-mono text-center px-6">
+                    <AlertTriangle className="w-4 h-4" />
+                    <span>Could not load trend data: {trendError}</span>
+                  </div>
+                ) : trendData.length === 0 ? (
+                  <div className="h-full flex items-center justify-center text-xs text-slate-500 font-mono text-center px-6">
+                    No production-dated batches recorded yet — this chart populates automatically as passports are issued.
+                  </div>
+                ) : (
+                  <ResponsiveContainer width="100%" height="100%">
+                    <AreaChart data={trendData}>
+                      <defs>
+                        <linearGradient id="pcrColor" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="#10b981" stopOpacity={0.4}/>
+                          <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
+                        </linearGradient>
+                        <linearGradient id="readinessColor" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.4}/>
+                          <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
+                      <XAxis dataKey="month" stroke="#64748b" fontSize={11} />
+                      <YAxis stroke="#64748b" fontSize={11} />
+                      <Tooltip contentStyle={{ backgroundColor: '#090d16', borderColor: '#1e293b', borderRadius: '12px', fontSize: '12px' }} />
+                      <Area type="monotone" dataKey="avgPcr" stroke="#10b981" strokeWidth={3} fillOpacity={1} fill="url(#pcrColor)" name="PCR Content %" />
+                      <Area type="monotone" dataKey="compliance" stroke="#3b82f6" strokeWidth={2} fillOpacity={1} fill="url(#readinessColor)" name="Compliance Score" />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                )}
               </div>
             </div>
 
@@ -803,8 +885,8 @@ function CompletePolymerDPPInner() {
                 <p className="text-xs text-slate-400 font-mono">Cryptographically verified entries synced with Neon DB</p>
               </div>
 
-              <div className="flex items-center gap-2 w-full md:w-auto">
-                <div className="relative flex-1 md:w-80">
+              <div className="flex flex-wrap items-center gap-2 w-full md:w-auto">
+                <div className="relative flex-1 min-w-[160px] md:w-80">
                   <Search className="w-4 h-4 text-slate-500 absolute left-3 top-3" />
                   <input
                     type="text"
@@ -816,14 +898,34 @@ function CompletePolymerDPPInner() {
                 </div>
                 <button
                   onClick={handleRefresh}
-                  className="p-2.5 bg-slate-800 hover:bg-slate-700 rounded-xl text-slate-300 transition"
+                  className="p-2.5 bg-slate-800 hover:bg-slate-700 rounded-xl text-slate-300 transition shrink-0"
                   title="Refresh from database"
                 >
                   <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
                 </button>
                 <button
+                  onClick={() => setShowLabelSheetModal(true)}
+                  className="px-3.5 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold rounded-xl transition flex items-center gap-1.5 text-xs whitespace-nowrap shrink-0"
+                  title="Generate a print-ready QR label sheet"
+                >
+                  <Printer className="w-3.5 h-3.5" /> Print Labels
+                </button>
+                <button
+                  onClick={handleExportLedgerExcel}
+                  disabled={exportingLedger}
+                  className="px-3.5 py-2.5 bg-slate-800 hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed text-slate-200 font-bold rounded-xl transition flex items-center gap-1.5 text-xs whitespace-nowrap shrink-0"
+                  title="Download the Material Ledger & Audit Trail as an Excel workbook"
+                >
+                  {exportingLedger ? (
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  ) : (
+                    <FileSpreadsheet className="w-3.5 h-3.5" />
+                  )}
+                  {exportingLedger ? 'Exporting...' : 'Download Ledger Excel'}
+                </button>
+                <button
                   onClick={() => setShowCreateModal(true)}
-                  className="px-3.5 py-2.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold rounded-xl transition flex items-center gap-1.5 text-xs whitespace-nowrap"
+                  className="px-3.5 py-2.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold rounded-xl transition flex items-center gap-1.5 text-xs whitespace-nowrap shrink-0"
                 >
                   <Plus className="w-3.5 h-3.5" /> New Passport
                 </button>
@@ -991,81 +1093,35 @@ function CompletePolymerDPPInner() {
           </div>
         )}
 
-        {/* QR CODE & GS1 DIGITAL TWIN MODAL */}
-        {showQrModal && selectedPassport && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-xl">
-            <div className="bg-slate-900 border border-slate-800 w-full max-w-md rounded-3xl p-6 relative shadow-2xl">
-
-              <button
-                onClick={() => setShowQrModal(false)}
-                className="absolute right-4 top-4 text-slate-400 hover:text-white p-1.5 rounded-xl bg-slate-800"
-              >
-                <X className="w-4 h-4" />
-              </button>
-
-              <div className="text-center mb-6">
-                <div className="p-4 bg-white rounded-2xl w-fit mx-auto mb-3 shadow-xl">
-                  {selectedPassport.gs1Url ? (
-                    <QRCodeSVG
-                      value={selectedPassport.gs1Url}
-                      size={160}
-                      bgColor="#FFFFFF"
-                      fgColor="#020617"
-                    />
-                  ) : (
-                    <div className="w-40 h-40 flex items-center justify-center text-slate-400 text-[10px] font-mono">
-                      No GS1 link recorded yet
-                    </div>
-                  )}
-                </div>
-                <h4 className="font-bold text-lg text-white">{selectedPassport.gradeName}</h4>
-                <p className="text-xs text-slate-400 font-mono mt-0.5">{selectedPassport.batchId}</p>
-              </div>
-
-              <div className="space-y-2.5 font-mono text-xs bg-slate-950 p-4 rounded-xl border border-slate-800 mb-6">
-                <div className="flex justify-between border-b border-slate-800 pb-2">
-                  <span className="text-slate-500">GS1 Digital Link URI</span>
-                  <span className="text-emerald-400 font-bold text-[10px] truncate max-w-[180px]">{selectedPassport.gs1Url || '—'}</span>
-                </div>
-                <div className="flex justify-between border-b border-slate-800 pb-2">
-                  <span className="text-slate-500">Record Hash (SHA-256)</span>
-                  <span className="text-white font-bold text-[10px]" title={selectedPassport.hash}>{truncateHash(selectedPassport.hash)}</span>
-                </div>
-                <div className="flex justify-between border-b border-slate-800 pb-2">
-                  <span className="text-slate-500">Total Recycled Content</span>
-                  <span className="text-white font-bold">{selectedPassport.pcr}%</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-slate-500">Certification</span>
-                  <span className="text-slate-300">{selectedPassport.cert}</span>
-                </div>
-              </div>
-
-              <div className="flex gap-3">
-                <a
-                  href={selectedPassport.gs1Url || '#'}
-                  target="_blank"
-                  rel="noreferrer"
-                  aria-disabled={!selectedPassport.gs1Url}
-                  className={`flex-1 text-center py-2.5 font-mono font-bold text-xs rounded-xl transition ${
-                    selectedPassport.gs1Url
-                      ? 'bg-emerald-500 hover:bg-emerald-400 text-slate-950'
-                      : 'bg-slate-800 text-slate-500 cursor-not-allowed pointer-events-none'
-                  }`}
-                >
-                  Open GS1 Link
-                </a>
-                <button
-                  onClick={() => setShowQrModal(false)}
-                  className="px-4 py-2.5 bg-slate-800 text-slate-300 font-mono text-xs rounded-xl hover:bg-slate-700"
-                >
-                  Close
-                </button>
-              </div>
-
-            </div>
-          </div>
+        {/* QR CODE & GS1 DIGITAL TWIN MODAL
+            Sprint 2.2 — replaces the old ad-hoc preview-only modal with the
+            reusable QrCodeModal (adds PNG/SVG download, see that file's
+            banner). The record hash / PCR% / certification panel the old
+            modal showed is preserved via QrCodeModal's optional `details`
+            prop rather than dropped. */}
+        {selectedPassport && (
+          <QrCodeModal
+            open={showQrModal}
+            onClose={() => setShowQrModal(false)}
+            batchId={selectedPassport.batchId}
+            label={selectedPassport.gradeName}
+            qrUrl={selectedPassport.gs1Url || null}
+            details={[
+              { label: 'Record Hash (SHA-256)', value: truncateHash(selectedPassport.hash), title: selectedPassport.hash || undefined },
+              { label: 'Total Recycled Content', value: `${selectedPassport.pcr}%` },
+              { label: 'Certification', value: selectedPassport.cert },
+            ]}
+          />
         )}
+
+        {/* Sprint 2.2 — Factory Batch Labeling: bulk print-ready QR label
+            sheet picker over the full ledger, independent of any single
+            selected row. */}
+        <QrLabelSheetModal
+          open={showLabelSheetModal}
+          onClose={() => setShowLabelSheetModal(false)}
+          passports={qrLabelCandidates}
+        />
 
         <CreatePassportModal
           open={showCreateModal}
@@ -1091,6 +1147,7 @@ function CompletePolymerDPPInner() {
           allPassports={data}
           onLinkParent={linkParentBatch}
           onCalculateCarbon={calculateCarbonFootprint}
+          onAddChainOfCustody={addChainOfCustodyRecord}
         />
 
       </main>

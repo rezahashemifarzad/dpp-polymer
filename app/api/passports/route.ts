@@ -122,6 +122,10 @@ export async function GET(req: NextRequest) {
             },
           },
           carbonFootprintCalculation: true,
+          // Multi-tier Supply Chain Verification & Auditor Portal Expansion
+          // — every tier record, all statuses (admin-facing shape). See
+          // ChainOfCustodyRecord in prisma/schema.prisma.
+          chainOfCustodyRecords: { orderBy: { sequence: "asc" } },
         },
       }),
     ]);

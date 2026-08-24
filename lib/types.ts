@@ -19,6 +19,7 @@ import {
   PolymerType,
   RecycledContentSource,
   CertificationScheme,
+  ChainOfCustodyTier,
 } from "@prisma/client";
 import { isValidGtin14 } from "@/lib/gtin";
 
@@ -94,6 +95,39 @@ export const CertificationInputSchema = z
   });
 
 export type CertificationInput = z.infer<typeof CertificationInputSchema>;
+
+// ----------------------------------------------------------------------------
+// Multi-Tier Chain of Custody (Multi-tier Supply Chain Verification &
+// Auditor Portal Expansion) — see prisma/schema.prisma's ChainOfCustodyRecord
+// for the full design rationale.
+// ----------------------------------------------------------------------------
+
+export const ChainOfCustodyInputSchema = z
+  .object({
+    tier: z.enum(ChainOfCustodyTier),
+    participantName: z.string().min(1, "participantName is required").max(200),
+    participantCountry: z.string().max(120).optional(),
+    externalBatchId: z.string().min(1, "externalBatchId is required").max(120),
+
+    certificationScheme: z.enum(CertificationScheme).optional(),
+    certificateId: z.string().max(120).optional(),
+    certificateDocumentUrl: z.string().url().optional(),
+    // Same SSRF-avoidance rationale as CertificationInputSchema.documentHash
+    // above — computed by whoever uploads the document, never fetched here.
+    certificateDocumentHash: z
+      .string()
+      .regex(/^[a-f0-9]{64}$/i, "certificateDocumentHash must be a 64-character hex SHA-256 digest")
+      .optional(),
+    massBalanceAllocationPercent: z.coerce.number().min(0).max(100).optional(),
+
+    notes: z.string().max(2000).optional(),
+  })
+  .refine((d) => !(d.certificateId && !d.certificationScheme), {
+    message: "certificationScheme is required when certificateId is provided",
+    path: ["certificationScheme"],
+  });
+
+export type ChainOfCustodyInput = z.infer<typeof ChainOfCustodyInputSchema>;
 
 // ----------------------------------------------------------------------------
 // Polymer Passport claim

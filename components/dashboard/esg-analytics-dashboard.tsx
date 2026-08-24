@@ -41,6 +41,8 @@ import {
   BadgeCheck,
   Download,
   FileJson,
+  FileText,
+  Loader2,
   CheckCircle2,
   Clock,
   AlertTriangle,
@@ -215,6 +217,14 @@ function StackedStatusBar({ segments }: { segments: StatusSegment[] }) {
 export function EsgAnalyticsDashboard({ summary }: { summary: EsgAnalyticsSummary }) {
   const router = useRouter();
   const [refreshing, setRefreshing] = useState(false);
+  // Sprint 2.3 (Enterprise Compliance Reporting & PDF/Excel Export Module)
+  // — unlike the CSV/JSON exports above (built entirely client-side from
+  // the `summary` prop already in hand), the compliance PDF is rendered
+  // server-side (lib/services/generate-compliance-report-pdf.tsx pulls its
+  // own live batch/auditor-sign-off data beyond what this page has), so it
+  // needs a real fetch+blob round trip with its own loading/error state.
+  const [pdfExporting, setPdfExporting] = useState(false);
+  const [pdfError, setPdfError] = useState<string | null>(null);
 
   const pcrTrendData = useMemo(
     () => summary.monthlyTrend.map((p) => ({ month: p.month, avgPcr: p.avgRecycledContentPercent })),
@@ -244,6 +254,31 @@ export function EsgAnalyticsDashboard({ summary }: { summary: EsgAnalyticsSummar
   };
   const handleExportCsv = () => {
     downloadBlob(`esg-summary-${summary.generatedAt.slice(0, 10)}.csv`, buildCsv(summary), "text/csv");
+  };
+
+  const handleExportPdf = async () => {
+    setPdfError(null);
+    setPdfExporting(true);
+    try {
+      const res = await fetch("/api/passports/compliance-report.pdf");
+      if (!res.ok) {
+        const json = await res.json().catch(() => null);
+        throw new Error(json?.error || `Request failed with status ${res.status}`);
+      }
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `polymer-dpp-compliance-report-${summary.generatedAt.slice(0, 10)}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      setPdfError(err instanceof Error ? err.message : "Failed to generate compliance report PDF");
+    } finally {
+      setPdfExporting(false);
+    }
   };
 
   return (
@@ -294,8 +329,29 @@ export function EsgAnalyticsDashboard({ summary }: { summary: EsgAnalyticsSummar
               <FileJson className="w-3.5 h-3.5" />
               JSON
             </button>
+            <button
+              onClick={handleExportPdf}
+              disabled={pdfExporting}
+              className="flex items-center gap-1.5 text-xs bg-slate-100 hover:bg-white disabled:opacity-50 disabled:cursor-not-allowed text-slate-900 font-bold px-3 py-2 rounded-lg transition-all whitespace-nowrap"
+              title="Generate the EU ESPR 2026 portfolio compliance report"
+            >
+              {pdfExporting ? (
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+              ) : (
+                <FileText className="w-3.5 h-3.5" />
+              )}
+              {pdfExporting ? "Generating..." : "Export Compliance PDF"}
+            </button>
           </div>
         </div>
+        {pdfError && (
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 pb-3 -mt-1">
+            <div className="flex items-start gap-1.5 text-[11px] text-red-400 font-mono bg-red-500/10 border border-red-500/20 rounded-lg px-3 py-2">
+              <AlertTriangle className="w-3.5 h-3.5 mt-0.5 shrink-0" />
+              <span>{pdfError}</span>
+            </div>
+          </div>
+        )}
       </header>
 
       <main className="max-w-7xl mx-auto px-6 py-8 space-y-8">

@@ -16,7 +16,7 @@
 
 import { prisma } from "./prisma";
 import { hashRecord, computeTotalRecycledPercent } from "./types";
-import type { PolymerPassport, Certification, CarbonFootprintCalculation } from "@prisma/client";
+import type { PolymerPassport, Certification, CarbonFootprintCalculation, ChainOfCustodyRecord } from "@prisma/client";
 
 // Third-Party Auditor Verification Workflow — the latest sign-off event
 // for this passport, if any. Narrow `select` on the auditor relation
@@ -56,6 +56,16 @@ export type PassportWithRelations = PolymerPassport & {
   }>;
   carbonFootprintCalculation: CarbonFootprintCalculation | null;
   auditorVerifications: LatestAuditorVerification[]; // latest first, at most 1 (see query below)
+  // Multi-tier Supply Chain Verification & Auditor Portal Expansion — every
+  // tier record, all statuses, ordered furthest-upstream-first. Deliberately
+  // NOT included in the hashRecord() recompute below — see this module's
+  // file banner and ChainOfCustodyRecord's own doc comment in
+  // prisma/schema.prisma: a post-issuance chain-of-custody addition must
+  // never retroactively invalidate the sealed passport hash. Callers that
+  // need a public/VERIFIED-only view (app/01/[gtin]/21/[serialOrBatch]/
+  // page.tsx) filter this array themselves, same convention as
+  // certifications.
+  chainOfCustodyRecords: ChainOfCustodyRecord[];
 };
 
 export interface VerifiedPassportResult {
@@ -101,6 +111,7 @@ export async function getVerifiedPassport(batchId: string): Promise<VerifiedPass
           auditor: { select: { name: true, organization: true } },
         },
       },
+      chainOfCustodyRecords: { orderBy: { sequence: "asc" } },
     },
   });
   if (!passport) return null;

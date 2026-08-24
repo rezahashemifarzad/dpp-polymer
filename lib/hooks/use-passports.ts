@@ -19,6 +19,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { createPassportAction } from "@/lib/actions/create-passport";
 import { linkBatchGenealogyAction } from "@/lib/actions/link-batch-genealogy";
 import { calculateCarbonFootprintAction } from "@/lib/actions/calculate-carbon-footprint";
+import { addChainOfCustodyRecordAction } from "@/lib/actions/add-chain-of-custody-record";
 
 export interface ApiCertification {
   id: string;
@@ -83,6 +84,43 @@ export interface ApiCarbonFootprintCalculation {
   calculatedAt: string;
 }
 
+// Multi-tier Supply Chain Verification & Auditor Portal Expansion — see
+// prisma/schema.prisma's ChainOfCustodyRecord model. Decimal field
+// (massBalanceAllocationPercent) is a string for the same reason as the
+// rest of this file. `status`/`reviewedBy`/`reviewedAt`/`reviewNotes` are
+// included here unfiltered (this is the admin-facing shape) — the public
+// scan page filters to VERIFIED-only itself, same convention as
+// certifications.
+export type ChainOfCustodyTierValue =
+  | "RAW_MATERIAL_SUPPLIER"
+  | "RECYCLER"
+  | "COMPOUNDER"
+  | "PROCESSOR"
+  | "DISTRIBUTOR"
+  | "OTHER";
+
+export type ChainOfCustodyStatusValue = "PENDING_REVIEW" | "VERIFIED" | "FLAGGED" | "REJECTED";
+
+export interface ApiChainOfCustodyRecord {
+  id: string;
+  sequence: number;
+  tier: ChainOfCustodyTierValue;
+  participantName: string;
+  participantCountry: string | null;
+  externalBatchId: string;
+  certificationScheme: string | null;
+  certificateId: string | null;
+  certificateDocumentUrl: string | null;
+  massBalanceAllocationPercent: string | null;
+  notes: string | null;
+  status: ChainOfCustodyStatusValue;
+  reviewedBy: string | null;
+  reviewedAt: string | null;
+  reviewNotes: string | null;
+  recordHash: string | null;
+  createdAt: string;
+}
+
 export interface ApiPassport {
   id: string;
   polymerType: string;
@@ -106,6 +144,7 @@ export interface ApiPassport {
   certificationAlert: ApiCertificationAlert;
   parentLinks: ApiGenealogyLink[];
   carbonFootprintCalculation: ApiCarbonFootprintCalculation | null;
+  chainOfCustodyRecords: ApiChainOfCustodyRecord[];
   createdAt: string;
 }
 
@@ -225,6 +264,39 @@ export function usePassports() {
     [refetch]
   );
 
+  const addChainOfCustodyRecord = useCallback(
+    async (
+      batchId: string,
+      input: {
+        tier: ChainOfCustodyTierValue;
+        participantName: string;
+        participantCountry?: string;
+        externalBatchId: string;
+        certificationScheme?: string;
+        certificateId?: string;
+        certificateDocumentUrl?: string;
+        certificateDocumentHash?: string;
+        massBalanceAllocationPercent?: number;
+        notes?: string;
+      }
+    ) => {
+      // Same Server Action pattern as linkParentBatch/calculateCarbonFootprint
+      // above — runs server-side only, never needs the RBAC key that POST
+      // /api/passports/[batchId]/chain-of-custody requires for external
+      // callers.
+      const result = await addChainOfCustodyRecordAction(batchId, input);
+      if (!result.ok) {
+        if (result.issues?.fieldErrors) {
+          throw new PassportValidationError(result.error || "Validation failed", result.issues.fieldErrors);
+        }
+        throw new Error(result.error || "Failed to add chain-of-custody record");
+      }
+      await refetch();
+      return result.data;
+    },
+    [refetch]
+  );
+
   return {
     data,
     loading,
@@ -234,5 +306,6 @@ export function usePassports() {
     createPassport,
     linkParentBatch,
     calculateCarbonFootprint,
+    addChainOfCustodyRecord,
   };
 }

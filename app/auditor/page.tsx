@@ -39,9 +39,10 @@ import { useCallback, useEffect, useState } from "react";
 import {
   ShieldCheck, KeyRound, Loader2, LogOut, RefreshCw, Inbox, ClipboardList,
   CheckCircle2, XCircle, AlertTriangle, Factory, Gauge, Recycle, Leaf,
-  BadgeCheck, Download, CalendarDays, ArrowLeft, Layers,
+  BadgeCheck, Download, CalendarDays, ArrowLeft, Layers, Link2,
 } from "lucide-react";
 import Link from "next/link";
+import { ChainOfCustodyTimeline, type ChainOfCustodyTierValue } from "@/components/dashboard/chain-of-custody-timeline";
 
 const SESSION_KEY_STORAGE = "dpp-auditor-key";
 const AUDITOR_KEY_HEADER = "x-dpp-auditor-key";
@@ -104,6 +105,33 @@ interface QueuePassport {
 
 type ActionState = { batchId: string; kind: "verify" | "reject" } | null;
 type Banner = { tone: "success" | "error"; message: string } | null;
+
+// Multi-tier Supply Chain Verification & Auditor Portal Expansion — mirrors
+// GET /api/auditor/coc-queue's response shape. A distinct, narrower queue
+// item than QueuePassport above: this is one TIER RECORD awaiting its own
+// review, not a whole passport awaiting PENDING_VERIFICATION sign-off (see
+// that route's own file banner for why these are two separate queues).
+interface CocQueueRecord {
+  id: string;
+  sequence: number;
+  tier: ChainOfCustodyTierValue;
+  participantName: string;
+  participantCountry: string | null;
+  externalBatchId: string;
+  certificationScheme: string | null;
+  certificateId: string | null;
+  massBalanceAllocationPercent: string | null;
+  notes: string | null;
+  createdAt: string;
+  passport: {
+    id: string;
+    batchId: string;
+    polymerType: string;
+    grade: string;
+    gtin: string;
+    manufacturer: { id: string; legalName: string } | null;
+  };
+}
 
 /* ---------------------------------------------------------------------------
  * Key-entry gate
@@ -415,6 +443,16 @@ function AuditorPortal({
   const [banner, setBanner] = useState<Banner>(null);
   const [actionState, setActionState] = useState<ActionState>(null);
 
+  // Multi-tier Supply Chain Verification & Auditor Portal Expansion — a
+  // second, independent tab/queue alongside the existing whole-passport
+  // review above. A tier record can be reviewed at any point in its
+  // passport's own lifecycle, so this is deliberately its own list, not a
+  // filter on the passport queue.
+  const [activeTab, setActiveTab] = useState<"passports" | "chain-of-custody">("passports");
+  const [cocQueue, setCocQueue] = useState<CocQueueRecord[]>([]);
+  const [cocLoading, setCocLoading] = useState(true);
+  const [selectedCocRecordId, setSelectedCocRecordId] = useState<string | null>(null);
+
   const fetchQueue = useCallback(async () => {
     setLoading(true);
     try {
@@ -432,9 +470,27 @@ function AuditorPortal({
     }
   }, [auditorKey]);
 
+  const fetchCocQueue = useCallback(async () => {
+    setCocLoading(true);
+    try {
+      const res = await fetch("/api/auditor/coc-queue", { headers: { [AUDITOR_KEY_HEADER]: auditorKey } });
+      const body = await res.json().catch(() => null);
+      if (!res.ok || !body?.success) {
+        setBanner({ tone: "error", message: body?.error ?? "Failed to load the chain-of-custody review queue." });
+        return;
+      }
+      setCocQueue(body.data as CocQueueRecord[]);
+    } catch {
+      setBanner({ tone: "error", message: "Could not reach the server while loading the chain-of-custody queue." });
+    } finally {
+      setCocLoading(false);
+    }
+  }, [auditorKey]);
+
   useEffect(() => {
     fetchQueue();
-  }, [fetchQueue]);
+    fetchCocQueue();
+  }, [fetchQueue, fetchCocQueue]);
 
   const handleSubmitted = (batchId: string, message: string) => {
     setBanner({ tone: "success", message });
@@ -443,7 +499,37 @@ function AuditorPortal({
     fetchQueue();
   };
 
+  const handleCocReview = async (
+    recordId: string,
+    status: "VERIFIED" | "FLAGGED" | "REJECTED",
+    reviewNotes?: string
+  ) => {
+    const record = cocQueue.find((r) => r.id === recordId);
+    if (!record) throw new Error("This record is no longer in the queue — try refreshing.");
+
+    const res = await fetch(
+      `/api/passports/${encodeURIComponent(record.passport.batchId)}/chain-of-custody/${recordId}`,
+      {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", [AUDITOR_KEY_HEADER]: auditorKey },
+        body: JSON.stringify({ status, reviewNotes }),
+      }
+    );
+    const body = await res.json().catch(() => null);
+    if (!res.ok || !body?.success) {
+      throw new Error(body?.error ?? "Failed to submit your review. Please try again.");
+    }
+
+    setBanner({
+      tone: "success",
+      message: `${record.participantName} (${record.passport.batchId}) marked ${status.toLowerCase()}.`,
+    });
+    setSelectedCocRecordId(null);
+    fetchCocQueue();
+  };
+
   const selected = queue.find((p) => p.batchId === selectedBatchId) ?? null;
+  const selectedCocRecord = cocQueue.find((r) => r.id === selectedCocRecordId) ?? null;
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 p-4 sm:p-6 font-sans overflow-x-hidden">
@@ -496,73 +582,202 @@ function AuditorPortal({
           </div>
         )}
 
-        <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
-          {/* Queue list */}
-          <div className="lg:col-span-2 bg-slate-900/60 border border-slate-800 rounded-xl p-5">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-sm font-semibold flex items-center gap-2">
-                <ClipboardList className="w-4 h-4 text-amber-400" />
-                Review Queue ({queue.length})
-              </h2>
-              <button
-                onClick={() => fetchQueue()}
-                className="flex items-center gap-1.5 text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 px-2.5 py-1.5 rounded-lg transition-all"
-              >
-                <RefreshCw className={`w-3.5 h-3.5 ${loading ? "animate-spin" : ""}`} />
-              </button>
+        {/* Tab switch — the two review workflows are independent (see the
+            CocQueueRecord comment above): a tier record's own review has
+            nothing to do with whether its parent passport is itself still
+            PENDING_VERIFICATION. */}
+        <div className="flex items-center gap-2 border-b border-slate-800 pb-px">
+          <button
+            onClick={() => setActiveTab("passports")}
+            className={`flex items-center gap-1.5 text-xs font-medium px-4 py-2.5 border-b-2 transition-all ${
+              activeTab === "passports"
+                ? "border-amber-500 text-amber-400"
+                : "border-transparent text-slate-500 hover:text-slate-300"
+            }`}
+          >
+            <ClipboardList className="w-3.5 h-3.5" /> Passport Review ({queue.length})
+          </button>
+          <button
+            onClick={() => setActiveTab("chain-of-custody")}
+            className={`flex items-center gap-1.5 text-xs font-medium px-4 py-2.5 border-b-2 transition-all ${
+              activeTab === "chain-of-custody"
+                ? "border-amber-500 text-amber-400"
+                : "border-transparent text-slate-500 hover:text-slate-300"
+            }`}
+          >
+            <Link2 className="w-3.5 h-3.5" /> Chain of Custody Review ({cocQueue.length})
+          </button>
+        </div>
+
+        {activeTab === "passports" ? (
+          <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
+            {/* Queue list */}
+            <div className="lg:col-span-2 bg-slate-900/60 border border-slate-800 rounded-xl p-5">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-sm font-semibold flex items-center gap-2">
+                  <ClipboardList className="w-4 h-4 text-amber-400" />
+                  Review Queue ({queue.length})
+                </h2>
+                <button
+                  onClick={() => fetchQueue()}
+                  className="flex items-center gap-1.5 text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 px-2.5 py-1.5 rounded-lg transition-all"
+                >
+                  <RefreshCw className={`w-3.5 h-3.5 ${loading ? "animate-spin" : ""}`} />
+                </button>
+              </div>
+
+              {loading && queue.length === 0 ? (
+                <div className="flex items-center justify-center py-10 text-slate-500 text-xs gap-2">
+                  <Loader2 className="w-4 h-4 animate-spin" /> Loading queue...
+                </div>
+              ) : queue.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-10 text-slate-600 gap-2">
+                  <Inbox className="w-8 h-8" />
+                  <p className="text-xs">No batches awaiting review.</p>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {queue.map((p) => (
+                    <button
+                      key={p.id}
+                      onClick={() => setSelectedBatchId(p.batchId)}
+                      className={`w-full text-left rounded-lg border p-3 transition-all ${
+                        selectedBatchId === p.batchId
+                          ? "bg-amber-500/10 border-amber-500/40"
+                          : "bg-slate-950 border-slate-800 hover:border-slate-700"
+                      }`}
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className="font-mono text-xs text-slate-200">{p.batchId}</span>
+                        <span className="text-[10px] text-slate-500">{new Date(p.productionDate).toLocaleDateString()}</span>
+                      </div>
+                      <div className="text-xs text-slate-400 mt-1">{p.polymerType} · {p.grade}</div>
+                      <div className="text-[10px] text-slate-600 mt-0.5">{p.manufacturer.legalName}</div>
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
 
-            {loading && queue.length === 0 ? (
-              <div className="flex items-center justify-center py-10 text-slate-500 text-xs gap-2">
-                <Loader2 className="w-4 h-4 animate-spin" /> Loading queue...
-              </div>
-            ) : queue.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-10 text-slate-600 gap-2">
-                <Inbox className="w-8 h-8" />
-                <p className="text-xs">No batches awaiting review.</p>
-              </div>
-            ) : (
-              <div className="space-y-2">
-                {queue.map((p) => (
-                  <button
-                    key={p.id}
-                    onClick={() => setSelectedBatchId(p.batchId)}
-                    className={`w-full text-left rounded-lg border p-3 transition-all ${
-                      selectedBatchId === p.batchId
-                        ? "bg-amber-500/10 border-amber-500/40"
-                        : "bg-slate-950 border-slate-800 hover:border-slate-700"
-                    }`}
-                  >
-                    <div className="flex items-center justify-between">
-                      <span className="font-mono text-xs text-slate-200">{p.batchId}</span>
-                      <span className="text-[10px] text-slate-500">{new Date(p.productionDate).toLocaleDateString()}</span>
-                    </div>
-                    <div className="text-xs text-slate-400 mt-1">{p.polymerType} · {p.grade}</div>
-                    <div className="text-[10px] text-slate-600 mt-0.5">{p.manufacturer.legalName}</div>
-                  </button>
-                ))}
-              </div>
-            )}
+            {/* Review panel */}
+            <div className="lg:col-span-3">
+              {selected ? (
+                <ReviewPanel
+                  passport={selected}
+                  auditorKey={auditorKey}
+                  actionState={actionState}
+                  onSubmitted={handleSubmitted}
+                  onError={(message) => setBanner({ tone: "error", message })}
+                />
+              ) : (
+                <div className="h-full flex flex-col items-center justify-center bg-slate-900/60 border border-slate-800 border-dashed rounded-xl p-10 text-slate-600 gap-2">
+                  <Layers className="w-8 h-8" />
+                  <p className="text-xs text-center">Select a batch from the queue to begin your review.</p>
+                </div>
+              )}
+            </div>
           </div>
+        ) : (
+          <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
+            {/* Chain-of-custody queue list */}
+            <div className="lg:col-span-2 bg-slate-900/60 border border-slate-800 rounded-xl p-5">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-sm font-semibold flex items-center gap-2">
+                  <Link2 className="w-4 h-4 text-amber-400" />
+                  Tier Records ({cocQueue.length})
+                </h2>
+                <button
+                  onClick={() => fetchCocQueue()}
+                  className="flex items-center gap-1.5 text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 px-2.5 py-1.5 rounded-lg transition-all"
+                >
+                  <RefreshCw className={`w-3.5 h-3.5 ${cocLoading ? "animate-spin" : ""}`} />
+                </button>
+              </div>
 
-          {/* Review panel */}
-          <div className="lg:col-span-3">
-            {selected ? (
-              <ReviewPanel
-                passport={selected}
-                auditorKey={auditorKey}
-                actionState={actionState}
-                onSubmitted={handleSubmitted}
-                onError={(message) => setBanner({ tone: "error", message })}
-              />
-            ) : (
-              <div className="h-full flex flex-col items-center justify-center bg-slate-900/60 border border-slate-800 border-dashed rounded-xl p-10 text-slate-600 gap-2">
-                <Layers className="w-8 h-8" />
-                <p className="text-xs text-center">Select a batch from the queue to begin your review.</p>
-              </div>
-            )}
+              {cocLoading && cocQueue.length === 0 ? (
+                <div className="flex items-center justify-center py-10 text-slate-500 text-xs gap-2">
+                  <Loader2 className="w-4 h-4 animate-spin" /> Loading queue...
+                </div>
+              ) : cocQueue.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-10 text-slate-600 gap-2">
+                  <Inbox className="w-8 h-8" />
+                  <p className="text-xs">No chain-of-custody tiers awaiting review.</p>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {cocQueue.map((r) => (
+                    <button
+                      key={r.id}
+                      onClick={() => setSelectedCocRecordId(r.id)}
+                      className={`w-full text-left rounded-lg border p-3 transition-all ${
+                        selectedCocRecordId === r.id
+                          ? "bg-amber-500/10 border-amber-500/40"
+                          : "bg-slate-950 border-slate-800 hover:border-slate-700"
+                      }`}
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className="font-mono text-xs text-slate-200">{r.passport.batchId}</span>
+                        <span className="text-[10px] text-slate-500">{new Date(r.createdAt).toLocaleDateString()}</span>
+                      </div>
+                      <div className="text-xs text-slate-400 mt-1">{r.participantName}</div>
+                      <div className="text-[10px] text-slate-600 mt-0.5">
+                        {r.passport.polymerType} · {r.passport.grade}
+                        {r.passport.manufacturer ? ` · ${r.passport.manufacturer.legalName}` : ""}
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Review panel */}
+            <div className="lg:col-span-3">
+              {selectedCocRecord ? (
+                <div className="bg-slate-900/60 border border-slate-800 rounded-xl p-6 space-y-4">
+                  <div>
+                    <h2 className="text-lg font-semibold text-slate-100">
+                      {selectedCocRecord.passport.polymerType} · {selectedCocRecord.passport.grade}
+                    </h2>
+                    <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs font-mono text-slate-500">
+                      <span>{selectedCocRecord.passport.batchId}</span>
+                      <span>·</span>
+                      <span>GTIN {selectedCocRecord.passport.gtin}</span>
+                    </div>
+                    {selectedCocRecord.passport.manufacturer && (
+                      <div className="mt-1.5 flex items-center gap-1.5 text-xs text-slate-400">
+                        <Factory className="w-3.5 h-3.5" /> {selectedCocRecord.passport.manufacturer.legalName}
+                      </div>
+                    )}
+                  </div>
+                  <ChainOfCustodyTimeline
+                    records={[
+                      {
+                        id: selectedCocRecord.id,
+                        sequence: selectedCocRecord.sequence,
+                        tier: selectedCocRecord.tier,
+                        participantName: selectedCocRecord.participantName,
+                        participantCountry: selectedCocRecord.participantCountry,
+                        externalBatchId: selectedCocRecord.externalBatchId,
+                        certificationScheme: selectedCocRecord.certificationScheme,
+                        certificateId: selectedCocRecord.certificateId,
+                        massBalanceAllocationPercent: selectedCocRecord.massBalanceAllocationPercent,
+                        notes: selectedCocRecord.notes,
+                        status: "PENDING_REVIEW",
+                      },
+                    ]}
+                    mode="review"
+                    onReview={handleCocReview}
+                  />
+                </div>
+              ) : (
+                <div className="h-full flex flex-col items-center justify-center bg-slate-900/60 border border-slate-800 border-dashed rounded-xl p-10 text-slate-600 gap-2">
+                  <Layers className="w-8 h-8" />
+                  <p className="text-xs text-center">Select a tier record from the queue to begin your review.</p>
+                </div>
+              )}
+            </div>
           </div>
-        </div>
+        )}
       </div>
     </div>
   );

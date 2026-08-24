@@ -34,7 +34,7 @@ import {
   ShieldCheck, ShieldAlert, Leaf, Recycle, Layers, Gauge, Hash,
   BadgeCheck, ExternalLink, Download, Copy, Check, AlertTriangle,
   Factory, CalendarDays, Clock, CheckCircle2, GitBranch, FileText,
-  UserCheck, Languages,
+  UserCheck, Languages, Link2, Sprout, Settings2, Truck, CircleDot,
 } from "lucide-react";
 import {
   type Locale, SUPPORTED_LOCALES, DEFAULT_LOCALE, LOCALE_LABELS,
@@ -71,6 +71,32 @@ interface GenealogyLinkView {
   quantityUsedKg: number | null;
   notes: string | null;
   parentPassport: GenealogyParentView;
+}
+
+// Multi-tier Supply Chain Verification & Auditor Portal Expansion. page.tsx
+// only ever passes tier records whose status is VERIFIED — same "never
+// show unverified/negative claims as fact" convention as certifications
+// above (see that filter in app/01/[gtin]/21/[serialOrBatch]/page.tsx) —
+// so there is no status field here at all: everything reaching this
+// component is already a positive trust signal.
+type ChainOfCustodyTierValue =
+  | "RAW_MATERIAL_SUPPLIER"
+  | "RECYCLER"
+  | "COMPOUNDER"
+  | "PROCESSOR"
+  | "DISTRIBUTOR"
+  | "OTHER";
+
+interface ChainOfCustodyLinkView {
+  id: string;
+  sequence: number;
+  tier: ChainOfCustodyTierValue;
+  participantName: string;
+  participantCountry: string | null;
+  externalBatchId: string;
+  certificationScheme: string | null;
+  massBalanceAllocationPercent: number | null;
+  reviewedAt: string | null;
 }
 
 // Deliberately a distinct, narrower type than the admin dashboard's
@@ -125,6 +151,7 @@ interface PassportView {
   signedAt: string | null;
   parentLinks: GenealogyLinkView[];
   carbonFootprintCalculation: CarbonFootprintCalculationView | null;
+  chainOfCustodyRecords: ChainOfCustodyLinkView[];
 }
 
 interface PublicScanPageProps {
@@ -157,6 +184,21 @@ function FingerprintStrip({ hash, tone }: { hash: string; tone: "teal" | "rose" 
     </div>
   );
 }
+
+// Same tier icon set as components/dashboard/chain-of-custody-timeline.tsx
+// (the dark-dashboard equivalent) — kept as a separate, deliberately small
+// copy here rather than a shared import, since this page never imports
+// dashboard components (see this file's own banner comment on why the
+// public page doesn't share components across its light theme and the
+// dashboard's dark one).
+const COC_TIER_ICONS: Record<ChainOfCustodyTierValue, typeof Sprout> = {
+  RAW_MATERIAL_SUPPLIER: Sprout,
+  RECYCLER: Recycle,
+  COMPOUNDER: Factory,
+  PROCESSOR: Settings2,
+  DISTRIBUTOR: Truck,
+  OTHER: CircleDot,
+};
 
 const CERT_LABELS: Record<string, string> = {
   ISCC_PLUS: "ISCC PLUS",
@@ -472,6 +514,52 @@ export default function PublicScanPage({ passport, integrityVerified, linkTruste
                   </div>
                 </div>
               ))}
+            </div>
+          </section>
+        )}
+
+        {/* Multi-Tier Chain of Custody (Multi-tier Supply Chain
+            Verification & Auditor Portal Expansion) — records reaching this
+            page are already filtered to status VERIFIED by page.tsx (see
+            this file's ChainOfCustodyLinkView comment above), so this
+            section renders unconditionally as a positive trust signal, same
+            pattern as the Auditor Sign-off section higher up. */}
+        {passport.chainOfCustodyRecords.length > 0 && (
+          <section className="rounded-xl bg-white border border-slate-200 p-4">
+            <h2 className="f-display text-sm font-semibold text-slate-900 flex items-center gap-1.5 mb-3">
+              <Link2 className="w-4 h-4 text-teal-700" /> {t("coc.title")}
+            </h2>
+            <div className="space-y-2">
+              {[...passport.chainOfCustodyRecords]
+                .sort((a, b) => a.sequence - b.sequence)
+                .map((record) => {
+                  const TierIcon = COC_TIER_ICONS[record.tier] ?? CircleDot;
+                  return (
+                    <div key={record.id} className="rounded-lg bg-slate-50 p-3 flex items-start gap-3">
+                      <div className="shrink-0 w-7 h-7 rounded-full bg-teal-100 flex items-center justify-center mt-0.5">
+                        <TierIcon className="w-3.5 h-3.5 text-teal-700" />
+                      </div>
+                      <div className="min-w-0">
+                        <div className="text-[10px] text-slate-400 f-body">{t(`coc.tier.${record.tier}`)}</div>
+                        <div className="f-mono text-xs font-medium text-slate-900">{record.participantName}</div>
+                        <div className="text-[10px] text-slate-400 f-body mt-0.5">
+                          {record.participantCountry ? `${record.participantCountry} · ` : ""}
+                          {t("coc.batch", { id: record.externalBatchId })}
+                          {record.certificationScheme ? ` · ${CERT_LABELS[record.certificationScheme] ?? record.certificationScheme}` : ""}
+                          {record.massBalanceAllocationPercent != null
+                            ? ` · ${t("coc.massBalance", { pct: record.massBalanceAllocationPercent })}`
+                            : ""}
+                        </div>
+                        {record.reviewedAt && (
+                          <div className="text-[10px] text-teal-600 f-body mt-0.5 flex items-center gap-1">
+                            <CheckCircle2 className="w-3 h-3" />
+                            {t("coc.verifiedOn", { date: new Date(record.reviewedAt).toLocaleDateString(locale) })}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
             </div>
           </section>
         )}

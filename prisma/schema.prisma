@@ -86,6 +86,17 @@ enum AuditAction {
   // so it gets its own audit trail entry like every other passport-level
   // event in this app.
   CLIENT_PURCHASE_RECORDED
+  // Multi-tier Supply Chain Verification & Auditor Portal Expansion —
+  // additive, existing values and rows untouched. See
+  // ChainOfCustodyRecord below. COC_VERIFIED/COC_FLAGGED/COC_REJECTED are
+  // deliberately distinct from AUDITOR_VERIFIED/AUDITOR_REJECTED (which
+  // record a decision about the whole passport) — these record a decision
+  // about one supply-chain tier record instead, and a single passport can
+  // have many independently-reviewed tier records.
+  COC_ADDED
+  COC_VERIFIED
+  COC_FLAGGED
+  COC_REJECTED
 }
 
 // Compliance & Green Certifications Module (docs/COMPLIANCE_CERTIFICATIONS_MODULE_SPEC.md
@@ -119,6 +130,41 @@ enum TransportMode {
 enum AuditorVerificationStatus {
   AUDITOR_VERIFIED
   REJECTED_BY_AUDITOR
+}
+
+// Multi-tier Supply Chain Verification & Auditor Portal Expansion — new
+// enums, additive, no existing enum touched.
+//
+// A tier in a batch's chain of custody: who touched the material before it
+// became this Digital Product Passport's own batch. Deliberately NOT the
+// same concept as BatchGenealogyLink (which links two batches that BOTH
+// already have their own PolymerPassport row in this system) — a raw
+// material supplier or recycler upstream of the DPP boundary usually has
+// no passport of their own here at all, just a name, a batch/lot
+// reference, and a certificate. ChainOfCustodyRecord is how that external,
+// pre-DPP portion of the supply chain gets attached to a single passport.
+enum ChainOfCustodyTier {
+  RAW_MATERIAL_SUPPLIER
+  RECYCLER
+  COMPOUNDER
+  PROCESSOR
+  DISTRIBUTOR
+  OTHER
+}
+
+// Mirrors CertificationVerificationStatus's shape (PENDING_REVIEW by
+// default, moved by a separate reviewer) plus one addition this feature's
+// own spec calls for: FLAGGED — a reviewer's way of raising a compliance
+// concern about a tier record without outright rejecting it (a rejection
+// says "this record is wrong/unacceptable"; a flag says "this needs
+// follow-up before it can be trusted," e.g. a certificate nearing expiry
+// or a mismatched mass-balance figure). Both FLAGGED and REJECTED carry a
+// required flagReason/reviewNotes — see the model below.
+enum ChainOfCustodyStatus {
+  PENDING_REVIEW
+  VERIFIED
+  FLAGGED
+  REJECTED
 }
 
 // ----------------------------------------------------------------------------
@@ -212,6 +258,13 @@ model PolymerPassport {
   // BatchGenealogyLink above — so each allocation can carry its own
   // quantity/notes and its own place in the audit trail.
   clientAccess ClientPassportAccess[]
+
+  // --- 11. Multi-Tier Chain of Custody (Multi-tier Supply Chain
+  // Verification & Auditor Portal Expansion) ---------------------------------
+  // See ChainOfCustodyRecord below. One-to-many, ordered by `sequence` —
+  // every raw material supplier, recycler, and compounder tier that fed
+  // into this batch, each independently reviewable by an Auditor.
+  chainOfCustodyRecords ChainOfCustodyRecord[]
 
   // --- Lifecycle / meta --------------------------------------------------
   status           DppStatus @default(ISSUED)
@@ -533,4 +586,95 @@ model ClientPassportAccess {
   @@unique([clientId, passportId])
   @@index([clientId])
   @@index([passportId])
+}
+
+// ----------------------------------------------------------------------------
+// MULTI-TIER CHAIN OF CUSTODY (Multi-tier Supply Chain Verification &
+// Auditor Portal Expansion — new model, no existing model or field
+// touched or removed)
+// ----------------------------------------------------------------------------
+// One row per upstream supply-chain tier (a raw material supplier, a
+// recycler, a compounder, ...) that fed into this passport's batch, each
+// carrying its own external batch reference and chain-of-custody
+// certificate. Unlike BatchGenealogyLink (which links two batches that are
+// BOTH already PolymerPassport rows in this system), the participant here
+// is typically external to this platform entirely — see the
+// ChainOfCustodyTier enum's own comment.
+//
+// Submitted by whoever holds the passport (MANUFACTURER/ADMIN — see
+// lib/services/add-chain-of-custody-record.ts), starting PENDING_REVIEW,
+// same "never implicitly trust a self-submission" convention as
+// Certification.verificationStatus. Moved to VERIFIED/FLAGGED/REJECTED
+// only by an individually-authenticated Auditor (lib/auditor-auth.ts,
+// same identity model as AuditorVerification below) — reviewedBy stores
+// "AUDITOR:<id>", mirroring AuditLog.actor's convention.
+//
+// recordHash is a SHA-256 (via lib/types.ts's hashRecord) over this tier's
+// own canonical claim data (tier, participantName, externalBatchId,
+// certificateId, ...) — a tamper-evident fingerprint for this one record,
+// same principle as PolymerPassport.recordHash and
+// AuditorVerification.signatureHash, but deliberately NOT folded into the
+// parent passport's own recordHash chain: tier records are added
+// post-issuance, on their own timeline, and must never invalidate the
+// passport's already-sealed integrity hash the way editing a core claim
+// field would.
+model ChainOfCustodyRecord {
+  id String @id @default(uuid())
+
+  passportId String
+  passport   PolymerPassport @relation(fields: [passportId], references: [id])
+
+  // Display/traversal order, furthest upstream first (1 = earliest tier).
+  // Assigned server-side as "next available" for this passport — see the
+  // add-record service — not caller-supplied, so tiers can never collide
+  // or be submitted out of order by mistake.
+  sequence Int
+
+  tier ChainOfCustodyTier
+
+  // The external organization at this tier — usually NOT a Manufacturer
+  // row in this system (see this model's own file banner). Free text by
+  // design: onboarding every raw-material supplier as a full system entity
+  // is out of scope for this MVP.
+  participantName    String
+  participantCountry String?
+
+  // This tier's own reference for the material lot/batch — their number,
+  // not ours. Free text (external systems use all kinds of batch ID
+  // formats), unlike PolymerPassport.batchId which is validated/unique.
+  externalBatchId String
+
+  // Chain-of-custody / mass-balance certificate for this tier. Reuses the
+  // existing CertificationScheme enum rather than inventing a parallel
+  // one — a chain-of-custody certificate (ISCC PLUS, REDcert2, ...) is the
+  // same set of real-world schemes a passport's own Certification rows
+  // already reference.
+  certificationScheme          CertificationScheme?
+  certificateId                String?
+  certificateDocumentUrl       String?
+  certificateDocumentHash      String? // mirrors Certification.documentHash — SHA-256 of the document, never fetched server-side (SSRF avoidance, same reasoning as that field)
+  massBalanceAllocationPercent Decimal? @db.Decimal(5, 2) // mirrors Certification's own field; only meaningful for mass-balance schemes
+
+  notes String? @db.Text
+
+  status ChainOfCustodyStatus @default(PENDING_REVIEW)
+
+  // Review outcome — set together, only by the Auditor review action.
+  // reviewNotes is required by the API when moving to FLAGGED or REJECTED
+  // (mirrors Certification.rejectionReason's "required by the API, not
+  // enforced at the DB layer" convention).
+  reviewedBy String? // "AUDITOR:<id>", same convention as AuditLog.actor
+  reviewedAt DateTime?
+  reviewNotes String? @db.Text
+
+  recordHash String?
+  hashAlgorithm String @default("SHA-256")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([passportId, sequence])
+  @@index([passportId])
+  @@index([status])
+  @@index([tier])
 }

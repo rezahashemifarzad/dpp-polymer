@@ -149,6 +149,25 @@ export default async function Gs1ResolverPage({ params, searchParams }: PageProp
               emissionFactorVersion: passport.carbonFootprintCalculation.emissionFactorVersion,
             }
           : null,
+        // Multi-tier Supply Chain Verification & Auditor Portal Expansion —
+        // same "never show unverified/negative claims as fact" rule as
+        // certifications above: only VERIFIED tier records are ever sent to
+        // the public page. PENDING_REVIEW/FLAGGED/REJECTED stay
+        // admin/auditor-only.
+        chainOfCustodyRecords: passport.chainOfCustodyRecords
+          .filter((r) => r.status === "VERIFIED")
+          .map((r) => ({
+            id: r.id,
+            sequence: r.sequence,
+            tier: r.tier,
+            participantName: r.participantName,
+            participantCountry: r.participantCountry,
+            externalBatchId: r.externalBatchId,
+            certificationScheme: r.certificationScheme,
+            massBalanceAllocationPercent:
+              r.massBalanceAllocationPercent !== null ? Number(r.massBalanceAllocationPercent) : null,
+            reviewedAt: r.reviewedAt ? r.reviewedAt.toISOString() : null,
+          })),
       }}
       integrityVerified={integrityVerified}
       linkTrusted={linkTrusted}

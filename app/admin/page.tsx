@@ -26,7 +26,7 @@
  * route that doesn't exist anywhere in this app.
  */
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import {
   ShieldCheck,
   PlusCircle,
@@ -40,18 +40,94 @@ import {
   BarChart3,
   KeyRound,
   Building2,
+  Printer,
+  FileSpreadsheet,
+  Loader2,
 } from "lucide-react";
 import Link from "next/link";
-import { ToastProvider } from "@/lib/hooks/use-toast";
+import { ToastProvider, useToast } from "@/lib/hooks/use-toast";
 import { usePassports, type ApiPassport } from "@/lib/hooks/use-passports";
 import { CreatePassportModal } from "@/components/dashboard/create-passport-modal";
 import { BatchDetailsModal } from "@/components/dashboard/batch-details-modal";
+// Sprint 2.2 (Dynamic QR Code Engine & Factory Batch Labeling) — this page
+// is the *other* independent Material Ledger UI (see
+// claude/circular-economy-platform-upgrade-notes.md's "two independent
+// Material Ledger tables" note); it previously had no QR preview at all,
+// only the bare "View ↗" link below. Both modals are the same reusable
+// components already wired into app/page.tsx.
+import { QrCodeModal } from "@/components/dashboard/qr-code-modal";
+import { QrLabelSheetModal, type QrLabelCandidate } from "@/components/dashboard/qr-label-sheet-modal";
 
 function AdminDashboardInner() {
-  const { data: passports, loading, refetch, createPassport, linkParentBatch, calculateCarbonFootprint } =
-    usePassports();
+  const {
+    data: passports,
+    loading,
+    refetch,
+    createPassport,
+    linkParentBatch,
+    calculateCarbonFootprint,
+    addChainOfCustodyRecord,
+  } = usePassports();
+  const { push } = useToast();
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [manageTarget, setManageTarget] = useState<ApiPassport | null>(null);
+  // Sprint 2.3 (Enterprise Compliance Reporting & PDF/Excel Export Module)
+  // — "Download Ledger Excel" fetch+blob round trip, same convention as
+  // app/page.tsx's handleExportLedgerExcel.
+  const [exportingLedger, setExportingLedger] = useState(false);
+
+  // Sprint 2.2 — single-batch QR preview/download, and the bulk
+  // print-ready label sheet picker. Separate state from manageTarget above:
+  // "Manage" and "QR" are two independent actions on a row.
+  const [qrTarget, setQrTarget] = useState<ApiPassport | null>(null);
+  const [showLabelSheetModal, setShowLabelSheetModal] = useState(false);
+
+  // Normalized shape for QrLabelSheetModal (page-shape-agnostic — see that
+  // component's file banner for why it doesn't take ApiPassport directly).
+  const qrLabelCandidates: QrLabelCandidate[] = useMemo(
+    () =>
+      passports.map((p) => ({
+        id: p.id,
+        batchId: p.batchId,
+        label: p.grade,
+        polymerType: p.polymerType,
+        gtin: p.gtin,
+        qrUrl: p.qrCodePayloadUrl,
+      })),
+    [passports]
+  );
+
+  // Sprint 2.3 — fetch+blob (not a bare <a href> click) so a genuine
+  // server-side failure surfaces as a toast instead of silently opening a
+  // JSON error body as if it were the workbook.
+  const handleExportLedgerExcel = async () => {
+    setExportingLedger(true);
+    try {
+      const res = await fetch("/api/passports/ledger-export.xlsx");
+      if (!res.ok) {
+        const json = await res.json().catch(() => null);
+        throw new Error(json?.error || `Request failed with status ${res.status}`);
+      }
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `polymer-dpp-ledger-export-${new Date().toISOString().slice(0, 10)}.xlsx`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+      push({ variant: "success", title: "Ledger Excel exported", description: "Material Ledger + Audit Trail workbook downloaded." });
+    } catch (err) {
+      push({
+        variant: "error",
+        title: "Excel export failed",
+        description: err instanceof Error ? err.message : "Failed to generate the ledger workbook.",
+      });
+    } finally {
+      setExportingLedger(false);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 p-4 sm:p-6 font-sans overflow-x-hidden">
@@ -158,21 +234,44 @@ function AdminDashboardInner() {
 
         {/* Material Ledger Table */}
         <div className="bg-slate-900/60 border border-slate-800 rounded-xl p-6">
-          <div className="flex justify-between items-center mb-6">
-            <div>
+          <div className="flex flex-wrap justify-between items-center gap-3 mb-6">
+            <div className="min-w-0">
               <h3 className="text-base font-semibold flex items-center gap-2">
                 <Layers className="w-5 h-5 text-emerald-400" />
                 Material Ledger &amp; Active Passports
               </h3>
               <p className="text-xs text-slate-400 mt-1">Live data records synchronized with Neon DB</p>
             </div>
-            <button
-              onClick={() => refetch()}
-              className="flex items-center gap-1.5 text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 px-3 py-1.5 rounded-lg transition-all"
-            >
-              <RefreshCw className={`w-3.5 h-3.5 ${loading ? "animate-spin" : ""}`} />
-              Refresh
-            </button>
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                onClick={() => refetch()}
+                className="flex items-center gap-1.5 text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 px-3 py-1.5 rounded-lg transition-all shrink-0"
+              >
+                <RefreshCw className={`w-3.5 h-3.5 ${loading ? "animate-spin" : ""}`} />
+                Refresh
+              </button>
+              <button
+                onClick={() => setShowLabelSheetModal(true)}
+                className="flex items-center gap-1.5 text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 px-3 py-1.5 rounded-lg transition-all shrink-0"
+                title="Generate a print-ready QR label sheet"
+              >
+                <Printer className="w-3.5 h-3.5" />
+                Print Labels
+              </button>
+              <button
+                onClick={handleExportLedgerExcel}
+                disabled={exportingLedger}
+                className="flex items-center gap-1.5 text-xs bg-slate-800 hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed text-slate-300 px-3 py-1.5 rounded-lg transition-all shrink-0"
+                title="Download the Material Ledger & Audit Trail as an Excel workbook"
+              >
+                {exportingLedger ? (
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                ) : (
+                  <FileSpreadsheet className="w-3.5 h-3.5" />
+                )}
+                {exportingLedger ? "Exporting..." : "Download Ledger Excel"}
+              </button>
+            </div>
           </div>
 
           <div className="overflow-x-auto">
@@ -237,13 +336,22 @@ function AdminDashboardInner() {
                       </td>
                       <td className="p-3 text-center">
                         {item.qrCodePayloadUrl ? (
-                          <Link
-                            href={item.qrCodePayloadUrl}
-                            target="_blank"
-                            className="inline-flex items-center gap-1 text-xs text-cyan-400 hover:text-cyan-300"
-                          >
-                            View <ExternalLink className="w-3 h-3" />
-                          </Link>
+                          <div className="inline-flex items-center gap-2">
+                            <button
+                              onClick={() => setQrTarget(item)}
+                              className="inline-flex items-center gap-1 text-xs text-slate-300 hover:text-white bg-slate-800 hover:bg-slate-700 px-2 py-1 rounded-lg transition-all"
+                              title="Preview & download QR code"
+                            >
+                              <QrCode className="w-3 h-3" />
+                            </button>
+                            <Link
+                              href={item.qrCodePayloadUrl}
+                              target="_blank"
+                              className="inline-flex items-center gap-1 text-xs text-cyan-400 hover:text-cyan-300"
+                            >
+                              View <ExternalLink className="w-3 h-3" />
+                            </Link>
+                          </div>
                         ) : (
                           <span className="text-slate-600">—</span>
                         )}
@@ -286,6 +394,32 @@ function AdminDashboardInner() {
         allPassports={passports}
         onLinkParent={linkParentBatch}
         onCalculateCarbon={calculateCarbonFootprint}
+        onAddChainOfCustody={addChainOfCustodyRecord}
+      />
+
+      {/* Sprint 2.2 — single-batch QR preview/download (this page had none
+          before) and the bulk print-ready label sheet picker. */}
+      <QrCodeModal
+        open={qrTarget !== null}
+        onClose={() => setQrTarget(null)}
+        batchId={qrTarget?.batchId ?? ""}
+        label={qrTarget?.grade ?? ""}
+        qrUrl={qrTarget?.qrCodePayloadUrl ?? null}
+        details={
+          qrTarget
+            ? [
+                { label: "Record Hash (SHA-256)", value: qrTarget.recordHash ?? "—", title: qrTarget.recordHash ?? undefined },
+                { label: "Total Recycled Content", value: `${qrTarget.recycledContentPercent}%` },
+                { label: "Certification", value: qrTarget.certifications[0]?.scheme ?? "—" },
+              ]
+            : []
+        }
+      />
+
+      <QrLabelSheetModal
+        open={showLabelSheetModal}
+        onClose={() => setShowLabelSheetModal(false)}
+        passports={qrLabelCandidates}
       />
     </div>
   );

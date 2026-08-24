@@ -25,11 +25,33 @@
  */
 
 import React, { useMemo, useState } from "react";
-import { X, Loader2, GitBranch, Leaf, AlertTriangle, ArrowUpRight } from "lucide-react";
+import { X, Loader2, GitBranch, Leaf, AlertTriangle, ArrowUpRight, Link2 } from "lucide-react";
 import { useToast } from "@/lib/hooks/use-toast";
-import type { ApiPassport } from "@/lib/hooks/use-passports";
+import type { ApiPassport, ChainOfCustodyTierValue } from "@/lib/hooks/use-passports";
+import { ChainOfCustodyTimeline } from "@/components/dashboard/chain-of-custody-timeline";
 
 const TRANSPORT_MODES: Array<"TRUCK" | "RAIL" | "SEA" | "AIR"> = ["TRUCK", "RAIL", "SEA", "AIR"];
+
+const COC_TIERS: Array<{ value: ChainOfCustodyTierValue; label: string }> = [
+  { value: "RAW_MATERIAL_SUPPLIER", label: "Raw Material Supplier" },
+  { value: "RECYCLER", label: "Recycler" },
+  { value: "COMPOUNDER", label: "Compounder" },
+  { value: "PROCESSOR", label: "Processor" },
+  { value: "DISTRIBUTOR", label: "Distributor" },
+  { value: "OTHER", label: "Other" },
+];
+
+const COC_CERT_SCHEMES = [
+  "ISCC_PLUS",
+  "REDCERT2",
+  "ISO_14021",
+  "ISO_14040_44",
+  "EN_15343",
+  "EN_16785",
+  "GRS",
+  "RECYCLASS",
+  "OTHER",
+];
 
 const inputCls =
   "w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-white focus:outline-none focus:border-emerald-500";
@@ -56,6 +78,19 @@ interface BatchDetailsModalProps {
     batchId: string,
     input: { weightKg: number; transportDistanceKm?: number; transportMode?: "TRUCK" | "RAIL" | "SEA" | "AIR" }
   ) => Promise<unknown>;
+  onAddChainOfCustody: (
+    batchId: string,
+    input: {
+      tier: ChainOfCustodyTierValue;
+      participantName: string;
+      participantCountry?: string;
+      externalBatchId: string;
+      certificationScheme?: string;
+      certificateId?: string;
+      massBalanceAllocationPercent?: number;
+      notes?: string;
+    }
+  ) => Promise<unknown>;
 }
 
 export function BatchDetailsModal({
@@ -65,6 +100,7 @@ export function BatchDetailsModal({
   allPassports,
   onLinkParent,
   onCalculateCarbon,
+  onAddChainOfCustody,
 }: BatchDetailsModalProps) {
   const { push } = useToast();
 
@@ -77,6 +113,21 @@ export function BatchDetailsModal({
   const [transportDistanceKm, setTransportDistanceKm] = useState("0");
   const [transportMode, setTransportMode] = useState<"TRUCK" | "RAIL" | "SEA" | "AIR">("TRUCK");
   const [calculating, setCalculating] = useState(false);
+
+  // Multi-Tier Chain of Custody (Multi-tier Supply Chain Verification &
+  // Auditor Portal Expansion) — the add-tier form. Reviewing PENDING_REVIEW
+  // records is deliberately NOT available here — only the authenticated
+  // Auditor Portal can act on a record (see this sprint's notes for why
+  // that scoping decision was made).
+  const [cocTier, setCocTier] = useState<ChainOfCustodyTierValue>("RAW_MATERIAL_SUPPLIER");
+  const [cocParticipantName, setCocParticipantName] = useState("");
+  const [cocParticipantCountry, setCocParticipantCountry] = useState("");
+  const [cocExternalBatchId, setCocExternalBatchId] = useState("");
+  const [cocCertScheme, setCocCertScheme] = useState("");
+  const [cocCertId, setCocCertId] = useState("");
+  const [cocMassBalancePercent, setCocMassBalancePercent] = useState("");
+  const [cocNotes, setCocNotes] = useState("");
+  const [addingCoc, setAddingCoc] = useState(false);
 
   // Eligible parents: any other ISSUED-or-later passport, excluding this
   // batch itself and anything already linked. Cycle-prevention beyond that
@@ -142,6 +193,44 @@ export function BatchDetailsModal({
       });
     } finally {
       setCalculating(false);
+    }
+  };
+
+  const handleAddChainOfCustody = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!cocParticipantName.trim() || !cocExternalBatchId.trim()) return;
+    setAddingCoc(true);
+    try {
+      await onAddChainOfCustody(passport.batchId, {
+        tier: cocTier,
+        participantName: cocParticipantName.trim(),
+        participantCountry: cocParticipantCountry.trim() || undefined,
+        externalBatchId: cocExternalBatchId.trim(),
+        certificationScheme: cocCertScheme || undefined,
+        certificateId: cocCertId.trim() || undefined,
+        massBalanceAllocationPercent: cocMassBalancePercent ? Number(cocMassBalancePercent) : undefined,
+        notes: cocNotes.trim() || undefined,
+      });
+      push({
+        variant: "success",
+        title: "Chain-of-custody tier added",
+        description: `${cocParticipantName} added to ${passport.batchId}'s supply chain — pending auditor review.`,
+      });
+      setCocParticipantName("");
+      setCocParticipantCountry("");
+      setCocExternalBatchId("");
+      setCocCertScheme("");
+      setCocCertId("");
+      setCocMassBalancePercent("");
+      setCocNotes("");
+    } catch (err) {
+      push({
+        variant: "error",
+        title: "Could not add chain-of-custody record",
+        description: err instanceof Error ? err.message : "Unknown error",
+      });
+    } finally {
+      setAddingCoc(false);
     }
   };
 
@@ -319,6 +408,109 @@ export function BatchDetailsModal({
                 : passport.carbonFootprintCalculation
                   ? "Recalculate"
                   : "Calculate Footprint"}
+            </button>
+          </form>
+        </div>
+
+        {/* Multi-Tier Chain of Custody panel (Multi-tier Supply Chain
+            Verification & Auditor Portal Expansion) — this is the ONE
+            insertion point shared by both app/page.tsx's Material Ledger
+            tab and app/admin/page.tsx, since both render this modal, so a
+            batch managed from either surface gets the same chain-of-custody
+            UI without a second copy to keep in sync. */}
+        <div className="border border-slate-800 rounded-2xl p-4 mt-4">
+          <div className="flex items-center gap-2 mb-3">
+            <Link2 className="w-4 h-4 text-emerald-400" />
+            <h4 className="text-sm font-semibold text-slate-100">Multi-Tier Chain of Custody</h4>
+          </div>
+          <p className="text-[10px] text-slate-500 font-mono mb-3">
+            Upstream suppliers, recyclers, and compounders for this batch. New tiers start PENDING_REVIEW —
+            only the Auditor Portal can verify, flag, or reject them.
+          </p>
+
+          <div className="mb-3">
+            <ChainOfCustodyTimeline
+              records={passport.chainOfCustodyRecords}
+              mode="readonly"
+              emptyLabel="No chain-of-custody tiers linked yet."
+            />
+          </div>
+
+          <form onSubmit={handleAddChainOfCustody} className="space-y-3 font-mono text-xs">
+            <div className="grid grid-cols-2 gap-3">
+              <Field label="Tier / Role">
+                <select
+                  value={cocTier}
+                  onChange={(e) => setCocTier(e.target.value as ChainOfCustodyTierValue)}
+                  className={inputCls}
+                >
+                  {COC_TIERS.map((tier) => (
+                    <option key={tier.value} value={tier.value}>
+                      {tier.label}
+                    </option>
+                  ))}
+                </select>
+              </Field>
+              <Field label="Participant Name">
+                <input
+                  required
+                  value={cocParticipantName}
+                  onChange={(e) => setCocParticipantName(e.target.value)}
+                  className={inputCls}
+                />
+              </Field>
+              <Field label="Participant Country (optional)">
+                <input
+                  value={cocParticipantCountry}
+                  onChange={(e) => setCocParticipantCountry(e.target.value)}
+                  className={inputCls}
+                />
+              </Field>
+              <Field label="Their Batch ID">
+                <input
+                  required
+                  value={cocExternalBatchId}
+                  onChange={(e) => setCocExternalBatchId(e.target.value)}
+                  className={inputCls}
+                />
+              </Field>
+              <Field label="Certification Scheme (optional)">
+                <select value={cocCertScheme} onChange={(e) => setCocCertScheme(e.target.value)} className={inputCls}>
+                  <option value="">— none —</option>
+                  {COC_CERT_SCHEMES.map((s) => (
+                    <option key={s} value={s}>
+                      {s}
+                    </option>
+                  ))}
+                </select>
+              </Field>
+              <Field label="Certificate ID (optional)">
+                <input value={cocCertId} onChange={(e) => setCocCertId(e.target.value)} className={inputCls} />
+              </Field>
+              <Field label="Mass Balance Allocation % (optional)">
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  max="100"
+                  value={cocMassBalancePercent}
+                  onChange={(e) => setCocMassBalancePercent(e.target.value)}
+                  className={inputCls}
+                />
+              </Field>
+              <div className="col-span-2">
+                <Field label="Notes (optional)">
+                  <input value={cocNotes} onChange={(e) => setCocNotes(e.target.value)} className={inputCls} />
+                </Field>
+              </div>
+            </div>
+            <button
+              type="submit"
+              disabled={addingCoc || !cocParticipantName.trim() || !cocExternalBatchId.trim()}
+              className="w-full py-2.5 bg-emerald-500 hover:bg-emerald-400 disabled:opacity-50 disabled:cursor-not-allowed text-slate-950 font-bold rounded-xl transition flex items-center justify-center gap-2"
+            >
+              {addingCoc && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+              {addingCoc ? "Adding..." : "Add Chain-of-Custody Tier"}
             </button>
           </form>
         </div>

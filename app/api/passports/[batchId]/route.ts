@@ -71,6 +71,9 @@ export async function GET(
           },
         },
         carbonFootprintCalculation: true,
+        // Multi-tier Supply Chain Verification & Auditor Portal Expansion
+        // — every tier record, all statuses (admin-facing shape).
+        chainOfCustodyRecords: { orderBy: { sequence: "asc" } },
       },
     });
 
