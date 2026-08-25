@@ -20,8 +20,28 @@
  * true generative backend is wanted later, this module's
  * answerAssistantQuestion() is the single seam to swap.
  *
- * Intents are tried in order, most-specific first, and the first
- * confident match wins:
+ * Two entry points, deliberately NOT one function with a client-supplied
+ * "scope" flag:
+ *
+ *   - answerAssistantQuestion(question) — the original, unchanged, admin
+ *     console entry point. Full intent set below.
+ *   - answerPublicAssistantQuestion(question, contextBatchId?) — the
+ *     public-page entry point (see PublicScanPage.tsx). Its function body
+ *     simply never calls getSupplierAnalytics(), computePortfolioExpiryAlerts(),
+ *     the portfolio-count intent, or the admin navigation index — there is
+ *     no runtime flag gating that access, because there is no code path to
+ *     it at all inside this function. A client-supplied boolean/string
+ *     "scope" parameter on a single shared entry point would be a
+ *     server-trusting-the-client anti-pattern here: Next.js Server Actions
+ *     carry no RBAC of their own (see every lib/actions/* file's own
+ *     "needs no RBAC key" reasoning — the REST route is what's gated),
+ *     so anyone able to reach the public entry point directly could set
+ *     that flag to whatever they wanted. Splitting into two functions
+ *     makes "secure isolation from private admin-only metrics" a
+ *     structural property of the public path, not a checked permission.
+ *
+ * answerAssistantQuestion() intents, tried in order, most-specific first,
+ * first confident match wins:
  *   1. Specific batch lookup (a batch-id-shaped token in the question)
  *   2. Portfolio batch-count / status-breakdown question
  *   3. Compliance glossary term (ISCC PLUS, PCR/PIR, MFI, ESPR, PPWR,
@@ -33,6 +53,17 @@
  *   7. Greeting / capability list
  *   8. Fallback — a helpful "here's what I can answer" message
  *
+ * answerPublicAssistantQuestion() intents — everything above EXCEPT 2, 4,
+ * 5, and 6 (portfolio count, supplier ranking, portfolio expiry, admin
+ * nav — all either internal-ops metrics or admin-only routes), PLUS: intent
+ * 1's batch lookup defaults to `contextBatchId` (the passport the visitor
+ * is currently viewing) when the question doesn't name a different batch,
+ * so "is this certified?" or "what's the recycled content?" work without
+ * the visitor re-typing a batch ID, and intent 1's link points at that
+ * batch's own public GS1 scan page (lib/qr.ts) instead of an admin ledger
+ * row. Intent 3's glossary answers drop their admin-page link on the
+ * public path for the same reason.
+ *
  * Every branch is a pure read against existing tables/services — this
  * module never writes anything, so it needs no audit-log entry (compare
  * lib/audit.ts's own scope: state *changes* get audited, read-only
@@ -43,6 +74,7 @@
 import { prisma } from "@/lib/prisma";
 import { computePortfolioExpiryAlerts } from "@/lib/services/expiry-alert-service";
 import { getSupplierAnalytics } from "@/lib/services/supplier-analytics";
+import { buildGs1VerificationUrl } from "@/lib/qr";
 
 export interface AssistantLink {
   label: string;
@@ -78,8 +110,31 @@ function extractBatchIdToken(question: string): string | null {
   return null;
 }
 
-async function tryBatchLookup(question: string): Promise<AssistantAnswer | null> {
-  const token = extractBatchIdToken(question);
+// Builds this batch's own public GS1 scan-page link (the same page the
+// visitor is presumably already on, or a related batch's equivalent
+// page). Falls back to the bare, un-tokened resolver path when
+// recordHash isn't sealed yet (buildGs1VerificationUrl throws on a
+// missing/short hash — see lib/qr.ts) rather than surfacing no link at
+// all; the resolver page itself already handles a missing/mismatched `v`
+// token gracefully (linkTrusted: false), it does not 404 on it.
+function buildPublicBatchLink(gtin: string, batchId: string, recordHash: string | null): string | null {
+  if (!/^\d{14}$/.test(gtin)) return null;
+  try {
+    return buildGs1VerificationUrl(gtin, batchId, recordHash ?? "").path;
+  } catch {
+    return `/01/${gtin}/21/${encodeURIComponent(batchId)}`;
+  }
+}
+
+interface BatchLookupOptions {
+  /** The passport currently on-screen (public scan page only) — used when the question names no other batch. */
+  contextBatchId?: string;
+  /** Public scope: link to the batch's own public GS1 page instead of the admin ledger, and use public-appropriate copy. */
+  publicMode?: boolean;
+}
+
+async function tryBatchLookup(question: string, opts: BatchLookupOptions = {}): Promise<AssistantAnswer | null> {
+  const token = extractBatchIdToken(question) ?? (opts.publicMode ? opts.contextBatchId ?? null : null);
   if (!token) return null;
 
   const passport = await prisma.polymerPassport.findFirst({
@@ -90,17 +145,25 @@ async function tryBatchLookup(question: string): Promise<AssistantAnswer | null>
       polymerType: true,
       grade: true,
       totalRecycledPercent: true,
+      gtin: true,
+      recordHash: true,
       manufacturer: { select: { legalName: true, country: true } },
       certifications: { select: { scheme: true, verificationStatus: true, validUntil: true } },
     },
   });
 
   if (!passport) {
-    return {
-      answer: `I couldn't find a batch matching "${token}". Double-check the batch ID, or use Global Search to browse batches by grade, polymer type, or status.`,
-      links: [{ label: "Open Global Search", href: "/admin/search" }],
-      intent: "batch-not-found",
-    };
+    return opts.publicMode
+      ? {
+          answer: `I couldn't find a batch matching "${token}". Double-check the batch ID printed on the product or QR code.`,
+          links: [],
+          intent: "batch-not-found",
+        }
+      : {
+          answer: `I couldn't find a batch matching "${token}". Double-check the batch ID, or use Global Search to browse batches by grade, polymer type, or status.`,
+          links: [{ label: "Open Global Search", href: "/admin/search" }],
+          intent: "batch-not-found",
+        };
   }
 
   const now = new Date();
@@ -116,12 +179,19 @@ async function tryBatchLookup(question: string): Promise<AssistantAnswer | null>
     ? `${passport.manufacturer.legalName} (${passport.manufacturer.country})`
     : "no manufacturer on file";
 
+  const link = opts.publicMode
+    ? (() => {
+        const path = buildPublicBatchLink(passport.gtin, passport.batchId, passport.recordHash);
+        return path ? [{ label: `View ${passport.batchId}'s public passport`, href: path }] : [];
+      })()
+    : [{ label: `View ${passport.batchId} in the Material Ledger`, href: `/admin#batch-row-${encodeURIComponent(passport.batchId)}` }];
+
   return {
     answer:
       `Batch ${passport.batchId} — status ${passport.status}, ${passport.polymerType} grade "${passport.grade}", ` +
       `${Number(passport.totalRecycledPercent)}% recycled content. Manufacturer: ${manufacturerText}. ` +
       `Certifications: ${certSummary}.`,
-    links: [{ label: `View ${passport.batchId} in the Material Ledger`, href: `/admin#batch-row-${encodeURIComponent(passport.batchId)}` }],
+    links: link,
     intent: "batch-lookup",
   };
 }
@@ -231,12 +301,14 @@ const GLOSSARY: GlossaryEntry[] = [
   },
 ];
 
-async function tryGlossary(question: string): Promise<AssistantAnswer | null> {
+async function tryGlossary(question: string, publicMode = false): Promise<AssistantAnswer | null> {
   for (const entry of GLOSSARY) {
     if (entry.aliases.some((pattern) => pattern.test(question))) {
       return {
         answer: entry.answer,
-        links: [{ label: "ESG Analytics — regulatory compliance", href: "/admin/esg-analytics" }],
+        // The ESG Analytics link is an admin-console page — never surfaced
+        // to a public, unauthenticated visitor.
+        links: publicMode ? [] : [{ label: "ESG Analytics — regulatory compliance", href: "/admin/esg-analytics" }],
         intent: "glossary",
       };
     }
@@ -415,4 +487,56 @@ export async function answerAssistantQuestion(rawQuestion: string): Promise<Assi
   if (navAnswer) return navAnswer;
 
   return FALLBACK_ANSWER;
+}
+
+// ---------------------------------------------------------------------
+// Public orchestrator — components/PublicScanPage.tsx
+// ---------------------------------------------------------------------
+//
+// See this file's own banner for why this is a separate function rather
+// than answerAssistantQuestion() plus a scope flag: everything below is
+// the ENTIRE set of intents reachable from the public entry point —
+// portfolio count, supplier ranking, portfolio-wide expiry, and admin
+// navigation are simply never referenced here, so there is no path to
+// them regardless of how this function is invoked.
+
+function tryGreetingPublic(question: string): AssistantAnswer | null {
+  if (!GREETING_PATTERN.test(question.trim())) return null;
+  return {
+    answer:
+      "I can tell you about this product's batch — its status, material grade, recycled content, manufacturer, and certifications — " +
+      "or explain a compliance term (\"what is ISCC PLUS\", \"what does PCR mean\", \"what is mass balance\"). Ask away.",
+    links: [],
+    intent: "greeting",
+  };
+}
+
+const FALLBACK_ANSWER_PUBLIC: AssistantAnswer = {
+  answer:
+    "I couldn't find a specific match for that. Try asking about this batch's status, material, or certifications, or a compliance " +
+    "term like ISCC PLUS, PCR, ESPR, or mass balance. Say \"help\" to see what I can answer.",
+  links: [],
+  intent: "fallback",
+};
+
+export async function answerPublicAssistantQuestion(rawQuestion: string, contextBatchId?: string): Promise<AssistantAnswer> {
+  const question = rawQuestion.trim().slice(0, MAX_QUESTION_LENGTH);
+  if (!question) {
+    return {
+      answer: "Ask me about this batch's status, material, recycled content, or certifications, or a compliance term like ISCC PLUS or PCR.",
+      links: [],
+      intent: "empty",
+    };
+  }
+
+  const greeting = tryGreetingPublic(question);
+  if (greeting) return greeting;
+
+  const batchAnswer = await tryBatchLookup(question, { contextBatchId, publicMode: true });
+  if (batchAnswer) return batchAnswer;
+
+  const glossaryAnswer = await tryGlossary(question, true);
+  if (glossaryAnswer) return glossaryAnswer;
+
+  return FALLBACK_ANSWER_PUBLIC;
 }

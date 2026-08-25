@@ -15,11 +15,16 @@
  * assignment) — there is no assignment/claiming concept in this MVP, so
  * first-review-wins; a second auditor opening an already-reviewed batch
  * will simply find its status has moved on.
+ *
+ * The query itself lives in lib/services/get-auditor-queue.ts (Role-Based
+ * Authentication & Client/Auditor Portal Suite) so this route and the new
+ * session-gated app/portal/auditor/page.tsx share one implementation. This
+ * route's URL, auth, and response shape are unchanged by that extraction.
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
 import { authorizeAuditor, auditorUnauthorizedResponse } from "@/lib/auditor-auth";
+import { getAuditorQueue } from "@/lib/services/get-auditor-queue";
 
 export async function GET(req: NextRequest) {
   const auditor = await authorizeAuditor(req);
@@ -28,15 +33,7 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    const passports = await prisma.polymerPassport.findMany({
-      where: { status: "PENDING_VERIFICATION" },
-      include: {
-        certifications: true,
-        manufacturer: true,
-        carbonFootprintCalculation: true,
-      },
-      orderBy: { productionDate: "asc" }, // oldest-awaiting-review first
-    });
+    const passports = await getAuditorQueue();
 
     return NextResponse.json({ success: true, data: passports });
   } catch (error) {

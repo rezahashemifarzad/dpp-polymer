@@ -53,5 +53,6 @@
   "integrity.signed": "Signed {date}",
   "download.pdf": "Download Official Certificate (PDF)",
   "footer.resolvedVia": "Resolved via GS1 Digital Link",
-  "language.label": "Language"
+  "language.label": "Language",
+  "auth.login": "Log in for detailed audit logs & client view"
 }

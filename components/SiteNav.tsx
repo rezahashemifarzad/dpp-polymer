@@ -46,7 +46,7 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, ShieldCheck, BarChart3, KeyRound, Building2, Menu, X } from "lucide-react";
+import { Home, ShieldCheck, BarChart3, KeyRound, Building2, LogIn, Menu, X } from "lucide-react";
 // Phase 7 - Step 3 (Advanced Global Search & Multi-Layer Filtering Suite)
 // — mounted from here, not hand-copied into each /admin/* page's own
 // header, for the exact same "one shared component, no drift" reason
@@ -73,6 +73,14 @@ const NAV_LINKS = [
   { href: "/admin/esg-analytics", label: "ESG Analytics", icon: BarChart3 },
   { href: "/auditor", label: "Auditor Portal", icon: KeyRound },
   { href: "/client-portal", label: "Client Portal", icon: Building2 },
+  // Role-Based Authentication & Client/Auditor Portal Suite — listed
+  // alongside the existing key-based /auditor and /client-portal links,
+  // same "always-visible, not an access boundary" treatment (see this
+  // file's own banner: the real gates live on the routes themselves, not
+  // in nav visibility). Routes to /login, which auto-detects AUDITOR vs
+  // CUSTOMER by email and lands the signed-in user on /portal/auditor or
+  // /portal/customer.
+  { href: "/login", label: "Sign In", icon: LogIn },
 ] as const;
 
 export default function SiteNav() {

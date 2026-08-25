@@ -15,16 +15,25 @@
  * key's row via `active: false`.
  *
  * Usage:
- *   npx tsx scripts/create-auditor.ts --name "Jane Doe" --org "TÜV Rheinland" [--email jane@tuv.example]
+ *   npx tsx scripts/create-auditor.ts --name "Jane Doe" --org "TÜV Rheinland" [--email jane@tuv.example] [--password "..."]
  *
  * or interactively (flags omitted -> prompts on stdin):
  *   npx tsx scripts/create-auditor.ts
+ *
+ * --password (Role-Based Authentication & Client/Auditor Portal Suite,
+ * optional): sets Auditor.passwordHash so this auditor can also sign in at
+ * /login for the new session-based /portal/auditor view, in addition to
+ * (not instead of) their personal API key above. Omit it (or press Enter
+ * at the interactive prompt) to leave passwordHash null — the auditor can
+ * still use their API key everywhere as before; a password can always be
+ * added later via scripts/set-auditor-password.ts.
  */
 
 import "dotenv/config";
 import { randomBytes, createHash } from "crypto";
 import * as readline from "readline/promises";
 import { PrismaClient } from "@prisma/client";
+import { hashPassword } from "../lib/password";
 
 const prisma = new PrismaClient();
 
@@ -47,25 +56,29 @@ function generateRawKey(): string {
   return randomBytes(32).toString("hex");
 }
 
-function parseArgs(argv: string[]): { name?: string; org?: string; email?: string } {
-  const out: { name?: string; org?: string; email?: string } = {};
+function parseArgs(argv: string[]): { name?: string; org?: string; email?: string; password?: string } {
+  const out: { name?: string; org?: string; email?: string; password?: string } = {};
   for (let i = 0; i < argv.length; i++) {
     const flag = argv[i];
     const value = argv[i + 1];
     if (flag === "--name") out.name = value;
     if (flag === "--org") out.org = value;
     if (flag === "--email") out.email = value;
+    if (flag === "--password") out.password = value;
   }
   return out;
 }
 
-async function promptMissing(partial: { name?: string; org?: string; email?: string }) {
+async function promptMissing(partial: { name?: string; org?: string; email?: string; password?: string }) {
   const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
   try {
     const name = partial.name ?? (await rl.question("Auditor name: ")).trim();
     const organization = partial.org ?? (await rl.question("Organization: ")).trim();
     const emailRaw = partial.email ?? (await rl.question("Email (optional, press Enter to skip): ")).trim();
-    return { name, organization, email: emailRaw || undefined };
+    const passwordRaw =
+      partial.password ??
+      (await rl.question("Password for /login sign-in (optional, press Enter to skip): ")).trim();
+    return { name, organization, email: emailRaw || undefined, password: passwordRaw || undefined };
   } finally {
     rl.close();
   }
@@ -73,19 +86,25 @@ async function promptMissing(partial: { name?: string; org?: string; email?: str
 
 async function main() {
   const parsed = parseArgs(process.argv.slice(2));
-  const { name, organization, email } = await promptMissing(parsed);
+  const { name, organization, email, password } = await promptMissing(parsed);
 
   if (!name || !organization) {
     console.error("Both --name and --org (organization) are required.");
     process.exitCode = 1;
     return;
   }
+  if (password && !email) {
+    console.error("--email is required when setting --password — /login signs in by email.");
+    process.exitCode = 1;
+    return;
+  }
 
   const rawKey = generateRawKey();
   const apiKeyHash = hashAuditorKey(rawKey);
+  const passwordHash = password ? await hashPassword(password) : undefined;
 
   const auditor = await prisma.auditor.create({
-    data: { name, organization, email, apiKeyHash, active: true },
+    data: { name, organization, email, apiKeyHash, active: true, passwordHash },
   });
 
   console.log("\nAuditor created:");
@@ -99,6 +118,17 @@ async function main() {
     "Give this key to the auditor to paste into the Auditor Portal (/auditor) sign-in screen.\n" +
       "It is sent as the x-dpp-auditor-key header on every request they make from that portal."
   );
+  if (passwordHash) {
+    console.log(
+      `\nA password was also set — ${email ?? "(no email on file)"} can sign in at /login to view ` +
+        "the read-only Auditor Portal (/portal/auditor)."
+    );
+  } else {
+    console.log(
+      "\nNo password was set — this auditor cannot yet sign in at /login. Run " +
+        "scripts/set-auditor-password.ts to add one later."
+    );
+  }
 }
 
 main()

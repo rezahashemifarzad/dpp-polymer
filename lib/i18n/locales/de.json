@@ -53,5 +53,6 @@
   "integrity.signed": "Signiert am {date}",
   "download.pdf": "Offizielles Zertifikat herunterladen (PDF)",
   "footer.resolvedVia": "Aufgelöst über GS1 Digital Link",
-  "language.label": "Sprache"
+  "language.label": "Sprache",
+  "auth.login": "Anmelden für detaillierte Prüfprotokolle & Kundenansicht"
 }

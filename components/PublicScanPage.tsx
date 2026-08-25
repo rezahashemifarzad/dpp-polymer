@@ -30,16 +30,26 @@
  */
 
 import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import {
   ShieldCheck, ShieldAlert, Leaf, Recycle, Layers, Gauge, Hash,
   BadgeCheck, ExternalLink, Download, Copy, Check, AlertTriangle,
   Factory, CalendarDays, Clock, CheckCircle2, GitBranch, FileText,
   UserCheck, Languages, Link2, Sprout, Settings2, Truck, CircleDot,
+  LogIn, ChevronRight,
 } from "lucide-react";
 import {
   type Locale, SUPPORTED_LOCALES, DEFAULT_LOCALE, LOCALE_LABELS,
   isSupportedLocale, createTranslator,
 } from "@/lib/i18n/dictionaries";
+// In-Page Floating AI Assistant Widget, public rollout — mounted here
+// (this page's own chrome, since SiteNav deliberately never renders on
+// this route — see that file's own banner) with theme="light" to match
+// this permanently light-themed page, and scope="public" so it calls the
+// separate, restricted askPublicAssistantAction rather than the admin
+// action (see lib/actions/ask-assistant.ts's file banner for why those
+// are two distinct functions, not one gated by a client-supplied flag).
+import { AiAssistantWidget } from "@/components/dashboard/ai-assistant-widget";
 
 /* ---------------------------------------------------------------------------
  * Types — mirror the JSON shape page.tsx passes down (Decimals already
@@ -340,6 +350,25 @@ export default function PublicScanPage({ passport, integrityVerified, linkTruste
           )}
         </div>
       </div>
+
+      {/* Role-Based Authentication & Client/Auditor Portal Suite — a
+          discoverable path to the new session-based /login flow, for an
+          auditor or customer who wants the fuller /portal/auditor or
+          /portal/customer view. The public passport view above stays fully
+          open with no auth required — this is purely an optional path
+          onward, never a gate. Deliberately its own full-width strip
+          (rather than crammed into the dark header's already-busy
+          brand/language/status row) so the full requested copy fits
+          without fighting for space at narrow widths. Routed through t()
+          for i18n consistency with the rest of this page's UI chrome. */}
+      <Link
+        href="/login"
+        className="flex items-center justify-center gap-1.5 bg-teal-50 hover:bg-teal-100 border-b border-teal-200 text-teal-800 text-xs f-body font-medium px-4 py-2.5 transition-colors"
+      >
+        <LogIn className="w-3.5 h-3.5 shrink-0" />
+        <span className="text-center">{t("auth.login")}</span>
+        <ChevronRight className="w-3.5 h-3.5 shrink-0" />
+      </Link>
 
       <div className="max-w-md mx-auto px-5 py-6 space-y-5">
         {/* Product header — polymer type/grade, GTIN, batch ID, and
@@ -683,6 +712,8 @@ export default function PublicScanPage({ passport, integrityVerified, linkTruste
           </a>
         </div>
       </div>
+
+      <AiAssistantWidget theme="light" scope="public" contextBatchId={passport.batchId} />
     </div>
   );
 }

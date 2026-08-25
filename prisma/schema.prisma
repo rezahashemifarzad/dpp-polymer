@@ -649,6 +649,18 @@ model Auditor {
   apiKeyHash   String  @unique
   active       Boolean @default(true) // soft-revoke: flip false to disable a lost/rotated key without deleting review history
 
+  // Role-Based Authentication & Client/Auditor Portal Suite — nullable so
+  // every existing row is unaffected until an admin runs
+  // scripts/set-auditor-password.ts (or the auditor is created with one via
+  // scripts/create-auditor.ts's optional --password flag). Hashed with
+  // lib/password.ts's scrypt-based hashPassword(), NOT the SHA-256 used for
+  // apiKeyHash above — that algorithm is correct for hashing a high-entropy
+  // random token, not a human-chosen password (see lib/password.ts's own
+  // file banner). Presence of a password does not affect the existing
+  // apiKeyHash flow at all — a given Auditor can have either, both, or
+  // (pre-migration) neither.
+  passwordHash String?
+
   verifications AuditorVerification[]
 
   createdAt DateTime @default(now())
@@ -711,6 +723,13 @@ model Client {
   country      String?
   apiKeyHash   String  @unique
   active       Boolean @default(true) // soft-revoke, same convention as Auditor.active
+
+  // Role-Based Authentication & Client/Auditor Portal Suite — same
+  // rationale and nullability as Auditor.passwordHash above. A Client
+  // represents a buyer COMPANY (see this model's own comment further up),
+  // so this is a shared company password, matching the granularity
+  // apiKeyHash already uses — not a per-employee credential.
+  passwordHash String?
 
   purchases ClientPassportAccess[]
 
@@ -1248,4 +1267,50 @@ model NotificationLog {
   @@index([status])
   @@index([createdAt])
   @@index([webhookEndpointId])
+}
+
+// =============================================================================
+// ROLE-BASED AUTHENTICATION & CLIENT/AUDITOR PORTAL SUITE (new model, no
+// existing model or field touched or removed)
+// =============================================================================
+// A server-side session for the new cookie-based login flow at /login,
+// feeding the new /portal/auditor and /portal/customer pages. This is
+// DELIBERATELY separate from — and does not replace — the existing
+// personal/company bearer-key auth (Auditor.apiKeyHash / Client.apiKeyHash,
+// resolved via lib/auditor-auth.ts / lib/client-auth.ts) that /auditor,
+// /client-portal, and every /api/auditor/* + /api/v1/client/* route still
+// use unmodified. Only ADMIN is intentionally excluded from SessionActorType
+// for this pass — the admin console keeps its existing lib/rbac.ts shared
+// API-key gate; a real AdminUser + admin session is deferred.
+//
+// actorType + actorId (a plain String, not a typed relation) is the
+// standard workaround for Prisma's lack of a native polymorphic
+// relation — actorId points at Auditor.id or Client.id depending on
+// actorType. See lib/session-auth.ts for the create/read/destroy helpers.
+//
+// tokenHash mirrors the Auditor.apiKeyHash / Client.apiKeyHash convention
+// exactly: the raw session token lives only in the caller's httpOnly
+// cookie, never persisted — only its SHA-256 hash is stored here, looked
+// up by unique-index hit. A session is deleted outright on logout or
+// expiry (see lib/session-auth.ts's getSession/destroySession), not
+// soft-revoked — there is no review history to preserve for a login
+// session the way there is for an AuditorVerification sign-off.
+enum SessionActorType {
+  AUDITOR
+  CUSTOMER
+}
+
+model Session {
+  id        String           @id @default(uuid())
+  tokenHash String           @unique
+  actorType SessionActorType
+  actorId   String
+  expiresAt DateTime
+  createdAt DateTime         @default(now())
+
+  // @@index([actorType, actorId]) — bulk session lookups/invalidation for a
+  // given actor (e.g. a future "sign out everywhere" action).
+  // @@index([expiresAt]) — a future cleanup sweep of expired rows.
+  @@index([actorType, actorId])
+  @@index([expiresAt])
 }
