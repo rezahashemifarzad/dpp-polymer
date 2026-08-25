@@ -46,6 +46,8 @@ import {
   Loader2,
   ScrollText,
   LayoutGrid,
+  Bell,
+  Factory,
 } from "lucide-react";
 import Link from "next/link";
 import { ToastProvider, useToast } from "@/lib/hooks/use-toast";
@@ -195,6 +197,36 @@ function AdminDashboardInner() {
             <ScrollText className="w-4 h-4" />
             Audit Log
           </Link>
+          {/* Phase 7 - Step 1 (Automated Notification & Webhook Suite) —
+              admin-console-only nav link, same precedent as Audit Log and
+              Green Accounting above (not added to app/page.tsx's own nav
+              row — unlike the QR/labeling-related Phase 6 additions, this
+              isn't Material-Ledger-table-related, so the "two independent
+              Material Ledger UIs" rule that governs THOSE changes doesn't
+              apply here). */}
+          <Link
+            href="/admin/notifications"
+            className="flex items-center gap-2 text-xs font-medium bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/30 text-rose-400 px-4 py-2 rounded-lg transition-all"
+          >
+            <Bell className="w-4 h-4" />
+            Notifications
+          </Link>
+          {/* Phase 7 - Step 2 (Supplier Performance & Compliance Ranking
+              Dashboard) — same admin-console-only precedent as Notifications
+              directly above: this ranks Manufacturer/supplier compliance
+              data, not something the public-facing Material Ledger
+              (app/page.tsx) shows, so the "two independent Material Ledger
+              UIs" rule doesn't apply here either. Also linked from the
+              Material Ledger card's own action row below, per the Phase 7 -
+              Step 2 request to reach this "cleanly from... existing ledger
+              views" too. */}
+          <Link
+            href="/admin/suppliers"
+            className="flex items-center gap-2 text-xs font-medium bg-sky-500/10 hover:bg-sky-500/20 border border-sky-500/30 text-sky-400 px-4 py-2 rounded-lg transition-all"
+          >
+            <Factory className="w-4 h-4" />
+            Suppliers
+          </Link>
           {/* Phase 6 (Batch Certificate & Dynamic QR Generator Suite) —
               same nav-pill slot as every other /admin/* destination above;
               added here AND to app/page.tsx's own nav row per the "two
@@ -300,6 +332,20 @@ function AdminDashboardInner() {
                 <RefreshCw className={`w-3.5 h-3.5 ${loading ? "animate-spin" : ""}`} />
                 Refresh
               </button>
+              {/* Phase 7 - Step 2 — the "existing ledger views" link target
+                  for the new Supplier Ranking dashboard: every row in this
+                  table belongs to a manufacturer/supplier, so a direct link
+                  from the ledger card's own action row (not just the admin
+                  nav pill above) satisfies that request without needing to
+                  add a new per-row column to this table's existing shape. */}
+              <Link
+                href="/admin/suppliers"
+                className="flex items-center gap-1.5 text-xs bg-sky-500/10 hover:bg-sky-500/20 border border-sky-500/30 text-sky-400 px-3 py-1.5 rounded-lg transition-all shrink-0"
+                title="View supplier performance & compliance rankings"
+              >
+                <Factory className="w-3.5 h-3.5" />
+                Supplier Rankings
+              </Link>
               <button
                 onClick={() => setShowLabelSheetModal(true)}
                 className="flex items-center gap-1.5 text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 px-3 py-1.5 rounded-lg transition-all shrink-0"
@@ -349,7 +395,23 @@ function AdminDashboardInner() {
                   </tr>
                 ) : (
                   passports.map((item) => (
-                    <tr key={item.id} className="hover:bg-slate-800/40 transition-colors">
+                    <tr
+                      key={item.id}
+                      // Phase 7 - Step 3 (Global Search & Multi-Layer
+                      // Filtering Suite) — anchor target for BATCH/
+                      // CERTIFICATE search results (see
+                      // lib/services/global-search.ts's own href
+                      // convention: `/admin#batch-row-<batchId>`).
+                      // scroll-mt-24 keeps the sticky-ish page top clear
+                      // of the browser's native #anchor scroll; the
+                      // target: variant is a zero-JS highlight-on-arrival
+                      // effect (Tailwind's built-in :target pseudo-class
+                      // variant), so a search result actually lands
+                      // visibly on the right row, not just "somewhere on
+                      // this page."
+                      id={`batch-row-${encodeURIComponent(item.batchId)}`}
+                      className="hover:bg-slate-800/40 transition-colors scroll-mt-24 target:bg-emerald-500/10 target:ring-1 target:ring-inset target:ring-emerald-500/40"
+                    >
                       <td className="p-3 font-mono font-medium text-emerald-400">{item.batchId}</td>
                       <td className="p-3 font-medium text-slate-100">{item.grade}</td>
                       <td className="p-3 text-center font-semibold">{item.polymerType}</td>

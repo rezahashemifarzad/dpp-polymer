@@ -31,6 +31,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import {
   ArrowLeft,
   ScrollText,
@@ -175,8 +176,17 @@ export function AuditLogDashboard({
   // `result` itself.
   const [pageSize] = useState(initialResult.pageSize || 50);
   const [filterOptions, setFilterOptions] = useState<AuditLogFilterOptions>(initialFilterOptions);
-  const [filters, setFilters] = useState<AuditLogFiltersState>(EMPTY_FILTERS);
-  const [batchIdDraft, setBatchIdDraft] = useState("");
+  // Phase 7 - Step 3 (Global Search & Multi-Layer Filtering Suite) — an
+  // AUDIT_LOG search result links here as `/admin/audit?batchId=<id>`
+  // (see lib/services/global-search.ts), same `?batchId=` deep-link
+  // convention app/admin/generator/page.tsx already established for its
+  // own GeneratorSuiteDashboard. Seeded once from the URL at mount; a
+  // deep link therefore arrives already filtered rather than landing on
+  // the unfiltered SSR page and making the visitor re-type the batch ID.
+  const searchParams = useSearchParams();
+  const deepLinkBatchId = searchParams.get("batchId") ?? "";
+  const [filters, setFilters] = useState<AuditLogFiltersState>({ ...EMPTY_FILTERS, batchId: deepLinkBatchId });
+  const [batchIdDraft, setBatchIdDraft] = useState(deepLinkBatchId);
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(false);
   const [listError, setListError] = useState<string | null>(null);
@@ -188,10 +198,13 @@ export function AuditLogDashboard({
   const [exporting, setExporting] = useState(false);
   const [exportError, setExportError] = useState<string | null>(null);
 
-  // Skip the very first fetch effect run — the SSR-rendered initialResult
-  // already covers page 1 with no filters, so re-fetching on mount would
-  // just be a redundant round trip for the identical data.
-  const isFirstRun = useRef(true);
+  // Skip the very first fetch effect run ONLY when there's no `?batchId=`
+  // deep link — the SSR-rendered initialResult covers page 1 with no
+  // filters, so it already matches an unfiltered first render and
+  // re-fetching would be a redundant round trip. A deep link's initial
+  // state does NOT match the SSR snapshot, though, so that case needs the
+  // first effect run to actually fire and fetch the filtered view.
+  const isFirstRun = useRef(deepLinkBatchId === "");
 
   const fetchList = useCallback(async (f: AuditLogFiltersState, p: number) => {
     setLoading(true);

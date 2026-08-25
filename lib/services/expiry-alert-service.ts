@@ -178,12 +178,31 @@ export async function computePortfolioExpiryAlerts(
   };
 }
 
+// Phase 7 - Step 1: Automated Notification & Webhook Suite. One entry per
+// certification whose tier newly appeared or escalated during this check
+// — exactly the set lib/services/notification-service.ts needs to decide
+// what to notify about, without re-deriving escalation logic itself (see
+// that file's own banner on why it consumes this list rather than
+// duplicating this function's tier-vs-lastNotifiedLevel comparison).
+// Purely additive to ExpiryAlertCheckResult below — existing callers that
+// only read evaluated/newAlerts/escalated/unchanged are unaffected.
+export interface RaisedExpiryEvent {
+  certificationId: string;
+  passportId: string;
+  batchId: string;
+  scheme: string;
+  certificateId: string;
+  tier: Exclude<ExpiryAlertTier, null>;
+  previousTier: ExpiryAlertTier;
+}
+
 export interface ExpiryAlertCheckResult {
   checkedAt: string;
   evaluated: number;
   newAlerts: number;
   escalated: number;
   unchanged: number;
+  raisedEvents: RaisedExpiryEvent[];
 }
 
 /**
@@ -212,12 +231,18 @@ export async function runExpiryAlertCheck(
       validUntil: true,
       lastNotifiedLevel: true,
       passportId: true,
+      // Phase 7 - Step 1: batchId is only needed to populate raisedEvents
+      // below for the notification dispatcher — not used by the escalation
+      // logic itself, so pulling it in here is purely additive to this
+      // query's existing shape.
+      passport: { select: { batchId: true } },
     },
   });
 
   let newAlerts = 0;
   let escalated = 0;
   let unchanged = 0;
+  const raisedEvents: RaisedExpiryEvent[] = [];
 
   for (const cert of candidates) {
     const tier = getExpiryAlertTier(cert.validUntil, referenceDate);
@@ -259,6 +284,15 @@ export async function runExpiryAlertCheck(
       });
       if (stored === null) newAlerts++;
       else escalated++;
+      raisedEvents.push({
+        certificationId: cert.id,
+        passportId: cert.passportId,
+        batchId: cert.passport.batchId,
+        scheme: cert.scheme,
+        certificateId: cert.certificateId,
+        tier,
+        previousTier: stored,
+      });
     } else {
       // The live tier is LESS severe than what's stored — shouldn't
       // normally happen (validUntil only moves forward in time as "now"
@@ -270,7 +304,14 @@ export async function runExpiryAlertCheck(
     }
   }
 
-  return { checkedAt: referenceDate.toISOString(), evaluated: candidates.length, newAlerts, escalated, unchanged };
+  return {
+    checkedAt: referenceDate.toISOString(),
+    evaluated: candidates.length,
+    newAlerts,
+    escalated,
+    unchanged,
+    raisedEvents,
+  };
 }
 
 export type AcknowledgeExpiryAlertResult =

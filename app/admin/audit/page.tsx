@@ -15,6 +15,7 @@
  * app.
  */
 
+import { Suspense } from "react";
 import { listAuditLogEntries, getAuditLogFilterOptions, AUDIT_LOG_DEFAULT_PAGE_SIZE } from "@/lib/services/audit-log-service";
 import { AuditLogDashboard } from "@/components/dashboard/audit-log-dashboard";
 
@@ -26,5 +27,14 @@ export default async function AuditLogPage() {
     getAuditLogFilterOptions(),
   ]);
 
-  return <AuditLogDashboard initialResult={result} initialFilterOptions={filterOptions} />;
+  // Phase 7 - Step 3 — AuditLogDashboard now reads the optional
+  // `?batchId=` deep link via useSearchParams() (see that file's own
+  // comment), which requires a Suspense boundary in the App Router; same
+  // pattern app/admin/generator/page.tsx already established for its own
+  // ?batchId= deep link.
+  return (
+    <Suspense fallback={null}>
+      <AuditLogDashboard initialResult={result} initialFilterOptions={filterOptions} />
+    </Suspense>
+  );
 }

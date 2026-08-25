@@ -47,6 +47,15 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Home, ShieldCheck, BarChart3, KeyRound, Building2, Menu, X } from "lucide-react";
+// Phase 7 - Step 3 (Advanced Global Search & Multi-Layer Filtering Suite)
+// — mounted from here, not hand-copied into each /admin/* page's own
+// header, for the exact same "one shared component, no drift" reason
+// this file's own banner already gives for NAV_LINKS. Gated to the
+// /admin section only (see isAdminSection below) — the search results it
+// surfaces (supplier tiers especially) are internal-tooling data that has
+// no place on the Auditor Portal / Client Portal / public Home chrome
+// this same shared header also renders.
+import { GlobalSearchPalette } from "@/components/dashboard/global-search-palette";
 
 const NAV_LINKS = [
   { href: "/", label: "Home", icon: Home },
@@ -91,9 +100,16 @@ export default function SiteNav() {
 
   if (pathname?.startsWith("/01/")) return null;
 
+  // Scopes the global search trigger (and its Cmd/Ctrl+K shortcut, since
+  // GlobalSearchPalette only exists in the DOM at all when this is true)
+  // to the admin console section of the app — see the import comment
+  // above for why this shouldn't reach the Auditor/Client Portal/Home
+  // chrome this same shared header also renders.
+  const isAdminSection = pathname?.startsWith("/admin") ?? false;
+
   return (
     <header className="relative z-50 bg-slate-950 border-b border-slate-800">
-      <div className="px-4 sm:px-6 h-14 flex items-center justify-between gap-4">
+      <div className="px-4 sm:px-6 h-14 flex items-center justify-between gap-2 sm:gap-4">
         <Link
           href="/"
           className="shrink-0 text-sm font-bold tracking-tight text-white hover:text-slate-200 transition-colors"
@@ -101,43 +117,51 @@ export default function SiteNav() {
           Polymer<span className="text-emerald-400">.DPP</span>
         </Link>
 
-        {/* Desktop / tablet nav — md and up. Icon-only from md to lg (a
-            `title` attribute stands in as the accessible/hover label) so
-            five links never wrap at exactly the md breakpoint; full
-            icon+label from lg up. */}
-        <nav className="hidden md:flex items-center gap-1 bg-slate-900 border border-slate-800 p-1 rounded-xl">
-          {NAV_LINKS.map(({ href, label, icon: Icon }) => {
-            const active = pathname === href;
-            return (
-              <Link
-                key={href}
-                href={href}
-                title={label}
-                aria-current={active ? "page" : undefined}
-                className={`flex items-center gap-1.5 px-2.5 lg:px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
-                  active
-                    ? "bg-emerald-500 text-slate-950 shadow-sm"
-                    : "text-slate-400 hover:text-white hover:bg-slate-800/60"
-                }`}
-              >
-                <Icon className="w-3.5 h-3.5 shrink-0" />
-                <span className="hidden lg:inline whitespace-nowrap">{label}</span>
-              </Link>
-            );
-          })}
-        </nav>
+        <div className="flex items-center gap-2 min-w-0">
+          {isAdminSection && (
+            <div className="shrink-0">
+              <GlobalSearchPalette />
+            </div>
+          )}
 
-        {/* Mobile hamburger — below md only */}
-        <button
-          type="button"
-          onClick={() => setMobileOpen((v) => !v)}
-          aria-expanded={mobileOpen}
-          aria-controls="site-nav-mobile-panel"
-          aria-label={mobileOpen ? "Close navigation menu" : "Open navigation menu"}
-          className="md:hidden shrink-0 p-2 rounded-lg text-slate-300 hover:text-white hover:bg-slate-800 transition-colors"
-        >
-          {mobileOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
-        </button>
+          {/* Desktop / tablet nav — md and up. Icon-only from md to lg (a
+              `title` attribute stands in as the accessible/hover label) so
+              five links never wrap at exactly the md breakpoint; full
+              icon+label from lg up. */}
+          <nav className="hidden md:flex items-center gap-1 bg-slate-900 border border-slate-800 p-1 rounded-xl shrink-0">
+            {NAV_LINKS.map(({ href, label, icon: Icon }) => {
+              const active = pathname === href;
+              return (
+                <Link
+                  key={href}
+                  href={href}
+                  title={label}
+                  aria-current={active ? "page" : undefined}
+                  className={`flex items-center gap-1.5 px-2.5 lg:px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
+                    active
+                      ? "bg-emerald-500 text-slate-950 shadow-sm"
+                      : "text-slate-400 hover:text-white hover:bg-slate-800/60"
+                  }`}
+                >
+                  <Icon className="w-3.5 h-3.5 shrink-0" />
+                  <span className="hidden lg:inline whitespace-nowrap">{label}</span>
+                </Link>
+              );
+            })}
+          </nav>
+
+          {/* Mobile hamburger — below md only */}
+          <button
+            type="button"
+            onClick={() => setMobileOpen((v) => !v)}
+            aria-expanded={mobileOpen}
+            aria-controls="site-nav-mobile-panel"
+            aria-label={mobileOpen ? "Close navigation menu" : "Open navigation menu"}
+            className="md:hidden shrink-0 p-2 rounded-lg text-slate-300 hover:text-white hover:bg-slate-800 transition-colors"
+          >
+            {mobileOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+          </button>
+        </div>
       </div>
 
       {/* Mobile panel + backdrop — rendered only below md (the button that

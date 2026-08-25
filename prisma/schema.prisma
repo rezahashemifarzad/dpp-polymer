@@ -128,6 +128,18 @@ enum AuditAction {
   // "this passport originated from an external supplier's onboarding
   // submission and was approved by an admin."
   SUPPLIER_SUBMISSION_APPROVED
+  // Phase 7 - Step 1: Automated Notification & Webhook Suite — additive,
+  // existing values and rows untouched. Written ONCE per notification
+  // event (not once per delivery channel — an event that fans out to
+  // email + N webhooks still gets exactly one AuditLog row, summarizing
+  // every channel's outcome in metadata) by
+  // lib/services/notification-service.ts's dispatchNotificationEvent,
+  // whenever a certification's expiry tier escalates or a chain-of-custody
+  // record is newly flagged and a notification is actually attempted
+  // (email and/or an active, subscribed webhook). See NotificationLog
+  // below for the fine-grained per-channel delivery record this
+  // summarizes.
+  NOTIFICATION_SENT
 }
 
 // Compliance & Green Certifications Module (docs/COMPLIANCE_CERTIFICATIONS_MODULE_SPEC.md
@@ -341,6 +353,13 @@ model PolymerPassport {
   // (null) for every passport created the ordinary way — this is purely
   // provenance metadata, never required.
   originatingSupplierSubmission SupplierSubmission?
+
+  // --- 14. Automated Notification & Webhook Suite (Phase 7 - Step 1) --------
+  // See NotificationLog below. One-to-many: every dispatched notification
+  // (expiry escalation or compliance anomaly) attempted for this batch,
+  // one row per channel per event — the fine-grained delivery record
+  // behind this passport's own NOTIFICATION_SENT AuditLog entries.
+  notificationLogs NotificationLog[]
 
   // --- Lifecycle / meta --------------------------------------------------
   status           DppStatus @default(ISSUED)
@@ -813,6 +832,18 @@ model ChainOfCustodyRecord {
   recordHash String?
   hashAlgorithm String @default("SHA-256")
 
+  // Phase 7 - Step 1: Automated Notification & Webhook Suite. Notification
+  // bookkeeping only — mirrors Certification.lastNotifiedLevel/lastNotifiedAt's
+  // own "state, not a re-derivable fact" reasoning (see that field's
+  // comment): whether a FLAGGED record has already triggered a compliance
+  // anomaly notification isn't recomputable from `status` alone (a record
+  // stays FLAGGED indefinitely until an auditor re-reviews it, so without
+  // this field every sweep would re-notify for the same flag forever). Set
+  // once, the first time lib/services/notification-service.ts's
+  // runComplianceAnomalySweep dispatches a COC_ANOMALY_FLAGGED
+  // notification for this record; left null otherwise.
+  anomalyNotifiedAt DateTime?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -1056,4 +1087,165 @@ model SupplierSubmission {
   @@index([inviteId])
   @@index([status])
   @@index([submittedAt])
+}
+
+// =============================================================================
+// 15. Automated Notification & Webhook Suite (Phase 7 - Step 1)
+// -----------------------------------------------------------------------------
+// Fully additive — no existing model, field, or enum value is changed
+// (only the new NOTIFICATION_SENT AuditAction value, ChainOfCustodyRecord's
+// new anomalyNotifiedAt field, and PolymerPassport's new notificationLogs
+// back-relation above). Three new models:
+//
+//   - WebhookEndpoint: an admin-configured HTTP destination for outbound
+//     notifications. `secret` is a server-generated signing key (shown to
+//     the admin exactly once at creation — see
+//     lib/services/webhook-endpoints.ts — same "never re-displayed"
+//     convention as SupplierInvite's raw token) used to HMAC-SHA256 sign
+//     every delivered payload, so a receiving endpoint can verify a
+//     webhook actually came from this platform. `eventTypes` is a native
+//     Postgres enum array (Prisma scalar list) rather than a join table —
+//     an endpoint typically subscribes to a small, static handful of
+//     event types, so this needs no independent lifecycle of its own.
+//     Delivery bookkeeping (lastTriggeredAt/lastStatus/consecutiveFailures/
+//     etc.) lives directly on the endpoint for a fast "is this endpoint
+//     healthy" read without joining NotificationLog; the full per-attempt
+//     history still lives in NotificationLog below.
+//
+//   - NotificationSettings: a single mutable configuration row (no forced
+//     singleton id — lib/services/notification-settings.ts always reads
+//     the first row, creating one with defaults on first read if none
+//     exists yet, mirroring PlasticTaxParameter's own "one row is the
+//     current config" convention elsewhere in this schema). Governs which
+//     already-computed expiry tiers (see the existing ExpiryAlertLevel
+//     enum — deliberately reused rather than duplicated) actually trigger
+//     a notification, and whether/where email notifications are sent.
+//     Deliberately does NOT change EXPIRING_SOON_TIER_WINDOW_DAYS /
+//     EXPIRING_URGENT_WINDOW_DAYS (lib/utils/certification-status.ts) —
+//     those remain the single source of truth for tier classification,
+//     used by the dashboard widget and per-row ledger badges alike, exactly
+//     as documented in that file's own comment on why a third tier was
+//     added as a NEW function rather than changed in place. This settings
+//     row only controls which of those already-existing tiers are noisy
+//     enough to notify on — a strictly additive, non-breaking control.
+//
+//   - NotificationLog: one row per notification DELIVERY ATTEMPT (one
+//     logical event fanned out across N channels — email, each subscribed
+//     active webhook — produces N rows sharing the same eventType/
+//     sourceType/sourceId/passportId). This is the fine-grained record
+//     powering both the admin "pending alerts" / delivery-history view and
+//     each event's single, summarized NOTIFICATION_SENT AuditLog entry.
+//     sourceType/sourceId is a lightweight polymorphic reference (
+//     "CERTIFICATION" | "CHAIN_OF_CUSTODY_RECORD" + that row's id) rather
+//     than two nullable FK columns — the source record's own lifecycle
+//     (a certification being renewed, a COC record being re-reviewed) is
+//     already tracked on that record itself; this table only needs enough
+//     to display and link back to it, not a live relation to join through.
+// =============================================================================
+
+enum NotificationEventType {
+  CERT_EXPIRY_SOON
+  CERT_EXPIRY_URGENT
+  CERT_EXPIRED
+  COC_ANOMALY_FLAGGED
+}
+
+enum NotificationChannel {
+  EMAIL
+  WEBHOOK
+}
+
+enum NotificationDeliveryStatus {
+  PENDING
+  SENT
+  FAILED
+  SKIPPED // channel not configured (e.g. no email provider key set) — not a failure, a deliberate no-op
+}
+
+model WebhookEndpoint {
+  id          String  @id @default(uuid())
+  url         String
+  description String?
+
+  // HMAC-SHA256 signing secret — generated server-side at creation,
+  // returned to the admin exactly once (see this section's banner above).
+  // Never re-displayed after creation; only regenerable by deleting and
+  // recreating the endpoint, same as SupplierInvite's own raw-token
+  // handling.
+  secret String
+
+  eventTypes NotificationEventType[]
+  isActive   Boolean                 @default(true)
+
+  createdBy String // actor identity, same convention as AuditLog.actor
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Delivery health, updated after every dispatch attempt against this
+  // endpoint (see lib/services/webhook-dispatch.ts).
+  lastTriggeredAt     DateTime?
+  lastStatus          NotificationDeliveryStatus?
+  lastResponseCode    Int?
+  lastError           String? @db.Text
+  consecutiveFailures Int     @default(0)
+  totalDeliveries     Int     @default(0)
+  totalFailures       Int     @default(0)
+
+  logs NotificationLog[]
+
+  @@index([isActive])
+}
+
+model NotificationSettings {
+  id String @id @default(uuid())
+
+  emailEnabled    Boolean            @default(false)
+  emailRecipients String[]          @default([])
+  // Which already-computed expiry tiers (ExpiryAlertLevel — see that
+  // enum's own comment) are noisy enough to actually notify on. Defaults
+  // to the two more severe tiers, deliberately excluding EXPIRING_SOON —
+  // a 30-day-out warning is meant to be seen on the dashboard widget, not
+  // necessarily paged/emailed about, though an admin can opt in.
+  notifyOnTiers   ExpiryAlertLevel[] @default([EXPIRING_URGENT, EXPIRED])
+  anomalyNotificationsEnabled Boolean @default(true)
+
+  updatedBy String? // actor identity, same convention as AuditLog.actor
+  updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now())
+}
+
+model NotificationLog {
+  id String @id @default(uuid())
+
+  eventType NotificationEventType
+  severity  ExpiryAlertLevel? // set for CERT_EXPIRY_* events, null for COC_ANOMALY_FLAGGED
+
+  passportId String
+  passport   PolymerPassport @relation(fields: [passportId], references: [id])
+
+  // Polymorphic reference to the record that triggered this notification —
+  // see this section's banner above for why this is a discriminator pair
+  // rather than two nullable FKs.
+  sourceType String // "CERTIFICATION" | "CHAIN_OF_CUSTODY_RECORD"
+  sourceId   String
+
+  title   String
+  message String @db.Text
+
+  channel           NotificationChannel
+  webhookEndpointId String?
+  webhookEndpoint   WebhookEndpoint? @relation(fields: [webhookEndpointId], references: [id])
+
+  status       NotificationDeliveryStatus @default(PENDING)
+  responseCode Int?
+  errorMessage String? @db.Text
+
+  createdAt DateTime @default(now())
+
+  @@index([passportId])
+  @@index([eventType])
+  @@index([channel])
+  @@index([status])
+  @@index([createdAt])
+  @@index([webhookEndpointId])
 }

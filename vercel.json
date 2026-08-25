@@ -1,7 +1,7 @@
 {
   "crons": [
     {
-      "path": "/api/certifications/expiry-check",
+      "path": "/api/notifications/sweep",
       "schedule": "0 6 * * *"
     }
   ]
