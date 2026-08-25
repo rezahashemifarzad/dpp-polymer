@@ -49,6 +49,11 @@ import { ChainOfCustodyTimeline } from "@/components/dashboard/chain-of-custody-
 // portfolio-wide alert widget both use, so all three surfaces agree.
 import { getExpiryAlertTier } from "@/lib/utils/certification-status";
 import { ExpiryAlertBadge } from "@/components/dashboard/expiry-alert-badge";
+// Autocomplete: previously used Chain-of-Custody participant names, so a
+// repeat upstream partner's name is picked consistently instead of
+// retyped (and potentially mis-spelled) on every batch. See
+// lib/services/form-suggestions.ts.
+import { useFormSuggestions } from "@/lib/hooks/use-form-suggestions";
 
 const TRANSPORT_MODES: Array<"TRUCK" | "RAIL" | "SEA" | "AIR"> = ["TRUCK", "RAIL", "SEA", "AIR"];
 
@@ -159,6 +164,8 @@ export function BatchDetailsModal({
     const alreadyLinked = new Set(passport.parentLinks.map((l) => l.parentPassport.id));
     return allPassports.filter((p) => p.id !== passport.id && !alreadyLinked.has(p.id));
   }, [passport, allPassports]);
+
+  const { suggestions } = useFormSuggestions(open);
 
   if (!open || !passport) return null;
 
@@ -561,10 +568,17 @@ export function BatchDetailsModal({
               <Field label="Participant Name">
                 <input
                   required
+                  list="coc-participant-name-suggestions"
                   value={cocParticipantName}
                   onChange={(e) => setCocParticipantName(e.target.value)}
                   className={inputCls}
+                  autoComplete="off"
                 />
+                <datalist id="coc-participant-name-suggestions">
+                  {suggestions.chainOfCustodyParticipantNames.map((name) => (
+                    <option key={name} value={name} />
+                  ))}
+                </datalist>
               </Field>
               <Field label="Participant Country (optional)">
                 <input

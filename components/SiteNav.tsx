@@ -56,6 +56,16 @@ import { Home, ShieldCheck, BarChart3, KeyRound, Building2, Menu, X } from "luci
 // no place on the Auditor Portal / Client Portal / public Home chrome
 // this same shared header also renders.
 import { GlobalSearchPalette } from "@/components/dashboard/global-search-palette";
+// In-Page Floating AI Assistant Widget — mounted here for the same
+// "one shared component, no drift" reason as GlobalSearchPalette above,
+// and gated to the same /admin section for the same reason: it can
+// answer questions that surface SupplierTier data (ADMIN-gated
+// everywhere else this app exposes it), so it has no place on the
+// Auditor Portal / Client Portal / public Home chrome this shared header
+// also renders. `position: fixed` (see that component) means it renders
+// outside <header> below, not inside it — this is a floating overlay
+// pinned to the viewport, not part of the nav bar itself.
+import { AiAssistantWidget } from "@/components/dashboard/ai-assistant-widget";
 
 const NAV_LINKS = [
   { href: "/", label: "Home", icon: Home },
@@ -108,6 +118,7 @@ export default function SiteNav() {
   const isAdminSection = pathname?.startsWith("/admin") ?? false;
 
   return (
+    <>
     <header className="relative z-50 bg-slate-950 border-b border-slate-800">
       <div className="px-4 sm:px-6 h-14 flex items-center justify-between gap-2 sm:gap-4">
         <Link
@@ -212,5 +223,7 @@ export default function SiteNav() {
         @keyframes slideDown { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: translateY(0); } }
       `}</style>
     </header>
+    {isAdminSection && <AiAssistantWidget />}
+    </>
   );
 }

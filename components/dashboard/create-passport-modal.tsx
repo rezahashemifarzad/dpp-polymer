@@ -22,6 +22,15 @@
  * usePassports() instance) rather than this component calling
  * usePassports() itself — avoids spinning up a second, redundant
  * GET /api/passports fetch every time the modal mounts.
+ *
+ * Autocomplete: Grade Name and Manufacturer both draw suggestions from
+ * useFormSuggestions() (lib/services/form-suggestions.ts), fetched once
+ * per modal open. Grade uses a native <datalist> — a plain free-text
+ * field where the typed value IS the submitted value, so the browser's
+ * own suggestion UI is the simplest correct tool. Manufacturer uses the
+ * dedicated ManufacturerAutocompleteField combobox instead, because that
+ * field's submitted value (a Manufacturer row's UUID) isn't what a
+ * person actually recognizes — see that component's own file banner.
  */
 
 import React, { useMemo, useState } from "react";
@@ -29,6 +38,8 @@ import { X, Loader2, CheckCircle2, XCircle, Wand2, AlertTriangle } from "lucide-
 import { useToast } from "@/lib/hooks/use-toast";
 import { PassportValidationError, type ApiPassport, type CreatePassportInput } from "@/lib/hooks/use-passports";
 import { isValidGtin14, generateValidGtin } from "@/lib/gtin";
+import { useFormSuggestions } from "@/lib/hooks/use-form-suggestions";
+import { ManufacturerAutocompleteField } from "@/components/dashboard/manufacturer-autocomplete-field";
 
 const POLYMER_TYPES = ["PET", "HDPE", "PVC", "LDPE", "PP", "PS", "PLA", "PHA", "PA", "PC", "ABS", "OTHER"];
 const RECYCLED_SOURCES = ["POST_CONSUMER", "POST_INDUSTRIAL", "VIRGIN", "BIO_BASED"];
@@ -118,6 +129,7 @@ export function CreatePassportModal({ open, onClose, onCreated, onCreate }: Crea
   const [form, setForm] = useState(emptyForm);
   const [submitting, setSubmitting] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string[]>>({});
+  const { suggestions } = useFormSuggestions(open);
 
   const gtinIsValid = form.gtin.length > 0 && isValidGtin14(form.gtin);
   const gtinShowsInvalid = form.gtin.length === 14 && !gtinIsValid;
@@ -242,11 +254,18 @@ export function CreatePassportModal({ open, onClose, onCreated, onCreate }: Crea
             <Field label="Grade Name" error={fieldErrors.grade}>
               <input
                 required
+                list="grade-suggestions"
                 value={form.grade}
                 onChange={update("grade")}
                 className={inputCls}
                 placeholder="Injection Molding Grade IM-450"
+                autoComplete="off"
               />
+              <datalist id="grade-suggestions">
+                {suggestions.grades.map((g) => (
+                  <option key={g} value={g} />
+                ))}
+              </datalist>
             </Field>
             <Field label="Melt Flow Index (g/10min)" error={fieldErrors.meltFlowIndex}>
               <input
@@ -319,19 +338,21 @@ export function CreatePassportModal({ open, onClose, onCreated, onCreate }: Crea
                 placeholder="BATCH-2026-EU-014"
               />
             </Field>
-            <Field label="Manufacturer ID (UUID)" error={fieldErrors.manufacturerId}>
-              <input
+            <Field label="Manufacturer" error={fieldErrors.manufacturerId}>
+              <ManufacturerAutocompleteField
                 required
                 value={form.manufacturerId}
-                onChange={update("manufacturerId")}
+                onChange={(v) => setForm((prev) => ({ ...prev, manufacturerId: v }))}
+                suggestions={suggestions.manufacturers}
                 className={inputCls}
-                placeholder="uuid of an existing Manufacturer row"
+                placeholder="Search by name, or paste a Manufacturer UUID"
               />
             </Field>
             <div className="col-span-2 -mt-2">
               <p className="text-[10px] text-slate-500">
-                No manufacturer yet? Run <code className="text-slate-400">npx prisma db seed</code> (adds
-                prisma/seed.ts) to create a demo one, then paste its printed id here.
+                Start typing a manufacturer&apos;s name to pick from existing records. No manufacturer yet? Run{" "}
+                <code className="text-slate-400">npx prisma db seed</code> (adds prisma/seed.ts) to create a demo
+                one.
               </p>
             </div>
 
