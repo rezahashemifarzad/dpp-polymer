@@ -20,8 +20,14 @@
  * still protect it even if this file were deleted entirely.
  *
  * Scoped ONLY to /portal/*. Deliberately does NOT touch:
- *   - /admin/* — already gated per-route via lib/rbac.ts's shared API key;
- *     out of scope for this pass (see the plan's ADMIN-login decision).
+ *   - /admin/* — lib/rbac.ts's shared API key only ever gated specific
+ *     state-changing API routes (verify/revoke), never page access to
+ *     /admin itself — that was a real, since-fixed gap (Auditor/Customer
+ *     sessions could reach /admin's Material Ledger console outright; see
+ *     app/admin/layout.tsx). That fix lives in a Server Component layout,
+ *     not here, for the same Edge/Prisma-incompatibility reason
+ *     lib/session-auth.ts isn't imported into this file either — see the
+ *     import comment below.
  *   - /auditor, /client-portal — the existing key-entry-gate pages, which
  *     have their own client-side auth flow and must keep working exactly
  *     as they do today.

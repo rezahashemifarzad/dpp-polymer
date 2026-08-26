@@ -64,7 +64,7 @@ export default async function AuditorPortalPage() {
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <Link
-            href="/"
+            href="/portal/auditor"
             className="flex items-center gap-2 text-xs font-medium bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 px-4 py-2 rounded-lg transition-all"
           >
             <ArrowLeft className="w-4 h-4" /> Home

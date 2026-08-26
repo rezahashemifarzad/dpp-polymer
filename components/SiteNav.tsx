@@ -25,6 +25,19 @@
  * end consumer scanning a product, which is a page meant to build trust
  * in the product data, not surface internal tooling.
  *
+ * Also deliberately does NOT render on /portal/auditor or /portal/customer
+ * (Role-Based Authentication & Client/Auditor Portal Suite — access-control
+ * fix). Those pages already have their own self-contained header (Home +
+ * Sign Out) exactly like the public scan page above, and for the same two
+ * reasons: this bar's brand link and its "Home" entry both point at "/" —
+ * which is itself the full internal Material Ledger admin console, not a
+ * neutral landing page — and this bar also lists an outright "Admin
+ * Console" link. Stacking this nav above a signed-in Auditor's or
+ * Customer's portal would let one click hand them administrative data
+ * their session has no business seeing. Each portal page's own Home link
+ * now points at that same portal (never at "/"), so this exclusion is the
+ * belt to that link's suspenders, not the only fix.
+ *
  * Theme: dark slate/zinc, matching every internal page this nav actually
  * appears above (app/page.tsx, app/admin/page.tsx, app/auditor/page.tsx,
  * app/client-portal/page.tsx are all bg-slate-950). An earlier version of
@@ -117,6 +130,7 @@ export default function SiteNav() {
   }, [mobileOpen]);
 
   if (pathname?.startsWith("/01/")) return null;
+  if (pathname?.startsWith("/portal/")) return null;
 
   // Scopes the global search trigger (and its Cmd/Ctrl+K shortcut, since
   // GlobalSearchPalette only exists in the DOM at all when this is true)
