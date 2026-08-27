@@ -54,5 +54,10 @@
   "download.pdf": "Offizielles Zertifikat herunterladen (PDF)",
   "footer.resolvedVia": "Aufgelöst über GS1 Digital Link",
   "language.label": "Sprache",
-  "auth.login": "Anmelden für detaillierte Prüfprotokolle & Kundenansicht"
+  "auth.login": "Anmelden für detaillierte Prüfprotokolle & Kundenansicht",
+  "revoked.title": "Digitaler Produktpass widerrufen",
+  "revoked.notice": "Dieser digitale Produktpass wurde vom Hersteller widerrufen/deaktiviert und ist kein gültiger Konformitätsnachweis mehr für diese Charge.",
+  "revoked.reason": "Grund: {reason}",
+  "revoked.date": "Widerrufen am {date}",
+  "revoked.auditNotice": "Die vollständige, unveränderliche Prüfhistorie dieser Charge — einschließlich der vor dem Widerruf hinterlegten Daten und Zertifizierungen — bleibt kryptografisch versiegelt erhalten und ist autorisierten Prüfern weiterhin zugänglich."
 }

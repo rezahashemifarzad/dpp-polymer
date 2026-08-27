@@ -58,6 +58,18 @@ export interface TransitionPassportStatusInput {
   actor: string;
   auditAction: AuditAction;
   metadata?: Record<string, unknown>;
+  /**
+   * No-Hard-Delete / Immutability Enforcement — only meaningful (and only
+   * ever written) when nextStatus is "REVOKED". Deliberately a separate,
+   * explicitly-typed parameter rather than read out of `metadata` by a
+   * conventional key name: the two existing callers already use different
+   * key names for "why" inside their own metadata payload (the shared
+   * PATCH route's `{ reason }`, the auditor-verification service's
+   * `{ notes }`), and metadata's shape is otherwise caller-defined/opaque
+   * here. An explicit parameter means neither caller can silently fail to
+   * populate PolymerPassport.revocationReason by using the "wrong" key.
+   */
+  revocationReason?: string;
 }
 
 /**
@@ -68,7 +80,7 @@ export interface TransitionPassportStatusInput {
  */
 export async function transitionPassportStatus(
   tx: Prisma.TransactionClient,
-  { batchId, nextStatus, actor, auditAction, metadata }: TransitionPassportStatusInput
+  { batchId, nextStatus, actor, auditAction, metadata, revocationReason }: TransitionPassportStatusInput
 ): Promise<PolymerPassport> {
   const current = await tx.polymerPassport.findUnique({ where: { batchId } });
   if (!current) {
@@ -88,6 +100,19 @@ export async function transitionPassportStatus(
     transitionedAt: new Date(),
   });
 
+  // No-Hard-Delete / Immutability Enforcement — revokedAt/revocationReason
+  // are set exactly once, only on the transition INTO "REVOKED" (which is
+  // terminal — ALLOWED_TRANSITIONS above maps it to [], so this can never
+  // run a second time for the same passport). Deliberately NOT included in
+  // newHash above: that hash seals the transition event itself the same
+  // way every other transition already does, and these two columns are a
+  // read-side convenience denormalization of that event, not new material
+  // data — same "post-issuance metadata never retroactively invalidates
+  // the sealed hash" precedent this file already follows for
+  // chainOfCustodyRecords (see lib/verifyPassport.ts's file banner).
+  const revocationFields =
+    nextStatus === "REVOKED" ? { revokedAt: new Date(), revocationReason: revocationReason ?? null } : {};
+
   const passport = await tx.polymerPassport.update({
     where: { batchId },
     data: {
@@ -96,6 +121,7 @@ export async function transitionPassportStatus(
       recordHash: newHash,
       signedAt: new Date(),
       signedBy: actor,
+      ...revocationFields,
     },
     include: { certifications: true, manufacturer: true },
   });

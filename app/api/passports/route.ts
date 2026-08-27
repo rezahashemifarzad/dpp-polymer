@@ -36,6 +36,7 @@ import { prisma } from "@/lib/prisma";
 import { createPassport } from "@/lib/services/create-passport";
 import { authorize, unauthorizedResponse } from "@/lib/rbac";
 import { getPassportCertificationAlert } from "@/lib/utils/certification-status";
+import { NO_HARD_DELETE_POLICY_MESSAGE } from "@/lib/utils/passport-lifecycle";
 
 const MAX_PAGE_SIZE = 100;
 const DEFAULT_PAGE_SIZE = 25;
@@ -211,4 +212,15 @@ export async function POST(req: NextRequest) {
       { status: 500 }
     );
   }
+}
+
+// No-Hard-Delete / Immutability Enforcement — a collection-level DELETE
+// (bulk-delete-by-filter) never existed on this route either; blocked
+// explicitly, same policy and message as app/api/passports/[batchId]/
+// route.ts's DELETE — see lib/utils/passport-lifecycle.ts.
+export async function DELETE() {
+  return NextResponse.json(
+    { success: false, error: NO_HARD_DELETE_POLICY_MESSAGE },
+    { status: 405, headers: { Allow: "GET, POST" } }
+  );
 }

@@ -97,6 +97,13 @@ export default async function Gs1ResolverPage({ params, searchParams }: PageProp
         batchId: passport.batchId,
         productionDate: passport.productionDate.toISOString(),
         status: passport.status,
+        // No-Hard-Delete / Immutability Enforcement — only ever non-null
+        // when status is "REVOKED" (see transitionPassportStatus). Passed
+        // through so PublicScanPage can render the official compliance
+        // notice this policy requires for revoked batches, instead of
+        // (never in addition to) the full dynamic passport data below.
+        revokedAt: passport.revokedAt ? passport.revokedAt.toISOString() : null,
+        revocationReason: passport.revocationReason,
         manufacturer: {
           legalName: passport.manufacturer.legalName,
           country: passport.manufacturer.country,

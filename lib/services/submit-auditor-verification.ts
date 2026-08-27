@@ -122,6 +122,13 @@ export async function submitAuditorVerification(
           decision,
           ...(notes ? { notes } : {}),
         },
+        // No-Hard-Delete / Immutability Enforcement — this path's "why" is
+        // the auditor's own rejection notes, not a `reason` field (this
+        // service's own vocabulary, per this file's decision field above);
+        // transitionPassportStatus takes it as an explicit parameter for
+        // exactly this reason. Only meaningful when nextStatus is
+        // "REVOKED" (i.e. decision === "REJECTED_BY_AUDITOR").
+        revocationReason: nextStatus === "REVOKED" ? notes : undefined,
       });
 
       return { passport: updatedPassport, verification };

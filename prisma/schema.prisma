@@ -367,6 +367,25 @@ model PolymerPassport {
   createdAt        DateTime  @default(now())
   updatedAt        DateTime  @updatedAt
 
+  // No-Hard-Delete / Immutability Enforcement — additive only. REVOKED
+  // (DppStatus above) was already a real, terminal status (see
+  // lib/services/transition-passport-status.ts's ALLOWED_TRANSITIONS,
+  // where REVOKED maps to []) written via the exact same hash-re-chain +
+  // AuditLog $transaction every other status change goes through — a
+  // second competing status enum/boolean was deliberately NOT added here,
+  // since this app already has exactly one source of truth for "is this
+  // record retired" (`status`) and a second one could only ever drift out
+  // of sync with it. These two fields are a fast, directly-queryable
+  // denormalization of what's already recorded (redundantly, on purpose)
+  // in that REVOKED transition's AuditLog row — so a caller (the public
+  // GS1 resolver, an admin list view) never has to join into AuditLog just
+  // to show "revoked on {date}: {reason}". Set exactly once, by
+  // transitionPassportStatus, in the same transaction as the REVOKED
+  // status write itself; never cleared, since REVOKED can never transition
+  // to anything else.
+  revokedAt         DateTime?
+  revocationReason  String?
+
   @@index([polymerType])
   @@index([status])
   @@index([gtin])

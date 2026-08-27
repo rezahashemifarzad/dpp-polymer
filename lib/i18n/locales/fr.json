@@ -54,5 +54,10 @@
   "download.pdf": "Télécharger le certificat officiel (PDF)",
   "footer.resolvedVia": "Résolu via GS1 Digital Link",
   "language.label": "Langue",
-  "auth.login": "Connexion pour les journaux d'audit détaillés et l'espace client"
+  "auth.login": "Connexion pour les journaux d'audit détaillés et l'espace client",
+  "revoked.title": "Passeport numérique de produit révoqué",
+  "revoked.notice": "Ce passeport numérique de produit a été révoqué/désactivé par le fabricant et n'est plus un enregistrement de conformité valide pour ce lot.",
+  "revoked.reason": "Motif : {reason}",
+  "revoked.date": "Révoqué le {date}",
+  "revoked.auditNotice": "L'historique d'audit complet et immuable de ce lot — y compris les données et certifications en vigueur avant la révocation — reste scellé cryptographiquement et demeure accessible aux auditeurs autorisés."
 }

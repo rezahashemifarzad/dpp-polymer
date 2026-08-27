@@ -19,6 +19,7 @@ import { AuditAction } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { authorize, unauthorizedResponse } from "@/lib/rbac";
 import { getPassportCertificationAlert } from "@/lib/utils/certification-status";
+import { NO_HARD_DELETE_POLICY_MESSAGE } from "@/lib/utils/passport-lifecycle";
 import {
   transitionPassportStatus,
   PassportNotFoundError,
@@ -132,6 +133,7 @@ export async function PATCH(
         actor: role,
         auditAction: ACTION_BY_STATUS[nextStatus],
         metadata: reason ? { reason } : undefined,
+        revocationReason: nextStatus === "REVOKED" ? reason : undefined,
       })
     );
 
@@ -146,4 +148,16 @@ export async function PATCH(
     console.error(`PATCH /api/passports/${batchId} failed:`, error);
     return NextResponse.json({ success: false, error: "Failed to update passport status" }, { status: 500 });
   }
+}
+
+// No-Hard-Delete / Immutability Enforcement — see
+// lib/utils/passport-lifecycle.ts's file banner. There was no DELETE
+// handler on this route before (or anywhere else in this app, for any
+// passport/batch resource) — this makes the policy explicit and permanent
+// rather than merely true by omission.
+export async function DELETE() {
+  return NextResponse.json(
+    { success: false, error: NO_HARD_DELETE_POLICY_MESSAGE },
+    { status: 405, headers: { Allow: "GET, PATCH" } }
+  );
 }

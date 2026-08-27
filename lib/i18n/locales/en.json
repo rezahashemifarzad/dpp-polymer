@@ -54,5 +54,10 @@
   "download.pdf": "Download Official Certificate (PDF)",
   "footer.resolvedVia": "Resolved via GS1 Digital Link",
   "language.label": "Language",
-  "auth.login": "Log in for detailed audit logs & client view"
+  "auth.login": "Log in for detailed audit logs & client view",
+  "revoked.title": "Digital Product Passport Revoked",
+  "revoked.notice": "This Digital Product Passport has been revoked/deactivated by the manufacturer and is no longer a valid compliance record for this batch.",
+  "revoked.reason": "Reason: {reason}",
+  "revoked.date": "Revoked {date}",
+  "revoked.auditNotice": "This batch's full immutable audit trail — including the data and certifications that were on file before revocation — is preserved, cryptographically sealed, and remains available to authorized auditors."
 }

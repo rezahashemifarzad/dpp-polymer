@@ -36,7 +36,7 @@ import {
   BadgeCheck, ExternalLink, Download, Copy, Check, AlertTriangle,
   Factory, CalendarDays, Clock, CheckCircle2, GitBranch, FileText,
   UserCheck, Languages, Link2, Sprout, Settings2, Truck, CircleDot,
-  LogIn, ChevronRight,
+  LogIn, ChevronRight, ShieldOff,
 } from "lucide-react";
 import {
   type Locale, SUPPORTED_LOCALES, DEFAULT_LOCALE, LOCALE_LABELS,
@@ -153,6 +153,14 @@ interface PassportView {
   batchId: string;
   productionDate: string;
   status: string;
+  // No-Hard-Delete / Immutability Enforcement — only ever non-null when
+  // status is "REVOKED". See the render branch below this component's
+  // main return, which shows the compliance notice instead of the full
+  // data body when status is "REVOKED" — this record is never physically
+  // deleted, only status-flipped, so the batch/GTIN identity above always
+  // still resolves.
+  revokedAt: string | null;
+  revocationReason: string | null;
   manufacturer: { legalName: string; country: string };
   certifications: CertificationView[];
   recordHash: string;
@@ -286,10 +294,93 @@ function LanguageSwitcher({ locale, onChange, label }: { locale: Locale; onChang
   );
 }
 
+// No-Hard-Delete / Immutability Enforcement — replaces the full dynamic
+// passport body on this page when status is "REVOKED". Deliberately does
+// NOT render any of the technical/sustainability/carbon/composition
+// sections above (those remain fully intact in the database and in the
+// authenticated /auditor and /portal/auditor views, which are unaffected
+// by this page's rendering choice) — a revoked passport is no longer a
+// valid compliance claim for the general public scanning it. Still shows
+// enough identity (GTIN/batch/manufacturer, already rendered in the shared
+// header above this component) for the visitor to know what they scanned,
+// plus why and when it was revoked when the manufacturer provided a
+// reason, plus an explicit statement that the audit trail is preserved,
+// not erased — the point of this whole feature.
+function RevokedNotice({
+  passport,
+  t,
+  locale,
+}: {
+  passport: PassportView;
+  t: (key: string, vars?: Record<string, string | number>) => string;
+  locale: Locale;
+}) {
+  return (
+    <div className="max-w-md mx-auto px-5 py-6 space-y-5">
+      <div>
+        <h1 className="f-display text-xl font-semibold text-slate-900">{passport.polymerType} · {passport.grade}</h1>
+        <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs f-mono text-slate-500">
+          <span>GTIN {passport.gtin}</span>
+          <span>·</span>
+          <span>{passport.batchId}</span>
+        </div>
+        <div className="mt-2 flex items-center gap-1.5 text-xs f-body text-slate-500">
+          <Factory className="w-3.5 h-3.5" /> {passport.manufacturer.legalName} · {passport.manufacturer.country}
+        </div>
+      </div>
+
+      <section className="rounded-xl bg-rose-50 border border-rose-200 p-5 space-y-3">
+        <div className="flex items-start gap-3">
+          <div className="shrink-0 w-9 h-9 rounded-full bg-rose-600 flex items-center justify-center">
+            <ShieldOff className="w-4.5 h-4.5 text-white" />
+          </div>
+          <div className="min-w-0">
+            <div className="text-sm font-semibold text-rose-900 f-body">{t("revoked.title")}</div>
+            <p className="text-xs text-rose-800 f-body mt-1">{t("revoked.notice")}</p>
+          </div>
+        </div>
+        {passport.revocationReason && (
+          <div className="text-xs f-body text-rose-800 bg-rose-100/60 border border-rose-200 rounded-lg px-3 py-2">
+            {t("revoked.reason", { reason: passport.revocationReason })}
+          </div>
+        )}
+        {passport.revokedAt && (
+          <div className="text-[11px] f-body text-rose-700">
+            {t("revoked.date", { date: new Date(passport.revokedAt).toLocaleString(locale) })}
+          </div>
+        )}
+      </section>
+
+      <p className="text-xs f-body text-slate-500 leading-relaxed">{t("revoked.auditNotice")}</p>
+
+      <Link
+        href="/login"
+        className="flex items-center justify-center gap-2 rounded-xl bg-slate-900 text-white text-xs f-body font-medium py-3 hover:bg-slate-800 transition-colors"
+      >
+        <LogIn className="w-4 h-4" /> {t("auth.login")}
+      </Link>
+
+      <div className="text-center pt-1 pb-4">
+        <a href="https://gs1.org/standards/digital-link" target="_blank" rel="noopener noreferrer"
+          className="inline-flex items-center gap-1 text-[10px] f-body text-slate-400 hover:text-slate-600">
+          {t("footer.resolvedVia")} <ExternalLink className="w-3 h-3" />
+        </a>
+      </div>
+    </div>
+  );
+}
+
 export default function PublicScanPage({ passport, integrityVerified, linkTrusted, auditorSignOff }: PublicScanPageProps) {
   const circularity = passport.recycledContentPercent + passport.bioBasedPercent;
   const virgin = Math.max(0, 100 - circularity);
   const overallTrusted = integrityVerified && linkTrusted;
+  // No-Hard-Delete / Immutability Enforcement — a revoked passport is
+  // NEVER deleted, only status-flipped (see transitionPassportStatus); the
+  // record, its hash chain, and its full audit trail all still exist and
+  // remain reachable to authorized auditors. This page just stops showing
+  // the full dynamic dataset to the general public once revoked — see the
+  // render branch below.
+  const isRevoked = passport.status === "REVOKED";
 
   // Default render is always English (DEFAULT_LOCALE) so server and
   // client markup match on first paint — a stored preference (if any) is
@@ -370,6 +461,9 @@ export default function PublicScanPage({ passport, integrityVerified, linkTruste
         <ChevronRight className="w-3.5 h-3.5 shrink-0" />
       </Link>
 
+      {isRevoked ? (
+        <RevokedNotice passport={passport} t={t} locale={locale} />
+      ) : (
       <div className="max-w-md mx-auto px-5 py-6 space-y-5">
         {/* Product header — polymer type/grade, GTIN, batch ID, and
             manufacturer name are DATA, not UI labels, so they are never
@@ -712,6 +806,7 @@ export default function PublicScanPage({ passport, integrityVerified, linkTruste
           </a>
         </div>
       </div>
+      )}
 
       <AiAssistantWidget theme="light" scope="public" contextBatchId={passport.batchId} />
     </div>
