@@ -49,6 +49,11 @@ import { ChainOfCustodyTimeline } from "@/components/dashboard/chain-of-custody-
 // portfolio-wide alert widget both use, so all three surfaces agree.
 import { getExpiryAlertTier } from "@/lib/utils/certification-status";
 import { ExpiryAlertBadge } from "@/components/dashboard/expiry-alert-badge";
+// REACH SVHC & PPWR Compliance — see components/dashboard/reach-ppwr/
+// reach-ppwr-panel.tsx's own file banner for why this is two independent
+// forms rather than folded into the Certifications panel above.
+import { ReachPpwrPanel } from "@/components/dashboard/reach-ppwr/reach-ppwr-panel";
+import type { SvhcStatusValue } from "@/lib/hooks/use-passports";
 // Autocomplete: previously used Chain-of-Custody participant names, so a
 // repeat upstream partner's name is picked consistently instead of
 // retyped (and potentially mis-spelled) on every batch. See
@@ -116,6 +121,23 @@ interface BatchDetailsModalProps {
       notes?: string;
     }
   ) => Promise<unknown>;
+  onDeclareSvhc: (
+    batchId: string,
+    input: {
+      status: SvhcStatusValue;
+      substances?: Array<{
+        casNumber: string;
+        substanceName: string;
+        concentrationPercent: number;
+        candidateListDate: string;
+        safeUseInstructions?: string;
+      }>;
+    }
+  ) => Promise<unknown>;
+  onDeclarePpwr: (
+    batchId: string,
+    input: { recyclabilityGrade?: string; pfasCompliant?: boolean; pfasConcentrationPpb?: number }
+  ) => Promise<unknown>;
 }
 
 export function BatchDetailsModal({
@@ -126,6 +148,8 @@ export function BatchDetailsModal({
   onLinkParent,
   onCalculateCarbon,
   onAddChainOfCustody,
+  onDeclareSvhc,
+  onDeclarePpwr,
 }: BatchDetailsModalProps) {
   const { push } = useToast();
 
@@ -363,6 +387,9 @@ export function BatchDetailsModal({
             <p className="text-xs text-slate-500 font-mono">No certifications attached to this batch yet.</p>
           )}
         </div>
+
+        {/* REACH Article 33 SVHC Declaration & PPWR Compliance */}
+        <ReachPpwrPanel passport={passport} onDeclareSvhc={onDeclareSvhc} onDeclarePpwr={onDeclarePpwr} />
 
         {/* Batch Genealogy panel */}
         <div className="border border-slate-800 rounded-2xl p-4 mb-4">

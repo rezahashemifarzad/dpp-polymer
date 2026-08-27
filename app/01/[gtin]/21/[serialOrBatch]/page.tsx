@@ -104,6 +104,23 @@ export default async function Gs1ResolverPage({ params, searchParams }: PageProp
         // (never in addition to) the full dynamic passport data below.
         revokedAt: passport.revokedAt ? passport.revokedAt.toISOString() : null,
         revocationReason: passport.revocationReason,
+        // REACH Article 33 SVHC Declaration & PPWR Compliance — svhcStatus
+        // is always one of the three enum values (schema default
+        // NOT_ASSESSED, never null); substanceDeclarations is only ever
+        // non-empty when svhcStatus is SVHC_PRESENT (enforced in
+        // lib/services/declare-svhc-status.ts). PPWR fields stay null
+        // until a batch actually gets an assessment recorded.
+        svhcStatus: passport.svhcStatus,
+        svhcStatusDeclaredAt: passport.svhcStatusDeclaredAt ? passport.svhcStatusDeclaredAt.toISOString() : null,
+        substanceDeclarations: passport.substanceDeclarations.map((s) => ({
+          casNumber: s.casNumber,
+          substanceName: s.substanceName,
+          concentrationPercent: Number(s.concentrationPercent),
+          safeUseInstructions: s.safeUseInstructions,
+        })),
+        ppwrRecyclabilityGrade: passport.ppwrRecyclabilityGrade,
+        ppwrPfasCompliant: passport.ppwrPfasCompliant,
+        ppwrAssessedAt: passport.ppwrAssessedAt ? passport.ppwrAssessedAt.toISOString() : null,
         manufacturer: {
           legalName: passport.manufacturer.legalName,
           country: passport.manufacturer.country,

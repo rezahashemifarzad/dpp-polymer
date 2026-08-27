@@ -59,5 +59,16 @@
   "revoked.notice": "Dieser digitale Produktpass wurde vom Hersteller widerrufen/deaktiviert und ist kein gültiger Konformitätsnachweis mehr für diese Charge.",
   "revoked.reason": "Grund: {reason}",
   "revoked.date": "Widerrufen am {date}",
-  "revoked.auditNotice": "Die vollständige, unveränderliche Prüfhistorie dieser Charge — einschließlich der vor dem Widerruf hinterlegten Daten und Zertifizierungen — bleibt kryptografisch versiegelt erhalten und ist autorisierten Prüfern weiterhin zugänglich."
+  "revoked.auditNotice": "Die vollständige, unveränderliche Prüfhistorie dieser Charge — einschließlich der vor dem Widerruf hinterlegten Daten und Zertifizierungen — bleibt kryptografisch versiegelt erhalten und ist autorisierten Prüfern weiterhin zugänglich.",
+  "reach.title": "REACH Artikel 33 — Besonders besorgniserregende Stoffe",
+  "reach.status.NOT_ASSESSED": "Noch nicht bewertet",
+  "reach.status.NONE_DECLARED": "Keine SVHC über 0,1 Gew.-% deklariert",
+  "reach.status.SVHC_PRESENT": "Enthält einen besonders besorgniserregenden Stoff (SVHC)",
+  "reach.selfDeclared": "Selbstdeklaration des Herstellers gemäß REACH Artikel 33 — keine unabhängig zertifizierte Angabe.",
+  "reach.declaredOn": "Deklariert am {date}",
+  "reach.concentration": "{pct}% Gew.-%",
+  "ppwr.title": "PPWR-Verpackungskonformität",
+  "ppwr.grade": "Recyclingfähigkeits-Klasse {grade}",
+  "ppwr.pfasCompliant": "Unterhalb des PFAS-Grenzwerts",
+  "ppwr.pfasNonCompliant": "Überschreitet den PFAS-Grenzwert"
 }

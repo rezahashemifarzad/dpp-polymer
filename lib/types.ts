@@ -20,6 +20,8 @@ import {
   RecycledContentSource,
   CertificationScheme,
   ChainOfCustodyTier,
+  SvhcStatus,
+  PpwrRecyclabilityGrade,
 } from "@prisma/client";
 import { isValidGtin14 } from "@/lib/gtin";
 
@@ -186,6 +188,78 @@ export const PolymerPassportInputSchema = z
 export type PolymerPassportInput = z.infer<typeof PolymerPassportInputSchema>;
 
 // ----------------------------------------------------------------------------
+// REACH Article 33 SVHC Declaration & PPWR Compliance
+// ----------------------------------------------------------------------------
+// See claude/reach-ppwr-compliance-notes.md for the full design rationale.
+// Both declarations are separate, standalone endpoints (see
+// lib/services/declare-svhc-status.ts and lib/services/declare-ppwr-compliance.ts)
+// rather than fields on PolymerPassportInputSchema above — this data
+// routinely arrives from lab testing/REACH review AFTER a batch's passport
+// already exists, exactly the same "add certification after creation" gap
+// docs/COMPLIANCE_CERTIFICATIONS_MODULE_SPEC.md §2.4 already identified and
+// fixed for Certification. createPassport() itself is untouched by this.
+
+export const SubstanceDeclarationInputSchema = z.object({
+  casNumber: z
+    .string()
+    .regex(/^\d{2,7}-\d{2}-\d$/, "casNumber must be a valid CAS Registry Number (e.g. \"117-81-7\")"),
+  substanceName: z.string().min(1, "substanceName is required").max(300),
+  // REACH's Article 33 communication threshold is 0.1% w/w — 4 decimal
+  // places lets a declaration represent trace concentrations meaningfully
+  // below that threshold, not just round to it.
+  concentrationPercent: z.coerce.number().min(0).max(100),
+  candidateListDate: z.coerce.date(),
+  safeUseInstructions: z.string().max(2000).optional(),
+});
+
+export type SubstanceDeclarationInput = z.infer<typeof SubstanceDeclarationInputSchema>;
+
+/**
+ * SVHC status is a manufacturer-owned legal declaration (REACH Article
+ * 33), not a third-party certificate — there is deliberately no
+ * VERIFIED/REJECTED workflow here the way CertificationInputSchema has.
+ * substances[] is required and non-empty exactly when status is
+ * SVHC_PRESENT, and must be empty/omitted otherwise — enforced here in
+ * Zod, not as a DB constraint, matching this app's established
+ * "conditional validation belongs in Zod" convention (see
+ * CertificationInputSchema.massBalanceAllocationPercent above).
+ */
+export const SvhcDeclarationInputSchema = z
+  .object({
+    status: z.enum(SvhcStatus),
+    substances: z.array(SubstanceDeclarationInputSchema).max(50).default([]),
+  })
+  .refine((d) => d.status !== "SVHC_PRESENT" || d.substances.length > 0, {
+    message: "At least one substance is required when status is SVHC_PRESENT",
+    path: ["substances"],
+  })
+  .refine((d) => d.status === "SVHC_PRESENT" || d.substances.length === 0, {
+    message: "substances must be empty unless status is SVHC_PRESENT",
+    path: ["substances"],
+  });
+
+export type SvhcDeclarationInput = z.infer<typeof SvhcDeclarationInputSchema>;
+
+/**
+ * PPWR fields are all independently optional — see
+ * prisma/schema.prisma's own comment on PolymerPassport.ppwrRecyclabilityGrade
+ * for why this stays nullable rather than a required-with-default status
+ * the way SvhcStatus is: this app covers polymer batches broadly, not
+ * exclusively packaging, so most rows legitimately have no PPWR assessment
+ * at all. pfasConcentrationPpb is the measured value substantiating
+ * pfasCompliant; both are accepted independently rather than one derived
+ * from the other, so a future threshold change never requires re-testing
+ * to recompute compliance.
+ */
+export const PpwrComplianceInputSchema = z.object({
+  recyclabilityGrade: z.enum(PpwrRecyclabilityGrade).optional(),
+  pfasCompliant: z.coerce.boolean().optional(),
+  pfasConcentrationPpb: z.coerce.number().min(0).max(9999999.999).optional(),
+});
+
+export type PpwrComplianceInput = z.infer<typeof PpwrComplianceInputSchema>;
+
+// ----------------------------------------------------------------------------
 // Supplier Onboarding Portal — public submission payload
 // ----------------------------------------------------------------------------
 // Deliberately looser than PolymerPassportInputSchema above: an external
@@ -279,6 +353,50 @@ export const SupplierSubmissionInputSchema = z
   });
 
 export type SupplierSubmissionInput = z.infer<typeof SupplierSubmissionInputSchema>;
+
+// ----------------------------------------------------------------------------
+// Admin UI for Auditor & Buyer (Client) Accounts — account provisioning
+// payloads. Distinct from PolymerPassportInputSchema and friends above:
+// these validate account-management input (creating an Auditor/Client row,
+// or setting its password), not passport data. Password minimum length
+// (8) is a basic sanity floor, not the security boundary — that's
+// lib/password.ts's scrypt cost parameters; a longer/stronger policy can
+// be layered on later without a schema change.
+// ----------------------------------------------------------------------------
+
+export const CreateAuditorAccountInputSchema = z
+  .object({
+    name: z.string().min(1, "name is required").max(200),
+    organization: z.string().min(1, "organization is required").max(200),
+    email: z.string().email().optional(),
+    password: z.string().min(8, "password must be at least 8 characters").max(200).optional(),
+  })
+  .refine((d) => !d.password || d.email, {
+    message: "email is required when setting a password — /login signs in by email",
+    path: ["email"],
+  });
+
+export type CreateAuditorAccountInput = z.infer<typeof CreateAuditorAccountInputSchema>;
+
+export const CreateClientAccountInputSchema = z
+  .object({
+    companyName: z.string().min(1, "companyName is required").max(200),
+    country: z.string().max(100).optional(),
+    contactEmail: z.string().email().optional(),
+    password: z.string().min(8, "password must be at least 8 characters").max(200).optional(),
+  })
+  .refine((d) => !d.password || d.contactEmail, {
+    message: "contactEmail is required when setting a password — /login signs in by email",
+    path: ["contactEmail"],
+  });
+
+export type CreateClientAccountInput = z.infer<typeof CreateClientAccountInputSchema>;
+
+export const SetAccountPasswordInputSchema = z.object({
+  password: z.string().min(8, "password must be at least 8 characters").max(200),
+});
+
+export type SetAccountPasswordInput = z.infer<typeof SetAccountPasswordInputSchema>;
 
 // ----------------------------------------------------------------------------
 // Derived numeric helpers — always return Prisma.Decimal

@@ -140,6 +140,28 @@ enum AuditAction {
   // below for the fine-grained per-channel delivery record this
   // summarizes.
   NOTIFICATION_SENT
+  // ERP / Automated Batch Intake Integration — additive, existing values
+  // and rows untouched. Written as a SECOND, follow-up AuditLog entry
+  // immediately after the standard CREATED entry that createPassport()
+  // itself already writes for every creation path (see
+  // lib/services/create-passport.ts, deliberately never modified) —
+  // exactly the SUPPLIER_SUBMISSION_APPROVED precedent above: the single
+  // canonical creation path stays untouched, and the *channel* a passport
+  // arrived through is documented as a second, feature-specific entry
+  // (see lib/erp-auth.ts / app/api/erp/passports/route.ts). Lets the
+  // audit trail tell "created by hand," "created via the shared-role-key
+  // API," and "pushed automatically by a manufacturer's ERP" apart.
+  CREATED_VIA_ERP_INTEGRATION
+  // REACH SVHC & PPWR Compliance — additive, existing values and rows
+  // untouched. REACH_SVHC_DECLARED is written whenever a passport's
+  // svhcStatus (and, when SVHC_PRESENT, its SubstanceDeclaration rows) is
+  // set or updated — this is a manufacturer self-declaration, not an
+  // Auditor decision, so it's deliberately distinct from
+  // CERT_VERIFIED/CERT_REJECTED above. PPWR_COMPLIANCE_DECLARED mirrors it
+  // for the separate PPWR recyclability/PFAS fields, since a batch can be
+  // reassessed for one without touching the other.
+  REACH_SVHC_DECLARED
+  PPWR_COMPLIANCE_DECLARED
 }
 
 // Compliance & Green Certifications Module (docs/COMPLIANCE_CERTIFICATIONS_MODULE_SPEC.md
@@ -386,11 +408,104 @@ model PolymerPassport {
   revokedAt         DateTime?
   revocationReason  String?
 
+  // --- 15. REACH SVHC & PPWR Compliance ---------------------------------
+  // REACH Article 33: an SVHC status is a legally required, manufacturer-
+  // OWNED declaration (not a third-party certificate — see
+  // SubstanceDeclaration below), so — unlike Certification's
+  // PENDING_REVIEW→VERIFIED workflow — there is no Auditor gate here.
+  // svhcStatus is deliberately non-optional-in-spirit (defaults to
+  // NOT_ASSESSED) rather than left null: silence must never be
+  // indistinguishable from "assessed and confirmed clean," which is
+  // exactly the distinction a REACH audit needs to be able to draw.
+  // Substance rows only exist when status is SVHC_PRESENT (enforced in
+  // the Zod layer per this app's established "validate conditionally in
+  // Zod, not a DB constraint" convention — see CertificationInputSchema's
+  // massBalanceAllocationPercent for the precedent).
+  svhcStatus           SvhcStatus @default(NOT_ASSESSED)
+  svhcStatusDeclaredAt DateTime?
+  svhcStatusDeclaredBy String? // actor identity, same convention as AuditLog.actor
+  substanceDeclarations SubstanceDeclaration[]
+
+  // PPWR (Packaging & Packaging Waste Regulation) fields — deliberately
+  // optional/nullable, not defaulted like svhcStatus above: this app
+  // covers polymer batches broadly, not exclusively packaging, so most
+  // rows legitimately have no PPWR assessment at all rather than an
+  // assessed-and-not-applicable one. ppwrPfasConcentrationPpb is the
+  // measured value substantiating ppwrPfasCompliant — kept as two fields
+  // (a raw figure plus the derived pass/fail) rather than only the
+  // boolean, so a future threshold change never requires re-testing to
+  // recompute compliance.
+  ppwrRecyclabilityGrade     PpwrRecyclabilityGrade?
+  ppwrPfasCompliant          Boolean?
+  ppwrPfasConcentrationPpb   Decimal?                @db.Decimal(10, 3)
+  ppwrAssessedAt             DateTime?
+  ppwrAssessedBy             String?
+
   @@index([polymerType])
   @@index([status])
   @@index([gtin])
   @@index([manufacturerId]) // STEP 5: added — high-frequency filter in GET /api/passports
   @@index([productionDate]) // Final Polish & Stability Sprint: green-tax-trend-forecast.ts and esg-analytics.ts's monthly trend both range-scan/bucket by this column
+  @@index([svhcStatus]) // REACH / PPWR Compliance: admin "needs assessment" queue filters on this
+}
+
+// REACH / PPWR Compliance — additive. See PolymerPassport.svhcStatus above
+// for why this is a required-with-default status rather than an optional
+// field: an EU market-surveillance audit needs to be able to tell "no SVHC
+// found" apart from "nobody ever checked."
+enum SvhcStatus {
+  NOT_ASSESSED
+  NONE_DECLARED
+  SVHC_PRESENT
+}
+
+// PPWR Design-for-Recycling performance grade. Mirrors the A–E scale used
+// by existing national/EU eco-modulation schemes for packaging recyclability
+// (the same shape PPWR's own harmonized criteria are converging on) — kept
+// as a closed enum rather than a free-text grade so it stays comparable
+// across manufacturers and queryable in bulk compliance reporting.
+enum PpwrRecyclabilityGrade {
+  GRADE_A
+  GRADE_B
+  GRADE_C
+  GRADE_D
+  GRADE_E
+  NOT_RECYCLABLE
+}
+
+// REACH Article 33: one row per Substance of Very High Concern found above
+// the 0.1% w/w threshold in a batch. Only ever created when the parent
+// passport's svhcStatus is SVHC_PRESENT — a passport with NOT_ASSESSED or
+// NONE_DECLARED has zero rows here, enforced at the Zod/service layer.
+// This is the manufacturer's own Article 33 legal declaration, not a
+// third-party certificate — deliberately has no verificationStatus field
+// the way Certification does; see this model's own declaredBy/declaredAt
+// for who made the declaration and when.
+model SubstanceDeclaration {
+  id String @id @default(uuid())
+
+  casNumber     String // e.g. "117-81-7" (DEHP) — the substance's CAS Registry Number
+  substanceName String
+  // Concentration by weight in the article. REACH's notification/
+  // communication threshold is 0.1% w/w — stored with enough precision
+  // (4 decimal places) to represent trace concentrations meaningfully
+  // below that threshold, not just round to one decimal place.
+  concentrationPercent Decimal @db.Decimal(7, 4)
+  // Which revision of ECHA's SVHC Candidate List this declaration was
+  // checked against — the list itself is updated roughly twice a year, so
+  // a declaration's currency is only meaningful relative to a dated list
+  // version, not as a standalone fact.
+  candidateListDate DateTime
+  safeUseInstructions String? // required by Article 33(1) when an SVHC is present
+
+  declaredAt DateTime @default(now())
+  declaredBy String // actor identity, same convention as AuditLog.actor
+
+  passportId String
+  passport   PolymerPassport @relation(fields: [passportId], references: [id])
+
+  @@index([passportId])
+  @@index([casNumber])
 }
 
 // ----------------------------------------------------------------------------
@@ -411,6 +526,22 @@ model Manufacturer {
   // approval — see lib/services/supplier-submission.ts) may have zero or
   // more standing SupplierInvite rows pointing at it.
   supplierInvites SupplierInvite[]
+
+  // ERP / Automated Batch Intake Integration — nullable so every existing
+  // Manufacturer row is unaffected until an admin provisions a key via
+  // scripts/set-manufacturer-key.ts. Mirrors Auditor.apiKeyHash /
+  // Client.apiKeyHash exactly: SHA-256 hash of a high-entropy random key,
+  // resolved via a unique-index lookup in lib/erp-auth.ts, soft-revocable
+  // via apiKeyActive without losing the manufacturer's passport history.
+  // This also finally lets app/api/passports/route.ts's own long-standing
+  // TODO(auth) comment be addressed for the automated-intake path
+  // specifically: an authenticated ERP push is scoped to its OWN
+  // manufacturer server-side, never trusting a manufacturerId out of the
+  // request body the way the legacy shared-role-key route still must.
+  apiKeyHash   String?  @unique
+  apiKeyActive Boolean  @default(true) // soft-revoke, same convention as Auditor.active / Client.active
+
+  @@index([apiKeyHash])
 }
 
 model Certification {
@@ -1332,4 +1463,53 @@ model Session {
   // @@index([expiresAt]) — a future cleanup sweep of expired rows.
   @@index([actorType, actorId])
   @@index([expiresAt])
+}
+
+// ----------------------------------------------------------------------------
+// ACCOUNT AUDIT LOG — Admin UI for Auditor & Buyer Accounts (new model, no
+// existing model or field touched or removed)
+// ----------------------------------------------------------------------------
+// Records who did what to an Auditor/Client account: created, activated,
+// deactivated, had its API key rotated, or had its password set/reset.
+//
+// DELIBERATELY NOT the same model as AuditLog above — AuditLog.passportId
+// is a required FK (every row records something that happened to a
+// specific PolymerPassport), and an account-lifecycle event has no
+// passport to attach to. Also deliberately NOT hash-chained the way
+// AuditLog is (see AuditLog's own comment on entryHash/previousEntryHash):
+// that tamper-evidence machinery protects the integrity of a product's
+// compliance record over its lifetime; "who rotated this auditor's API
+// key" is an operational/security trail, not a compliance ledger, so a
+// plain append-only table (nothing here is ever updated or deleted, same
+// convention as AuditLog) is the right amount of machinery.
+//
+// targetType/targetId is a polymorphic pointer (Auditor.id or Client.id),
+// same pattern as Session.actorType/actorId directly above — reuses
+// SessionActorType rather than introducing a parallel enum, since it
+// points at the exact same two tables (AUDITOR -> Auditor, CUSTOMER ->
+// Client).
+enum AccountAuditAction {
+  ACCOUNT_CREATED
+  ACCOUNT_ACTIVATED
+  ACCOUNT_DEACTIVATED
+  API_KEY_ROTATED
+  PASSWORD_SET
+}
+
+model AccountAuditLog {
+  id String @id @default(uuid())
+
+  targetType SessionActorType
+  targetId   String
+
+  action AccountAuditAction
+  actor  String // e.g. "ADMIN" — mirrors AuditLog.actor's own convention
+
+  metadata Json?
+
+  createdAt DateTime @default(now())
+
+  @@index([targetType, targetId])
+  @@index([action])
+  @@index([createdAt])
 }

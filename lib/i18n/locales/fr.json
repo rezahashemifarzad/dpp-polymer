@@ -59,5 +59,16 @@
   "revoked.notice": "Ce passeport numérique de produit a été révoqué/désactivé par le fabricant et n'est plus un enregistrement de conformité valide pour ce lot.",
   "revoked.reason": "Motif : {reason}",
   "revoked.date": "Révoqué le {date}",
-  "revoked.auditNotice": "L'historique d'audit complet et immuable de ce lot — y compris les données et certifications en vigueur avant la révocation — reste scellé cryptographiquement et demeure accessible aux auditeurs autorisés."
+  "revoked.auditNotice": "L'historique d'audit complet et immuable de ce lot — y compris les données et certifications en vigueur avant la révocation — reste scellé cryptographiquement et demeure accessible aux auditeurs autorisés.",
+  "reach.title": "REACH Article 33 — Substances préoccupantes",
+  "reach.status.NOT_ASSESSED": "Pas encore évalué",
+  "reach.status.NONE_DECLARED": "Aucune SVHC déclarée au-delà de 0,1 % p/p",
+  "reach.status.SVHC_PRESENT": "Contient une substance extrêmement préoccupante (SVHC)",
+  "reach.selfDeclared": "Auto-déclaré par le fabricant en vertu de l'article 33 de REACH — non certifié par un tiers.",
+  "reach.declaredOn": "Déclaré le {date}",
+  "reach.concentration": "{pct} % p/p",
+  "ppwr.title": "Conformité emballage PPWR",
+  "ppwr.grade": "Classe d'aptitude au recyclage {grade}",
+  "ppwr.pfasCompliant": "Sous le seuil de restriction PFAS",
+  "ppwr.pfasNonCompliant": "Dépasse le seuil de restriction PFAS"
 }

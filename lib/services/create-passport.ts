@@ -102,7 +102,9 @@ export async function createPassport(rawInput: unknown): Promise<CreatePassportR
     return { ok: false, status: 400, error: (err as Error).message };
   }
 
-  const created = await prisma.$transaction(async (tx) => {
+  let created: PassportWithRelations;
+  try {
+    created = await prisma.$transaction(async (tx) => {
     const passport = await tx.polymerPassport.create({
       data: {
         polymerType: data.polymerType,
@@ -178,7 +180,30 @@ export async function createPassport(rawInput: unknown): Promise<CreatePassportR
     });
 
     return passport;
-  });
+    });
+  } catch (err) {
+    // ERP / Automated Batch Intake Integration retry-safety: the
+    // findUnique pre-check above and this INSERT are not atomic with each
+    // other, so two requests racing for the same batchId (a genuine
+    // concern once an ERP can retry a timed-out POST automatically) can
+    // both pass the pre-check and have the loser's INSERT hit batchId's
+    // unique constraint here instead. Translate that specific case into
+    // the exact same friendly 409 the pre-check already returns, so a
+    // retried request never surfaces as an opaque 500 to the caller —
+    // every other unexpected failure still throws, unchanged.
+    if (
+      err instanceof Prisma.PrismaClientKnownRequestError &&
+      err.code === "P2002" &&
+      (Array.isArray(err.meta?.target) ? err.meta.target.includes("batchId") : err.meta?.target === "batchId")
+    ) {
+      return {
+        ok: false,
+        status: 409,
+        error: `A passport already exists for batchId "${data.batchId}"`,
+      };
+    }
+    throw err;
+  }
 
   return { ok: true, status: 201, data: created };
 }

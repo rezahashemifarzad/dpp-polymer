@@ -48,6 +48,7 @@ import {
   LayoutGrid,
   Bell,
   Factory,
+  Users,
 } from "lucide-react";
 import Link from "next/link";
 import { ToastProvider, useToast } from "@/lib/hooks/use-toast";
@@ -71,6 +72,14 @@ import { ExpiryAlertBadge } from "@/components/dashboard/expiry-alert-badge";
 // management widget, same "portfolio-wide widget below the header" slot
 // as ExpiryAlertBanner above.
 import { SupplierReviewPanel } from "@/components/dashboard/supplier-review-panel";
+// REACH SVHC Compliance Alert Banner — follow-up to the REACH & PPWR
+// Admin Dashboard UI sprint, same "portfolio-wide widget below the
+// header" slot as ExpiryAlertBanner/SupplierReviewPanel above. Its
+// "Manage" action hands back a full ApiPassport it fetched itself (see
+// that component's file banner for why), which is what lets the
+// manageTarget fallback below stay correct even for a batch outside the
+// currently-loaded (paginated) passports list.
+import { SvhcComplianceBanner } from "@/components/dashboard/reach-ppwr/svhc-compliance-banner";
 
 function AdminDashboardInner() {
   const {
@@ -81,6 +90,8 @@ function AdminDashboardInner() {
     linkParentBatch,
     calculateCarbonFootprint,
     addChainOfCustodyRecord,
+    declareSvhcStatus,
+    declarePpwrCompliance,
   } = usePassports();
   const { push } = useToast();
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -239,6 +250,19 @@ function AdminDashboardInner() {
             <LayoutGrid className="w-4 h-4" />
             Generator Suite
           </Link>
+          {/* Admin UI for Auditor & Buyer Accounts — same
+              admin-console-only nav precedent as Notifications/Suppliers
+              above (not added to app/page.tsx's own nav row: account
+              provisioning isn't Material-Ledger-table-related, so the
+              "two independent Material Ledger UIs" rule doesn't apply
+              here either). */}
+          <Link
+            href="/admin/accounts"
+            className="flex items-center gap-2 text-xs font-medium bg-teal-500/10 hover:bg-teal-500/20 border border-teal-500/30 text-teal-400 px-4 py-2 rounded-lg transition-all"
+          >
+            <Users className="w-4 h-4" />
+            Accounts
+          </Link>
           <Link
             href="/"
             className="flex items-center gap-2 text-xs font-medium bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 px-4 py-2 rounded-lg transition-all"
@@ -256,6 +280,13 @@ function AdminDashboardInner() {
             and a manual "Run Check Now" trigger for the background check
             that otherwise runs on Vercel Cron's daily schedule. */}
         <ExpiryAlertBanner />
+
+        {/* REACH SVHC Compliance Alert Banner — portfolio-wide view of
+            batches with no REACH Article 33 declaration on file (or with
+            an SVHC substance declared), mirroring ExpiryAlertBanner
+            above. "Manage" opens the same BatchDetailsModal below via
+            setManageTarget. */}
+        <SvhcComplianceBanner onManageBatch={setManageTarget} />
 
         {/* Phase 4 - Step 2 — Supplier Onboarding Portal. Pending
             submission review queue plus "Invite Supplier" / "Manage
@@ -502,11 +533,18 @@ function AdminDashboardInner() {
         // Re-derive from the live list rather than holding a stale snapshot
         // — after linkParentBatch / calculateCarbonFootprint each refetch()
         // the list, so this keeps the modal showing the just-saved state.
-        passport={manageTarget ? passports.find((p) => p.id === manageTarget.id) ?? null : null}
+        // Falls back to the already-held manageTarget object (not null) when
+        // it isn't in the currently-loaded page of `passports` — usePassports()
+        // only ever fetches page 1, so a batch opened via SvhcComplianceBanner
+        // (which can point at any batch in the portfolio) would otherwise fail
+        // to render here even though we already have its full data in hand.
+        passport={manageTarget ? passports.find((p) => p.id === manageTarget.id) ?? manageTarget : null}
         allPassports={passports}
         onLinkParent={linkParentBatch}
         onCalculateCarbon={calculateCarbonFootprint}
         onAddChainOfCustody={addChainOfCustodyRecord}
+        onDeclareSvhc={declareSvhcStatus}
+        onDeclarePpwr={declarePpwrCompliance}
       />
 
       {/* Sprint 2.2 — single-batch QR preview/download (this page had none

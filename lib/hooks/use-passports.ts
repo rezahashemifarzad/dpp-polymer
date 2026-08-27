@@ -20,6 +20,8 @@ import { createPassportAction } from "@/lib/actions/create-passport";
 import { linkBatchGenealogyAction } from "@/lib/actions/link-batch-genealogy";
 import { calculateCarbonFootprintAction } from "@/lib/actions/calculate-carbon-footprint";
 import { addChainOfCustodyRecordAction } from "@/lib/actions/add-chain-of-custody-record";
+import { declareSvhcStatusAction } from "@/lib/actions/declare-svhc-status";
+import { declarePpwrComplianceAction } from "@/lib/actions/declare-ppwr-compliance";
 
 export interface ApiCertification {
   id: string;
@@ -121,6 +123,23 @@ export interface ApiChainOfCustodyRecord {
   createdAt: string;
 }
 
+// REACH SVHC & PPWR Compliance — see prisma/schema.prisma's SvhcStatus /
+// SubstanceDeclaration / PolymerPassport.ppwr* fields. concentrationPercent
+// is a string for the same Decimal-precision reason as every other numeric
+// field in this file.
+export type SvhcStatusValue = "NOT_ASSESSED" | "NONE_DECLARED" | "SVHC_PRESENT";
+
+export interface ApiSubstanceDeclaration {
+  id: string;
+  casNumber: string;
+  substanceName: string;
+  concentrationPercent: string;
+  candidateListDate: string;
+  safeUseInstructions: string | null;
+  declaredAt: string;
+  declaredBy: string;
+}
+
 export interface ApiPassport {
   id: string;
   polymerType: string;
@@ -145,6 +164,13 @@ export interface ApiPassport {
   parentLinks: ApiGenealogyLink[];
   carbonFootprintCalculation: ApiCarbonFootprintCalculation | null;
   chainOfCustodyRecords: ApiChainOfCustodyRecord[];
+  svhcStatus: SvhcStatusValue;
+  svhcStatusDeclaredAt: string | null;
+  substanceDeclarations: ApiSubstanceDeclaration[];
+  ppwrRecyclabilityGrade: string | null;
+  ppwrPfasCompliant: boolean | null;
+  ppwrPfasConcentrationPpb: string | null;
+  ppwrAssessedAt: string | null;
   createdAt: string;
 }
 
@@ -297,6 +323,54 @@ export function usePassports() {
     [refetch]
   );
 
+  const declareSvhcStatus = useCallback(
+    async (
+      batchId: string,
+      input: {
+        status: SvhcStatusValue;
+        substances?: Array<{
+          casNumber: string;
+          substanceName: string;
+          concentrationPercent: number;
+          candidateListDate: string;
+          safeUseInstructions?: string;
+        }>;
+      }
+    ) => {
+      // Same Server Action pattern as addChainOfCustodyRecord above — runs
+      // server-side only, never needs the RBAC key that PATCH
+      // /api/passports/[batchId]/svhc requires for external callers.
+      const result = await declareSvhcStatusAction(batchId, input);
+      if (!result.ok) {
+        if (result.issues?.fieldErrors) {
+          throw new PassportValidationError(result.error || "Validation failed", result.issues.fieldErrors);
+        }
+        throw new Error(result.error || "Failed to declare SVHC status");
+      }
+      await refetch();
+      return result.data;
+    },
+    [refetch]
+  );
+
+  const declarePpwrCompliance = useCallback(
+    async (
+      batchId: string,
+      input: { recyclabilityGrade?: string; pfasCompliant?: boolean; pfasConcentrationPpb?: number }
+    ) => {
+      const result = await declarePpwrComplianceAction(batchId, input);
+      if (!result.ok) {
+        if (result.issues?.fieldErrors) {
+          throw new PassportValidationError(result.error || "Validation failed", result.issues.fieldErrors);
+        }
+        throw new Error(result.error || "Failed to declare PPWR compliance");
+      }
+      await refetch();
+      return result.data;
+    },
+    [refetch]
+  );
+
   return {
     data,
     loading,
@@ -307,5 +381,7 @@ export function usePassports() {
     linkParentBatch,
     calculateCarbonFootprint,
     addChainOfCustodyRecord,
+    declareSvhcStatus,
+    declarePpwrCompliance,
   };
 }

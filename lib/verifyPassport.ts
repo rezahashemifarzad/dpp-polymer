@@ -16,7 +16,13 @@
 
 import { prisma } from "./prisma";
 import { hashRecord, computeTotalRecycledPercent } from "./types";
-import type { PolymerPassport, Certification, CarbonFootprintCalculation, ChainOfCustodyRecord } from "@prisma/client";
+import type {
+  PolymerPassport,
+  Certification,
+  CarbonFootprintCalculation,
+  ChainOfCustodyRecord,
+  SubstanceDeclaration,
+} from "@prisma/client";
 
 // Third-Party Auditor Verification Workflow — the latest sign-off event
 // for this passport, if any. Narrow `select` on the auditor relation
@@ -66,6 +72,15 @@ export type PassportWithRelations = PolymerPassport & {
   // page.tsx) filter this array themselves, same convention as
   // certifications.
   chainOfCustodyRecords: ChainOfCustodyRecord[];
+  // REACH Article 33 SVHC Declaration & PPWR Compliance — svhcStatus and
+  // the ppwr* scalar fields come through automatically (this query's
+  // top-level `include` never restricts base-model scalar fields, only
+  // adds relations); substanceDeclarations is a relation and needs its
+  // own explicit include below. Deliberately NOT included in the
+  // hashRecord() recompute further down — same "post-issuance addition
+  // never retroactively invalidates the sealed hash" precedent this
+  // module's own comment already documents for chainOfCustodyRecords.
+  substanceDeclarations: SubstanceDeclaration[];
 };
 
 export interface VerifiedPassportResult {
@@ -112,6 +127,7 @@ export async function getVerifiedPassport(batchId: string): Promise<VerifiedPass
         },
       },
       chainOfCustodyRecords: { orderBy: { sequence: "asc" } },
+      substanceDeclarations: true,
     },
   });
   if (!passport) return null;

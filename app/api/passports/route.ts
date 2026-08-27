@@ -127,6 +127,9 @@ export async function GET(req: NextRequest) {
           // — every tier record, all statuses (admin-facing shape). See
           // ChainOfCustodyRecord in prisma/schema.prisma.
           chainOfCustodyRecords: { orderBy: { sequence: "asc" } },
+          // REACH Article 33 SVHC Declaration — see the matching comment on
+          // GET /api/passports/[batchId]'s own include block.
+          substanceDeclarations: true,
         },
       }),
     ]);

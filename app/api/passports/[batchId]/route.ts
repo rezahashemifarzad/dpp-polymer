@@ -75,6 +75,11 @@ export async function GET(
         // Multi-tier Supply Chain Verification & Auditor Portal Expansion
         // — every tier record, all statuses (admin-facing shape).
         chainOfCustodyRecords: { orderBy: { sequence: "asc" } },
+        // REACH Article 33 SVHC Declaration — svhcStatus and the ppwr*
+        // scalar fields come through automatically (this include never
+        // restricts base-model scalars); substanceDeclarations is a
+        // relation and needs this explicit include.
+        substanceDeclarations: true,
       },
     });
 

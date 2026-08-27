@@ -276,6 +276,8 @@ function CompletePolymerDPPInner() {
     linkParentBatch,
     calculateCarbonFootprint,
     addChainOfCustodyRecord,
+    declareSvhcStatus,
+    declarePpwrCompliance,
   } = usePassports();
   // Sprint 2.1 — live monthly trend for the chart below (replaces the old
   // hard-coded analyticsData array). See lib/hooks/use-passport-trend.ts /
@@ -1184,6 +1186,8 @@ function CompletePolymerDPPInner() {
           onLinkParent={linkParentBatch}
           onCalculateCarbon={calculateCarbonFootprint}
           onAddChainOfCustody={addChainOfCustodyRecord}
+          onDeclareSvhc={declareSvhcStatus}
+          onDeclarePpwr={declarePpwrCompliance}
         />
 
       </main>

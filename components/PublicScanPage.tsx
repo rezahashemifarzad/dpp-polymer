@@ -36,7 +36,7 @@ import {
   BadgeCheck, ExternalLink, Download, Copy, Check, AlertTriangle,
   Factory, CalendarDays, Clock, CheckCircle2, GitBranch, FileText,
   UserCheck, Languages, Link2, Sprout, Settings2, Truck, CircleDot,
-  LogIn, ChevronRight, ShieldOff,
+  LogIn, ChevronRight, ShieldOff, FlaskConical, PackageCheck,
 } from "lucide-react";
 import {
   type Locale, SUPPORTED_LOCALES, DEFAULT_LOCALE, LOCALE_LABELS,
@@ -62,6 +62,14 @@ interface CertificationView {
   validFrom: string;
   validUntil: string;
   documentUrl: string | null;
+}
+
+// REACH SVHC & PPWR Compliance
+interface SubstanceDeclarationView {
+  casNumber: string;
+  substanceName: string;
+  concentrationPercent: number;
+  safeUseInstructions: string | null;
 }
 
 // Circular Economy Platform Upgrade (Step 4) additions — a slimmer summary
@@ -163,6 +171,16 @@ interface PassportView {
   revocationReason: string | null;
   manufacturer: { legalName: string; country: string };
   certifications: CertificationView[];
+  // REACH SVHC & PPWR Compliance — svhcStatus is always present (defaults
+  // to "NOT_ASSESSED" at the schema level, never null/undefined); the PPWR
+  // fields stay null on any batch that has never had a PPWR assessment
+  // recorded, since not every polymer batch ends up in packaging.
+  svhcStatus: "NOT_ASSESSED" | "NONE_DECLARED" | "SVHC_PRESENT";
+  svhcStatusDeclaredAt: string | null;
+  substanceDeclarations: SubstanceDeclarationView[];
+  ppwrRecyclabilityGrade: string | null;
+  ppwrPfasCompliant: boolean | null;
+  ppwrAssessedAt: string | null;
   recordHash: string;
   hashAlgorithm: string;
   previousRecordHash: string | null;
@@ -726,6 +744,84 @@ export default function PublicScanPage({ passport, integrityVerified, linkTruste
               );
             })}
           </div>
+        </section>
+
+        {/* REACH Article 33 SVHC Declaration & PPWR Compliance —
+            self-declared by the manufacturer, not an Auditor-verified
+            claim (see lib/services/declare-svhc-status.ts /
+            declare-ppwr-compliance.ts's own banners for why there's no
+            VERIFIED/REJECTED gate here the way Certifications has). Always
+            shows the SVHC status, including NOT_ASSESSED — silence must
+            never read as "confirmed clean." PPWR is only shown once a
+            batch actually has an assessment on file, since most polymer
+            batches in this system are never intended for packaging. */}
+        <section>
+          <h2 className="f-display text-sm font-semibold text-slate-900 flex items-center gap-1.5 mb-3">
+            <FlaskConical className="w-4 h-4 text-violet-600" /> {t("reach.title")}
+          </h2>
+          <div className={`rounded-xl border p-4 ${
+            passport.svhcStatus === "SVHC_PRESENT"
+              ? "bg-amber-50 border-amber-200"
+              : passport.svhcStatus === "NONE_DECLARED"
+              ? "bg-white border-slate-200"
+              : "bg-slate-50 border-slate-200"
+          }`}>
+            <div className="flex items-center gap-2">
+              {passport.svhcStatus === "SVHC_PRESENT" ? (
+                <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />
+              ) : passport.svhcStatus === "NONE_DECLARED" ? (
+                <ShieldCheck className="w-4 h-4 text-teal-600 shrink-0" />
+              ) : (
+                <ShieldAlert className="w-4 h-4 text-slate-400 shrink-0" />
+              )}
+              <span className="f-body text-sm font-semibold text-slate-900">{t(`reach.status.${passport.svhcStatus}`)}</span>
+            </div>
+            <p className="text-xs f-body text-slate-500 mt-1.5">{t("reach.selfDeclared")}</p>
+            {passport.svhcStatusDeclaredAt && (
+              <p className="text-[11px] f-body text-slate-400 mt-1">
+                {t("reach.declaredOn", { date: new Date(passport.svhcStatusDeclaredAt).toLocaleDateString(locale) })}
+              </p>
+            )}
+            {passport.svhcStatus === "SVHC_PRESENT" && passport.substanceDeclarations.length > 0 && (
+              <div className="mt-3 space-y-2">
+                {passport.substanceDeclarations.map((s, i) => (
+                  <div key={i} className="rounded-lg bg-white border border-amber-200 p-3">
+                    <div className="flex items-center justify-between">
+                      <span className="f-body text-xs font-semibold text-slate-900">{s.substanceName}</span>
+                      <span className="f-mono text-[11px] text-slate-400">CAS {s.casNumber}</span>
+                    </div>
+                    <div className="text-[11px] f-body text-amber-700 mt-0.5">
+                      {t("reach.concentration", { pct: s.concentrationPercent })}
+                    </div>
+                    {s.safeUseInstructions && (
+                      <div className="text-[11px] f-body text-slate-500 mt-1">{s.safeUseInstructions}</div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {passport.ppwrAssessedAt && (
+            <div className="mt-2 rounded-xl bg-white border border-slate-200 p-4">
+              <div className="flex items-center gap-2">
+                <PackageCheck className="w-4 h-4 text-blue-600 shrink-0" />
+                <span className="f-body text-sm font-semibold text-slate-900">{t("ppwr.title")}</span>
+              </div>
+              <div className="mt-2 flex flex-wrap gap-3 text-xs f-body">
+                {passport.ppwrRecyclabilityGrade && (
+                  <span className="text-slate-600">
+                    {t("ppwr.grade", { grade: passport.ppwrRecyclabilityGrade.replace("GRADE_", "").replace("_", " ") })}
+                  </span>
+                )}
+                {passport.ppwrPfasCompliant !== null && (
+                  <span className={passport.ppwrPfasCompliant ? "text-teal-700" : "text-rose-600"}>
+                    {passport.ppwrPfasCompliant ? t("ppwr.pfasCompliant") : t("ppwr.pfasNonCompliant")}
+                  </span>
+                )}
+              </div>
+            </div>
+          )}
         </section>
 
         {/* Data Integrity & Cryptographic Security */}
