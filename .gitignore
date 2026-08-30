@@ -49,3 +49,4 @@ dev.db-journal
 .next/
 out/
 build/
+recovery-codes.txt 
