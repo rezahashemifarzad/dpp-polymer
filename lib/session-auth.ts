@@ -26,7 +26,7 @@ import { randomBytes, createHash } from "crypto";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
-import type { Auditor, Client, SessionActorType } from "@prisma/client";
+import type { Auditor, Client, AdminUser, SessionActorType } from "@prisma/client";
 import { SESSION_COOKIE_NAME } from "@/lib/session-constants";
 
 export { SESSION_COOKIE_NAME };
@@ -140,14 +140,25 @@ export async function destroySession(): Promise<void> {
  * /login. Call at the top of any Server Component page under
  * /portal/auditor. A session that resolves to the wrong actor type (e.g. a
  * CUSTOMER session hitting this portal) redirects to that actor's own
- * correct portal instead of throwing a 403 — a friendlier outcome for a
+ * correct destination instead of throwing a 403 — a friendlier outcome for a
  * legitimate, currently-authenticated visitor who's just in the wrong
  * place.
+ *
+ * Each wrong-actor-type branch is now checked explicitly (AUDITOR, CUSTOMER,
+ * ADMIN) rather than a single `!== "AUDITOR"` fallthrough. That fallthrough
+ * was correct back when SessionActorType only had two values, but once
+ * ADMIN was added (Production Readiness follow-up — Real Admin Login) it
+ * would have sent an admin session hitting /portal/auditor to
+ * /portal/customer, which would in turn bounce it right back here via
+ * requireClientSession's own equivalent check — an infinite redirect loop.
+ * Naming every actor type explicitly here avoids that class of bug for any
+ * future fourth actor type too.
  */
 export async function requireAuditorSession(): Promise<Auditor> {
   const session = await getSession();
   if (!session) redirect("/login");
-  if (session.actorType !== "AUDITOR") redirect("/portal/customer");
+  if (session.actorType === "CUSTOMER") redirect("/portal/customer");
+  if (session.actorType === "ADMIN") redirect("/admin");
 
   const auditor = await prisma.auditor.findUnique({ where: { id: session.actorId } });
   if (!auditor || !auditor.active) redirect("/login");
@@ -159,10 +170,33 @@ export async function requireAuditorSession(): Promise<Auditor> {
 export async function requireClientSession(): Promise<Client> {
   const session = await getSession();
   if (!session) redirect("/login");
-  if (session.actorType !== "CUSTOMER") redirect("/portal/auditor");
+  if (session.actorType === "AUDITOR") redirect("/portal/auditor");
+  if (session.actorType === "ADMIN") redirect("/admin");
 
   const client = await prisma.client.findUnique({ where: { id: session.actorId } });
   if (!client || !client.active) redirect("/login");
 
   return client;
+}
+
+/**
+ * Mirror of requireAuditorSession()/requireClientSession() for the new
+ * ADMIN actor type (Production Readiness follow-up — Real Admin Login &
+ * Session Wall for /admin). Called from app/admin/layout.tsx, which wraps
+ * every /admin/* route automatically, so there is no separate route to
+ * forget to guard. Same three outcomes as the other two: no session ->
+ * /login; a valid session for the wrong actor type -> that actor's own
+ * destination (never a 403 — see the comment above); no matching/active
+ * AdminUser row (e.g. a soft-revoked admin) -> /login.
+ */
+export async function requireAdminSession(): Promise<AdminUser> {
+  const session = await getSession();
+  if (!session) redirect("/login");
+  if (session.actorType === "AUDITOR") redirect("/portal/auditor");
+  if (session.actorType === "CUSTOMER") redirect("/portal/customer");
+
+  const admin = await prisma.adminUser.findUnique({ where: { id: session.actorId } });
+  if (!admin || !admin.active) redirect("/login");
+
+  return admin;
 }

@@ -1,10 +1,12 @@
 /**
  * app/login/page.tsx
  * -----------------------------------------------------------------------
- * Single sign-in page for the new session-based AUDITOR / CUSTOMER login
- * (Role-Based Authentication & Client/Auditor Portal Suite). No role
- * selector — lib/actions/login.ts auto-detects the role by which table the
- * submitted email matches (Auditor.email vs Client.contactEmail).
+ * Single sign-in page for session-based ADMIN / AUDITOR / CUSTOMER login
+ * (Role-Based Authentication & Client/Auditor Portal Suite; ADMIN added by
+ * the Production Readiness follow-up — Real Admin Login & Session Wall for
+ * /admin). No role selector — lib/actions/login.ts auto-detects the role by
+ * which table the submitted email matches (AdminUser.email, Auditor.email,
+ * or Client.contactEmail).
  *
  * Server Component: if a valid session cookie is already present, redirect
  * straight to the matching portal instead of showing the form again — this
@@ -26,7 +28,13 @@ import { LoginForm } from "./LoginForm";
 export default async function LoginPage() {
   const session = await getSession();
   if (session) {
-    redirect(session.actorType === "AUDITOR" ? "/portal/auditor" : "/portal/customer");
+    redirect(
+      session.actorType === "ADMIN"
+        ? "/admin"
+        : session.actorType === "AUDITOR"
+          ? "/portal/auditor"
+          : "/portal/customer"
+    );
   }
 
   return (
@@ -38,12 +46,12 @@ export default async function LoginPage() {
           </div>
           <div>
             <h1 className="text-base font-bold tracking-wide">Sign In</h1>
-            <p className="text-xs text-slate-400">Auditor &amp; Client Portal Access</p>
+            <p className="text-xs text-slate-400">Admin, Auditor &amp; Client Access</p>
           </div>
         </div>
         <p className="text-xs text-slate-400 mt-4 mb-4 leading-relaxed">
-          Sign in with the email and password your administrator set up for you. Auditors and
-          customers are routed to their own portal automatically.
+          Sign in with the email and password your administrator set up for you. You&apos;ll be
+          routed to the Admin Console or your own portal automatically.
         </p>
 
         <LoginForm />

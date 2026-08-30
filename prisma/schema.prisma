@@ -1448,6 +1448,16 @@ model NotificationLog {
 enum SessionActorType {
   AUDITOR
   CUSTOMER
+  // Production Readiness follow-up — Real Admin Login & Session Wall for
+  // /admin. Added alongside the new AdminUser model below so a Session row
+  // can point at an admin the same polymorphic way it already points at an
+  // Auditor or Client. Purely additive: every existing Session row's
+  // actorType stays AUDITOR or CUSTOMER, and every switch/if-chain in
+  // lib/session-auth.ts that branched on "the other one of two values" was
+  // updated to branch on all three explicitly (see that file) rather than
+  // relying on an implicit "anything that isn't X" fallthrough, which would
+  // otherwise have quietly mishandled this new value.
+  ADMIN
 }
 
 model Session {
@@ -1512,4 +1522,35 @@ model AccountAuditLog {
   @@index([targetType, targetId])
   @@index([action])
   @@index([createdAt])
+}
+
+// ----------------------------------------------------------------------------
+// ADMIN LOGIN — Production Readiness follow-up: Real Admin Login & Session
+// Wall for /admin (new model, no existing model or field touched or removed)
+// ----------------------------------------------------------------------------
+// Closes the gap the production-readiness audit flagged: /admin had no login
+// wall at all — DPP_ADMIN_API_KEY (lib/rbac.ts) only ever gated specific
+// state-changing API routes for machine callers, never page access, and
+// app/admin/layout.tsx previously only redirected an already-signed-in
+// Auditor/Customer away, letting a fully anonymous visitor straight through.
+//
+// Deliberately NOT shaped like Auditor/Client (no apiKeyHash, no separate
+// bearer-key portal to stay backward-compatible with — this model exists
+// solely to back password login at /login, so there is no legacy flow to
+// preserve). passwordHash is nullable anyway, matching Auditor.passwordHash /
+// Client.passwordHash's own nullable convention and lib/actions/login.ts's
+// existing "no password set — contact your administrator" handling, in case
+// an admin row is ever created ahead of its password being set.
+//
+// lib/rbac.ts's DPP_ADMIN_API_KEY gate is completely untouched by this model
+// — that's a separate, still-working concern for machine/API callers, per
+// the Baseline Rule.
+model AdminUser {
+  id           String  @id @default(uuid())
+  name         String
+  email        String  @unique
+  passwordHash String?
+  active       Boolean @default(true) // soft-revoke, same convention as Auditor.active / Client.active
+
+  createdAt DateTime @default(now())
 }

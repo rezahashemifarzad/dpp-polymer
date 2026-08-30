@@ -26,6 +26,7 @@
  */
 
 import { prisma } from "@/lib/prisma";
+import { wrapSchemaDrift } from "@/lib/services/schema-drift";
 
 // Mirrors expiry-alert-service.ts's EXCLUDED_PASSPORT_STATUSES exactly,
 // and the same rationale: a REVOKED batch's compliance posture is
@@ -78,44 +79,57 @@ function toRow(p: {
   };
 }
 
-/** Live portfolio-wide SVHC compliance summary — powers the admin dashboard widget. */
+/**
+ * Live portfolio-wide SVHC compliance summary — powers the admin
+ * dashboard widget.
+ *
+ * Wrapped in wrapSchemaDrift(): svhcStatus/svhcStatusDeclaredAt were
+ * added to PolymerPassport in an earlier sprint, and this project has no
+ * migration history (see lib/services/schema-drift.ts's file banner) —
+ * a database that hasn't had `npx prisma db push` run against it since
+ * doesn't have these columns yet, and that failure previously surfaced
+ * as an opaque "Failed to compute SVHC compliance alerts" 500 with no
+ * indication of the actual cause or fix.
+ */
 export async function computePortfolioSvhcSummary(): Promise<PortfolioSvhcComplianceSummary> {
-  const [notAssessedRows, svhcPresentRows, notAssessedCount, svhcPresentCount] = await Promise.all([
-    prisma.polymerPassport.findMany({
-      where: { svhcStatus: "NOT_ASSESSED", status: { notIn: Array.from(EXCLUDED_PASSPORT_STATUSES) } },
-      orderBy: { createdAt: "asc" }, // oldest-outstanding-first, same urgency-ordering spirit as expiry's soonest-first
-      take: MAX_ROWS_PER_TIER,
-      select: {
-        id: true,
-        batchId: true,
-        polymerType: true,
-        grade: true,
-        status: true,
-        createdAt: true,
-        manufacturer: { select: { legalName: true } },
-      },
-    }),
-    prisma.polymerPassport.findMany({
-      where: { svhcStatus: "SVHC_PRESENT", status: { notIn: Array.from(EXCLUDED_PASSPORT_STATUSES) } },
-      orderBy: { svhcStatusDeclaredAt: "desc" }, // most-recently-declared-first
-      take: MAX_ROWS_PER_TIER,
-      select: {
-        id: true,
-        batchId: true,
-        polymerType: true,
-        grade: true,
-        status: true,
-        createdAt: true,
-        manufacturer: { select: { legalName: true } },
-      },
-    }),
-    prisma.polymerPassport.count({
-      where: { svhcStatus: "NOT_ASSESSED", status: { notIn: Array.from(EXCLUDED_PASSPORT_STATUSES) } },
-    }),
-    prisma.polymerPassport.count({
-      where: { svhcStatus: "SVHC_PRESENT", status: { notIn: Array.from(EXCLUDED_PASSPORT_STATUSES) } },
-    }),
-  ]);
+  const [notAssessedRows, svhcPresentRows, notAssessedCount, svhcPresentCount] = await wrapSchemaDrift(() =>
+    Promise.all([
+      prisma.polymerPassport.findMany({
+        where: { svhcStatus: "NOT_ASSESSED", status: { notIn: Array.from(EXCLUDED_PASSPORT_STATUSES) } },
+        orderBy: { createdAt: "asc" }, // oldest-outstanding-first, same urgency-ordering spirit as expiry's soonest-first
+        take: MAX_ROWS_PER_TIER,
+        select: {
+          id: true,
+          batchId: true,
+          polymerType: true,
+          grade: true,
+          status: true,
+          createdAt: true,
+          manufacturer: { select: { legalName: true } },
+        },
+      }),
+      prisma.polymerPassport.findMany({
+        where: { svhcStatus: "SVHC_PRESENT", status: { notIn: Array.from(EXCLUDED_PASSPORT_STATUSES) } },
+        orderBy: { svhcStatusDeclaredAt: "desc" }, // most-recently-declared-first
+        take: MAX_ROWS_PER_TIER,
+        select: {
+          id: true,
+          batchId: true,
+          polymerType: true,
+          grade: true,
+          status: true,
+          createdAt: true,
+          manufacturer: { select: { legalName: true } },
+        },
+      }),
+      prisma.polymerPassport.count({
+        where: { svhcStatus: "NOT_ASSESSED", status: { notIn: Array.from(EXCLUDED_PASSPORT_STATUSES) } },
+      }),
+      prisma.polymerPassport.count({
+        where: { svhcStatus: "SVHC_PRESENT", status: { notIn: Array.from(EXCLUDED_PASSPORT_STATUSES) } },
+      }),
+    ])
+  );
 
   return {
     generatedAt: new Date().toISOString(),
