@@ -1,0 +1,887 @@
+<title>گزارش گرنت NRW — پلیمر DPP</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  /* ============ TOKENS ============ */
+  :root{
+    --bg:#f6faf8;
+    --surface:#ffffff;
+    --surface-2:#edf5f2;
+    --surface-3:#e3edea;
+    --border:#dbe6e2;
+    --ink:#0f1a2b;
+    --ink-2:#48586a;
+    --ink-3:#7c8b93;
+    --accent:#0c8578;
+    --accent-ink:#066358;
+    --accent-soft:#e2f4f0;
+    --accent-2:#a8560f;
+    --accent-2-soft:#fbeadb;
+    --navy:#1e2761;
+    --navy-soft:#e9eaf6;
+    --warn-bg:#fdf3e3;
+    --warn-border:#e8c27a;
+    --warn-ink:#7a5210;
+    --shadow:0 1px 2px rgba(15,26,43,.04), 0 6px 20px -8px rgba(15,26,43,.12);
+    --radius-s:6px;
+    --radius-m:10px;
+    --radius-l:16px;
+    --measure:66ch;
+    --sidebar-w:272px;
+    color-scheme:light;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --bg:#0b1420;
+      --surface:#111d2e;
+      --surface-2:#16273b;
+      --surface-3:#1b2f47;
+      --border:#28405a;
+      --ink:#edf3f5;
+      --ink-2:#aebccb;
+      --ink-3:#7e8fa3;
+      --accent:#33d1bb;
+      --accent-ink:#7fe6d6;
+      --accent-soft:rgba(51,209,187,.12);
+      --accent-2:#e8a24e;
+      --accent-2-soft:rgba(232,162,78,.13);
+      --navy:#8b9be8;
+      --navy-soft:rgba(139,155,232,.12);
+      --warn-bg:rgba(232,162,78,.1);
+      --warn-border:#8a6222;
+      --warn-ink:#f0c785;
+      --shadow:0 1px 2px rgba(0,0,0,.3), 0 10px 30px -10px rgba(0,0,0,.5);
+      color-scheme:dark;
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg:#0b1420;
+    --surface:#111d2e;
+    --surface-2:#16273b;
+    --surface-3:#1b2f47;
+    --border:#28405a;
+    --ink:#edf3f5;
+    --ink-2:#aebccb;
+    --ink-3:#7e8fa3;
+    --accent:#33d1bb;
+    --accent-ink:#7fe6d6;
+    --accent-soft:rgba(51,209,187,.12);
+    --accent-2:#e8a24e;
+    --accent-2-soft:rgba(232,162,78,.13);
+    --navy:#8b9be8;
+    --navy-soft:rgba(139,155,232,.12);
+    --warn-bg:rgba(232,162,78,.1);
+    --warn-border:#8a6222;
+    --warn-ink:#f0c785;
+    --shadow:0 1px 2px rgba(0,0,0,.3), 0 10px 30px -10px rgba(0,0,0,.5);
+    color-scheme:dark;
+  }
+
+  /* ============ BASE ============ */
+  *{box-sizing:border-box;}
+  html{direction:rtl;}
+  body{
+    background:var(--bg);
+    color:var(--ink);
+    font-family:"Vazirmatn", "IBM Plex Sans", -apple-system, "Segoe UI", sans-serif;
+    font-size:16px;
+    line-height:1.85;
+    padding-inline:0;
+    direction:rtl;
+  }
+  h1,h2,h3,h4{
+    font-family:"Vazirmatn", Georgia, serif;
+    font-weight:700;
+    color:var(--ink);
+    text-wrap:balance;
+    line-height:1.4;
+  }
+  a{color:var(--accent-ink);}
+  a:focus-visible, button:focus-visible, summary:focus-visible{outline:2px solid var(--accent); outline-offset:2px;}
+  code, .mono{font-family:"IBM Plex Mono", ui-monospace, monospace; direction:ltr; unicode-bidi:embed;}
+  p{margin:0 0 1em;}
+  ::selection{background:var(--accent-soft);}
+
+  /* ============ LAYOUT ============ */
+  .layout{
+    display:grid;
+    grid-template-columns:var(--sidebar-w) minmax(0,1fr);
+    max-width:1240px;
+    margin-inline:auto;
+    align-items:start;
+    direction:rtl;
+  }
+  .sidebar{
+    position:sticky;
+    top:env(safe-area-inset-top,0px);
+    align-self:start;
+    max-height:100vh;
+    overflow-y:auto;
+    padding:28px 24px 28px 20px;
+    border-left:1px solid var(--border);
+  }
+  .content{
+    min-width:0;
+    padding:0 clamp(20px,4vw,56px) 80px;
+  }
+  .brand{
+    display:flex; align-items:center; gap:10px;
+    font-family:"Vazirmatn"; font-weight:700; font-size:13.5px;
+    color:var(--ink-2);
+    margin-bottom:22px;
+  }
+  .brand-mark{
+    width:26px;height:26px;border-radius:7px;
+    background:linear-gradient(155deg, var(--accent), var(--navy));
+    flex:none;
+  }
+  .toc-group{margin-bottom:18px;}
+  .toc-label{
+    font-family:"Vazirmatn"; font-size:12px; font-weight:700;
+    color:var(--ink-3); margin:0 0 8px;
+  }
+  .toc{list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:2px;}
+  .toc a{
+    display:block; padding:7px 10px; border-radius:var(--radius-s);
+    color:var(--ink-2); text-decoration:none; font-size:14px;
+    border-right:2px solid transparent;
+  }
+  .toc a:hover{background:var(--surface-2); color:var(--ink);}
+  .toc a.active{
+    background:var(--accent-soft); color:var(--accent-ink);
+    border-right-color:var(--accent); font-weight:600;
+  }
+  .side-actions{display:flex; flex-direction:column; gap:8px; margin-top:20px;}
+  .btn{
+    font-family:"Vazirmatn"; font-weight:600; font-size:13.5px;
+    border:1px solid var(--border); background:var(--surface);
+    color:var(--ink); border-radius:var(--radius-s);
+    padding:9px 12px; cursor:pointer; text-align:right;
+    display:flex; align-items:center; gap:8px;
+  }
+  .btn:hover{border-color:var(--accent); color:var(--accent-ink);}
+  .side-meta{margin-top:20px; padding-top:16px; border-top:1px solid var(--border); font-size:12.5px; color:var(--ink-3); line-height:1.8;}
+
+  /* mobile: sidebar becomes a sticky horizontal strip */
+  @media (max-width: 880px){
+    .layout{grid-template-columns:1fr;}
+    .sidebar{
+      position:sticky; top:env(safe-area-inset-top,0px);
+      max-height:none; border-left:none; border-bottom:1px solid var(--border);
+      background:var(--bg); z-index:5;
+      padding:14px 16px;
+    }
+    .brand{margin-bottom:10px;}
+    .toc-group{margin-bottom:0;}
+    .toc-label{display:none;}
+    .toc{flex-direction:row; overflow-x:auto; gap:6px; padding-bottom:4px; -webkit-overflow-scrolling:touch;}
+    .toc a{white-space:nowrap; border-right:none; border-bottom:2px solid transparent; flex:none;}
+    .toc a.active{border-right:none; border-bottom-color:var(--accent);}
+    .side-actions{flex-direction:row; margin-top:10px;}
+    .side-meta{display:none;}
+  }
+
+  /* ============ COVER ============ */
+  .cover{padding:56px 0 28px;}
+  .eyebrow{
+    font-family:"Vazirmatn"; font-size:13.5px;
+    color:var(--accent-ink); font-weight:700;
+    display:flex; align-items:center; gap:8px; margin-bottom:14px;
+  }
+  .eyebrow .dot{width:6px;height:6px;border-radius:50%;background:var(--accent);}
+  .cover h1{font-size:clamp(28px,4.4vw,42px); margin:0 0 14px; max-width:20ch;}
+  .cover .dek{font-size:18px; color:var(--ink-2); max-width:62ch; margin:0 0 26px;}
+  .meta-row{
+    display:flex; flex-wrap:wrap; gap:10px 28px; padding:18px 0;
+    border-top:1px solid var(--border); border-bottom:1px solid var(--border);
+    margin-bottom:30px;
+  }
+  .meta-item{display:flex; flex-direction:column; gap:2px;}
+  .meta-item .k{font-family:"Vazirmatn"; font-size:11.5px; color:var(--ink-3); font-weight:600;}
+  .meta-item .v{font-size:14.5px; color:var(--ink); font-weight:500;}
+
+  .map-grid{
+    display:grid; grid-template-columns:repeat(auto-fit, minmax(230px,1fr));
+    gap:12px; margin-bottom:8px;
+  }
+  .map-card{
+    display:block; padding:16px 18px; border:1px solid var(--border);
+    border-radius:var(--radius-m); background:var(--surface); text-decoration:none;
+    box-shadow:var(--shadow);
+  }
+  .map-card .n{font-family:"Vazirmatn"; font-size:12.5px; color:var(--accent-ink); font-weight:700;}
+  .map-card h4{margin:4px 0 4px; font-size:16px; color:var(--ink);}
+  .map-card p{margin:0; font-size:13.5px; color:var(--ink-2);}
+
+  /* ============ SECTIONS ============ */
+  section{padding:52px 0; border-top:1px solid var(--border); scroll-margin-top:20px;}
+  section:first-of-type{border-top:none;}
+  .sec-head{max-width:var(--measure); margin-bottom:26px;}
+  .sec-num{font-family:"Vazirmatn"; font-size:13.5px; color:var(--accent-ink); font-weight:700;}
+  section h2{font-size:clamp(23px,3vw,30px); margin:6px 0 0;}
+  .prose{max-width:var(--measure);}
+  .prose p{color:var(--ink-2); font-size:15.5px;}
+  .prose h3{font-size:19px; margin:32px 0 10px; color:var(--ink);}
+  .prose h3:first-child{margin-top:0;}
+  .prose strong{color:var(--ink); font-weight:700;}
+
+  /* callouts */
+  .callout{
+    display:flex; gap:12px; padding:16px 18px; border-radius:var(--radius-m);
+    margin:18px 0 26px; max-width:var(--measure);
+    background:var(--accent-soft); border:1px solid color-mix(in srgb, var(--accent) 30%, transparent);
+  }
+  .callout .ico{flex:none; font-size:18px; line-height:1.3;}
+  .callout .body b{display:block; font-size:12.5px; color:var(--accent-ink); margin-bottom:4px; font-family:"Vazirmatn"; font-weight:700;}
+  .callout p{margin:0; font-size:14.5px; color:var(--ink); line-height:1.8;}
+  .callout.warn{background:var(--warn-bg); border-color:var(--warn-border);}
+  .callout.warn .body b{color:var(--warn-ink);}
+
+  .pullquote{
+    max-width:var(--measure); margin:24px 0; padding:22px 26px;
+    border-right:3px solid var(--accent); background:var(--surface-2);
+    border-radius:var(--radius-m) 0 0 var(--radius-m);
+  }
+  .pullquote p{
+    font-family:"Vazirmatn"; font-weight:500; font-size:18px;
+    color:var(--ink); margin:0; line-height:1.75;
+  }
+
+  /* chip row */
+  .chip-row{display:flex; flex-wrap:wrap; gap:8px; margin:18px 0 28px;}
+  .chip{
+    font-family:"IBM Plex Mono"; font-size:12.5px; padding:6px 11px;
+    background:var(--surface-2); border:1px solid var(--border); border-radius:99px;
+    color:var(--ink-2); direction:ltr; unicode-bidi:embed;
+  }
+
+  /* tables */
+  .table-wrap{overflow-x:auto; margin:18px 0 28px; border:1px solid var(--border); border-radius:var(--radius-m);}
+  table{border-collapse:collapse; width:100%; min-width:520px; font-size:14px;}
+  thead th{
+    background:var(--surface-3); color:var(--ink); text-align:right;
+    font-family:"Vazirmatn"; font-size:12.5px; font-weight:700;
+    padding:11px 14px; border-bottom:1px solid var(--border);
+    position:sticky; top:0;
+  }
+  tbody td{padding:11px 14px; border-bottom:1px solid var(--border); color:var(--ink-2); vertical-align:top;}
+  tbody tr:last-child td{border-bottom:none;}
+  tbody tr:nth-child(odd){background:color-mix(in srgb, var(--surface-2) 45%, transparent);}
+  td strong, td b{color:var(--ink);}
+  .num{font-family:"Vazirmatn"; font-weight:600; color:var(--ink);}
+
+  /* card grids */
+  .card-grid{display:grid; grid-template-columns:repeat(auto-fit,minmax(260px,1fr)); gap:14px; margin:20px 0 28px;}
+  .card{
+    padding:18px 20px; border:1px solid var(--border); border-radius:var(--radius-m);
+    background:var(--surface); box-shadow:var(--shadow);
+  }
+  .card h4{margin:0 0 8px; font-size:16px; display:flex; align-items:center; gap:8px;}
+  .card p{margin:0 0 10px; font-size:13.8px; color:var(--ink-2);}
+  .card .links{display:flex; flex-wrap:wrap; gap:10px; font-size:12.5px; font-family:"IBM Plex Mono"; direction:ltr; unicode-bidi:embed;}
+  .card .links a{color:var(--accent-ink);}
+  .card-badge{
+    font-family:"Vazirmatn"; font-size:11px; font-weight:700;
+    color:var(--accent-ink); background:var(--accent-soft);
+    padding:3px 9px; border-radius:99px; display:inline-block;
+  }
+
+  /* ============ BUSINESS MODEL CANVAS ============ */
+  .bmc{
+    display:grid; gap:8px; margin:24px 0 30px;
+    grid-template-columns:repeat(5,1fr);
+    grid-template-areas:
+      "partners activities valueprop relationships segments"
+      "partners resources  valueprop channels      segments"
+      "cost     cost       cost      revenue        revenue";
+  }
+  .bmc-cell{
+    background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-m);
+    padding:13px 14px; min-height:0;
+  }
+  .bmc-cell h5{
+    margin:0 0 8px; font-family:"Vazirmatn"; font-size:12px; font-weight:700;
+    color:var(--ink-3);
+  }
+  .bmc-cell ul{margin:0; padding-right:16px; padding-left:0; font-size:12.8px; color:var(--ink-2); line-height:1.75;}
+  .bmc-cell li{margin-bottom:5px;}
+  .bmc-cell li:last-child{margin-bottom:0;}
+  .bmc-partners{grid-area:partners;}
+  .bmc-activities{grid-area:activities;}
+  .bmc-resources{grid-area:resources;}
+  .bmc-relationships{grid-area:relationships;}
+  .bmc-channels{grid-area:channels;}
+  .bmc-segments{grid-area:segments;}
+  .bmc-cost{grid-area:cost;}
+  .bmc-revenue{grid-area:revenue;}
+  .bmc-valueprop{
+    grid-area:valueprop; background:var(--accent-soft);
+    border:1px solid color-mix(in srgb, var(--accent) 35%, transparent);
+  }
+  .bmc-valueprop h5{color:var(--accent-ink);}
+  .bmc-valueprop ul{color:var(--ink);}
+
+  @media (max-width:820px){
+    .bmc{grid-template-columns:1fr;
+      grid-template-areas:
+        "valueprop" "partners" "activities" "resources"
+        "relationships" "channels" "segments" "cost" "revenue";
+    }
+  }
+
+  /* ============ TIMELINE ============ */
+  .timeline{position:relative; margin:24px 0 30px; padding-right:28px; padding-left:0; max-width:var(--measure);}
+  .timeline::before{
+    content:""; position:absolute; right:8px; top:6px; bottom:6px; width:2px;
+    background:var(--border);
+  }
+  .tl-item{position:relative; padding-bottom:30px;}
+  .tl-item:last-child{padding-bottom:0;}
+  .tl-item::before{
+    content:""; position:absolute; right:-28px; top:2px; width:14px; height:14px;
+    border-radius:50%; background:var(--surface); border:2px solid var(--accent);
+  }
+  .tl-item.done::before{background:var(--accent);}
+  .tl-item h4{margin:0 0 4px; font-size:16.5px; display:flex; align-items:center; gap:8px; flex-wrap:wrap;}
+  .tl-item .when{font-family:"Vazirmatn"; font-size:12.5px; color:var(--ink-3); font-weight:600;}
+  .tl-item ul{margin:8px 0 0; padding-right:18px; padding-left:0; font-size:14px; color:var(--ink-2); line-height:1.8;}
+  .tl-item li{margin-bottom:4px;}
+  .status-pill{
+    font-family:"Vazirmatn"; font-size:11px; font-weight:700;
+    padding:2px 9px; border-radius:99px;
+  }
+  .status-pill.complete{background:var(--accent-soft); color:var(--accent-ink);}
+  .status-pill.next{background:var(--accent-2-soft); color:var(--accent-2);}
+
+  /* ============ CHART ============ */
+  .chart-card{
+    border:1px solid var(--border); border-radius:var(--radius-m); background:var(--surface);
+    padding:20px 22px 12px; margin:20px 0 10px; box-shadow:var(--shadow);
+  }
+  .chart-card svg{width:100%; height:auto; display:block; direction:ltr;}
+  .chart-legend{display:flex; gap:20px; flex-wrap:wrap; margin-top:10px; font-size:13px; color:var(--ink-2);}
+  .chart-legend span{display:inline-flex; align-items:center; gap:6px;}
+  .chart-legend i{width:10px;height:10px;border-radius:3px; display:inline-block;}
+
+  /* checklist */
+  .checklist{display:flex; flex-direction:column; gap:12px; margin:22px 0 10px;}
+  .check-item{
+    display:flex; gap:14px; padding:16px 18px; border:1px solid var(--warn-border);
+    background:var(--warn-bg); border-radius:var(--radius-m);
+  }
+  .check-item .num{
+    flex:none; width:26px; height:26px; border-radius:50%; background:var(--surface);
+    border:1px solid var(--warn-border); display:flex; align-items:center; justify-content:center;
+    font-family:"Vazirmatn"; font-size:13px; font-weight:700; color:var(--warn-ink);
+  }
+  .check-item h4{margin:0 0 4px; font-size:15px; color:var(--ink);}
+  .check-item p{margin:0; font-size:13.8px; color:var(--ink-2);}
+
+  footer{
+    max-width:var(--measure); padding:34px 0 10px; margin-top:10px;
+    border-top:1px solid var(--border); color:var(--ink-3); font-size:12.5px; line-height:1.9;
+  }
+  footer a{color:var(--ink-2);}
+
+  /* ============ PRINT ============ */
+  @media print{
+    .sidebar{display:none;}
+    .layout{display:block; max-width:none;}
+    .content{padding:0; max-width:none;}
+    section{border-top:1px solid #ccc; padding:16px 0;}
+    .cover{padding:0 0 20px;}
+    .map-card, .card, .chart-card, .bmc-cell{box-shadow:none;}
+    body{background:#fff; color:#111;}
+    a{color:inherit; text-decoration:underline;}
+    /* avoid breaking small, self-contained components across a page boundary —
+       never the whole section, which is too large a unit and wastes the page tail */
+    .callout, .pullquote, .card, .bmc-cell, .check-item, .tl-item, .map-card,
+    .meta-row, .chart-card, thead, tr{break-inside:avoid;}
+    h2, h3, h4{break-after:avoid;}
+    .sec-head{break-after:avoid;}
+    .bmc, .card-grid, .checklist, .timeline{break-inside:auto;}
+  }
+</style>
+
+<div class="layout" dir="rtl" lang="fa">
+  <nav class="sidebar" aria-label="فهرست مطالب">
+    <div class="brand"><span class="brand-mark" aria-hidden="true"></span>Polymer DPP · گزارش گرنت NRW</div>
+    <div class="toc-group">
+      <p class="toc-label">فهرست مطالب</p>
+      <ul class="toc" id="toc">
+        <li><a href="#cover">جلد و نقشه سند</a></li>
+        <li><a href="#exec-summary">۱ · خلاصه اجرایی</a></li>
+        <li><a href="#bmc">۲ · بوم مدل کسب‌وکار</a></li>
+        <li><a href="#grant-alignment">۳ · هم‌راستایی با گرنت NRW</a></li>
+        <li><a href="#tech-architecture">۴ · معماری فنی</a></li>
+        <li><a href="#roadmap">۵ · نقشه راه و مالی</a></li>
+        <li><a href="#checklist">چک‌لیست ارسال</a></li>
+      </ul>
+    </div>
+    <div class="side-actions">
+      <button class="btn" onclick="window.print()">🖨️&nbsp; چاپ / ذخیره به‌صورت PDF</button>
+    </div>
+    <div class="side-meta">
+      تهیه‌شده برای NRW.BANK · EFRE.NRW · گرنت‌های نوآوری منطقه‌ای<br>
+      پیش‌نویس نسخه ۱ · ترجمه فارسی ۲۰۲۶/۰۹/۱۸
+    </div>
+  </nav>
+
+  <main class="content">
+
+    <header class="cover" id="cover">
+      <div class="eyebrow"><span class="dot" aria-hidden="true"></span>پرتفوی طرح کسب‌وکار و گرنت</div>
+      <h1>پلیمر DPP — گزارش گرنت NRW</h1>
+      <p class="dek">زیرساخت پاسپورت دیجیتال محصول برای صنعت پلیمر اروپا — طرح کسب‌وکار، مدل کسب‌وکار، و مستندات هم‌راستایی با گرنت برای NRW.BANK، EFRE.NRW، و تأمین مالی منطقه‌ای اقتصاد چرخشی.</p>
+
+      <div class="meta-row">
+        <div class="meta-item"><span class="k">تهیه‌شده برای</span><span class="v">NRW.BANK · EFRE.NRW · گرنت‌های نوآوری منطقه‌ای</span></div>
+        <div class="meta-item"><span class="k">منطقه</span><span class="v">نوردراین-وستفالن، آلمان</span></div>
+        <div class="meta-item"><span class="k">وضعیت</span><span class="v">پیش‌نویس در حال کار — نسخه ۱</span></div>
+        <div class="meta-item"><span class="k">تهیه‌شده توسط</span><span class="v">رضا فرزاد، بنیان‌گذار</span></div>
+      </div>
+
+      <div class="map-grid">
+        <a class="map-card" href="#exec-summary"><span class="n">۰۱</span><h4>خلاصه اجرایی</h4><p>مسئله، پلتفرم، و اینکه چرا NRW، چرا اکنون.</p></a>
+        <a class="map-card" href="#bmc"><span class="n">۰۲</span><h4>بوم مدل کسب‌وکار</h4><p>خلق ارزش، جریان‌های درآمدی، ساختار هزینه، بازار هدف.</p></a>
+        <a class="map-card" href="#grant-alignment"><span class="n">۰۳</span><h4>هم‌راستایی با گرنت NRW</h4><p>تناسب با NRW.BANK، EFRE.NRW، و اکوسیستم RWTH Aachen.</p></a>
+        <a class="map-card" href="#tech-architecture"><span class="n">۰۴</span><h4>معماری فنی</h4><p>آنچه واقعاً زنده است: دفترکل، پورتال‌های RBAC، QR مبتنی بر GS1، تحلیل‌های ESG.</p></a>
+        <a class="map-card" href="#roadmap"><span class="n">۰۵</span><h4>نقشه راه و مالی</h4><p>فازهای تجاری‌سازی و پیش‌بینی‌های نمایشی.</p></a>
+        <a class="map-card" href="#checklist"><span class="n">✓</span><h4>چک‌لیست ارسال</h4><p>چهار نکته برای بررسی پیش از ثبت هر چیزی.</p></a>
+      </div>
+    </header>
+
+    <!-- ============ 1. EXECUTIVE SUMMARY ============ -->
+    <section id="exec-summary">
+      <div class="sec-head"><span class="sec-num">۰۱ — خلاصه اجرایی و ارزش پیشنهادی</span><h2>یک دارایی اعتماد قابل‌راستی‌آزمایی، نه یک صفحه گسترده انطباقی دیگر</h2></div>
+
+      <div class="callout">
+        <div class="ico">💡</div>
+        <div class="body"><b>نکته کلیدی</b><p>یک پلتفرم DPP واقعی و مستقر — نه صرفاً یک ایده — که الزام رو-به-رشد شفافیت اتحادیه اروپا موسوم به ESPR/PPWR را به یک دارایی اعتماد قابل‌راستی‌آزمایی برای بخش صنایع کوچک و متوسط (Mittelstand) پلیمر و شیمیایی NRW تبدیل می‌کند؛ بر پایه تغییرناپذیری رمزنگارانه و راستی‌آزمایی از طریق QR مبتنی بر استاندارد GS1.</p></div>
+      </div>
+
+      <div class="prose">
+        <h3>مسئله</h3>
+        <p>زنجیره ارزش پلیمر در اروپا در بازه‌ای کوتاه ناگزیر شده چیزهایی را اثبات کند که تا پیش از این هرگز لازم نبوده اثبات شود: میزان دقیق محتوای بازیافتی یا زیست‌پایه در یک بچ مشخص از رزین، منشأ این خوراک اولیه، ردپای کربنی آن، و اینکه آیا هر ادعای روی برچسب واقعاً قابل راستی‌آزمایی مستقل است یا صرفاً یک اظهار خوداظهاری. مقررات ESPR اتحادیه اروپا، مقررات بسته‌بندی و پسماند بسته‌بندی (PPWR)، و الزام گسترده‌تر پاسپورت دیجیتال محصول، بازاریابی پایداری از نوع «حرف ما را باور کنید» را به یک الزام سخت انطباقی با پیامدهای حقوقی تبدیل می‌کنند.</p>
+        <p>برای ترکیب‌کنندگان، بازیافت‌کنندگان و تبدیل‌کنندگان پلیمر — بخشی از صنعت که به‌شدت در کریدور شیمیایی راین-روهر و راینلند در NRW متمرکز شده — این وضعیت مسئله عملیاتی‌ای ایجاد می‌کند که صفحات گسترده و فایل‌های PDF نمی‌توانند در مقیاس بزرگ حل کنند: زنجیره حفاظت مبتنی بر توازن جرمی باید بچ‌به‌بچ ردیابی شود، گواهی‌نامه‌ها باید بر اساس یک برنامه زمانی منقضی و دوباره راستی‌آزمایی شوند، و همه این حقایق باید از طریق یک پاسپورت قابل‌اسکن با QR کد و منطبق با GS1 Digital Link در معرض دید قرار گیرند.</p>
+        <p>بیشتر پردازشگران پلیمری با اندازه متوسط — ستون فقرات Mittelstand در خوشه شیمیایی و پلاستیک NRW — نه ظرفیت مهندسی نرم‌افزار و نه کارکنان تنظیم‌مقرراتی لازم برای ساخت این زیرساخت را در اختیار دارند.</p>
+
+        <h3>آنچه ساخته‌ایم</h3>
+        <p>Polymer DPP یک پلتفرم SaaS واقعی و مستقر است — نه یک مفهوم — که به تولیدکنندگان، بازیافت‌کنندگان و ترکیب‌کنندگان پلیمر یک سامانه پاسپورت دیجیتال محصول اختصاصی ارائه می‌دهد:</p>
+        <ul>
+          <li><strong>ثبت داده مواد در سطح صنعتی</strong> — شاخص جریان مذاب مطابق ISO 1133، چگالی، استحکام کششی، درصدهای محتوای بازیافتی PCR/PIR، محتوای زیست‌پایه، و ردپای کربنی مبتنی بر PEF/LCA، همگی با دقت اعشاری دقیق.</li>
+          <li><strong>گردش‌کار اعتماد چندطرفه</strong> — تولیدکنندگان داده بچ را ثبت می‌کنند؛ ممیزان مستقل و دارای اعتبارنامه شخصی، آن را پیش از نمایش به خریدار یا مصرف‌کننده به‌صورت رسمی راستی‌آزمایی یا رد می‌کنند.</li>
+          <li><strong>تغییرناپذیری رمزنگارانه</strong> — هر رکورد بچ با SHA-256 مهروموم می‌شود، و هر تغییر وضعیت در یک دفترکل ممیزی زنجیره‌ای و فقط-افزایشی با یک تابع راستی‌آزمایی یکپارچگی زنده ثبت می‌شود.</li>
+          <li><strong>شفافیت رو-به-مصرف‌کننده و رو-به-ممیز</strong> — یک QR کد منطبق با GS1 Digital Link روی هر بچ به یک صفحه پاسپورت عمومی منتهی می‌شود، به‌همراه پورتال‌های اختصاصی و یک مجموعه کامل تحلیل ESG/انطباق.</li>
+          <li><strong>تحلیل‌های مرتبط با تنظیم‌مقررات</strong> — یک شاخص آمادگی پایداری محاسبه‌شده، ردیابی اهداف PPWR برای ۲۰۳۰/۲۰۴۰، رتبه‌بندی عملکرد تأمین‌کنندگان، و برآورد نمایشی مواجهه با مالیات پلاستیک اتحادیه اروپا.</li>
+        </ul>
+
+        <h3>ارزش پیشنهادی</h3>
+        <p><strong>برای تولیدکنندگان و بازیافت‌کنندگان:</strong> یک بار انطباقی اجتناب‌ناپذیر را به یک برگ برنده رقابتی تبدیل کنید — یک QR کد که هر ممیزی می‌تواند اسکن کند، بهتر از این است که بگویید «ما می‌گوییم رزین ما ۴۰٪ PCR دارد».</p>
+        <p><strong>برای خریداران B2B:</strong> یک منبع واحد حقیقت برای داده‌های پایداری که خود آن‌ها باید تحت الزامات CSRD/ESPR گزارش دهند.</p>
+        <p><strong>برای NRW به‌عنوان یک منطقه:</strong> یک لایه زیرساخت DPP بومی و منطبق با اتحادیه اروپا برای یکی از بزرگ‌ترین خوشه‌های صنعتی شیمیایی و پلاستیک آلمان.</p>
+
+        <h3>چرا اکنون، چرا NRW</h3>
+        <p>NRW میزبان یکی از متراکم‌ترین تجمع‌های ظرفیت شیمیایی، پردازش پلاستیک و بازیافت در اروپاست، درست در کنار یک پایگاه پژوهشی علم مواد در سطح جهانی در RWTH Aachen. قوانین اجرایی ESPR و آستانه‌های محتوای بازیافتی ۲۰۳۰ مطابق PPWR، یک مهلت سخت ایجاد می‌کنند که با تعداد کمی سال، نه دهه، سنجیده می‌شود — پنجره تبدیل‌شدن به تأمین‌کننده پیش‌فرض زیرساخت DPP در NRW اکنون باز است.</p>
+      </div>
+    </section>
+
+    <!-- ============ 2. BUSINESS MODEL CANVAS ============ -->
+    <section id="bmc">
+      <div class="sec-head"><span class="sec-num">۰۲ — بوم مدل کسب‌وکار</span><h2>خلق ارزش، درآمد، هزینه و بازار — در یک نگاه</h2></div>
+
+      <div class="callout">
+        <div class="ico">💡</div>
+        <div class="body"><b>نکته کلیدی</b><p>شش جریان درآمدی B2B بر پایه یک اشتراک SaaS چندسطحی برای تولیدکنندگان، ابتدا در خوشه متراکم پلیمر/شیمیایی NRW فروخته می‌شوند و با اجباری‌شدن انطباق ESPR/PPWR در سراسر DACH/اتحادیه اروپا گسترش می‌یابند.</p></div>
+      </div>
+
+      <div class="bmc">
+        <div class="bmc-cell bmc-partners"><h5>شرکای کلیدی</h5><ul>
+          <li>گروه‌های پژوهشی RWTH Aachen / Fraunhofer</li>
+          <li>نهادهای صدور گواهی ISCC PLUS و REDcert2</li>
+          <li>GS1 Germany (استاندارد Digital Link)</li>
+          <li>انجمن‌های صنعت شیمیایی/پلاستیک NRW</li>
+          <li>Neon (زیرساخت Postgres مدیریت‌شده)</li>
+          <li>ممیزان و شرکت‌های حسابرسی مستقل</li>
+        </ul></div>
+        <div class="bmc-cell bmc-activities"><h5>فعالیت‌های کلیدی</h5><ul>
+          <li>مهندسی پلتفرم (شِما، API، تجربه کاربری)</li>
+          <li>نگاشت تنظیم‌مقرراتی همزمان با تحول ESPR/PPWR</li>
+          <li>جذب و آموزش شبکه ممیزان</li>
+          <li>جذب تولیدکنندگان و مهاجرت داده</li>
+        </ul></div>
+        <div class="bmc-cell bmc-resources"><h5>منابع کلیدی</h5><ul>
+          <li>کدبیس (مدل داده، دفترکل، موتور QR)</li>
+          <li>تخصص دومینی تعبیه‌شده (علم پلیمر، انطباق اتحادیه اروپا، امنیت)</li>
+          <li>پایگاه‌داده تولیدی زنده و تاریخچه بچ‌های راستی‌آزمایی‌شده</li>
+          <li>روابط پایلوت با ممیزان و تولیدکنندگان</li>
+        </ul></div>
+        <div class="bmc-cell bmc-valueprop"><h5>ارزش‌های پیشنهادی</h5><ul>
+          <li>ادعاهای پایداری قابل‌راستی‌آزمایی — نه خوداظهاری</li>
+          <li>انطباق ESPR / PPWR / GS1 Digital Link به‌صورت پیش‌فرض</li>
+          <li>داده مواد با دقت صنعتی و اعشاری</li>
+          <li>تغییرناپذیری رمزنگارانه</li>
+          <li>یک سامانه برای اعتماد تولیدکننده ← ممیز ← خریدار</li>
+        </ul></div>
+        <div class="bmc-cell bmc-relationships"><h5>روابط با مشتری</h5><ul>
+          <li>فروش مستقیم B2B با پشتیبانی جذب</li>
+          <li>لینک‌های دعوت خوداتکا برای تأمین‌کنندگان</li>
+          <li>جذب اختصاصی و دقیق ممیزان</li>
+          <li>روابط بلندمدت با حساب‌ها</li>
+        </ul></div>
+        <div class="bmc-cell bmc-channels"><h5>کانال‌ها</h5><ul>
+          <li>فروش مستقیم در کریدور شیمیایی NRW</li>
+          <li>رویدادهای انجمن‌های صنعتی و خوشه‌ای</li>
+          <li>بازاریابی مشترک با نهادهای صدور گواهی</li>
+          <li>صفحه اسکن QR عمومی به‌عنوان نقطه تماس برند</li>
+        </ul></div>
+        <div class="bmc-cell bmc-segments"><h5>بخش‌های مشتری</h5><ul>
+          <li><strong>اصلی:</strong> ترکیب‌کنندگان و بازیافت‌کنندگان متوسط (۵۰ تا ۵۰۰ کارمند)، NRW/DACH</li>
+          <li><strong>ثانویه:</strong> خریداران B2B (OEMها، تبدیل‌کنندگان) نیازمند داده راستی‌آزمایی‌شده</li>
+          <li><strong>ثالث:</strong> ممیزان مستقل و ارائه‌دهندگان مرتبط با گواهی‌نامه</li>
+        </ul></div>
+        <div class="bmc-cell bmc-cost"><h5>ساختار هزینه</h5><ul>
+          <li>مهندسی و توسعه محصول (غالب، در فاز اولیه)</li>
+          <li>زیرساخت ابری (Neon، میزبانی)</li>
+          <li>تخصص انطباق و دومین (مستمر)</li>
+          <li>فروش، شراکت‌ها و موفقیت مشتری</li>
+          <li>امنیت/ممیزی و نگه‌داری گواهی‌نامه</li>
+          <li>سربار گزارش‌دهی گرنت و انطباق</li>
+        </ul></div>
+        <div class="bmc-cell bmc-revenue"><h5>جریان‌های درآمدی</h5><ul>
+          <li>① اشتراک چندسطحی تولیدکننده (اصلی)</li>
+          <li>② صدور مجوز کرسی ممیزی/راستی‌آزمایی</li>
+          <li>③ دسترسی خریدار B2B/API</li>
+          <li>④ خدمات صدور گواهی و خروجی انطباق</li>
+          <li>⑤ خدمات جذب، مهاجرت و یکپارچه‌سازی</li>
+          <li>⑥ آینده: صدور مجوز برچسب‌سفید/چندمستأجری</li>
+        </ul></div>
+      </div>
+
+      <div class="prose">
+        <h3>جریان‌های درآمدی — جزئیات</h3>
+        <p>پلتفرم حول درآمد B2B SaaS تکرارشونده و متناسب با میزان استفاده طراحی شده است، نه کارمزدهای پروژه‌ای یک‌باره؛ این نشان‌دهنده این واقعیت است که یک پاسپورت دیجیتال محصول تنها زمانی ارزش دارد که در طول عمر هر بچی که توصیف می‌کند، زنده و به‌روز بماند.</p>
+        <ul>
+          <li><strong>اشتراک چندسطحی تولیدکننده</strong> — خط اصلی درآمد، لایه‌بندی‌شده بر اساس حجم بچ و دسترسی به ویژگی‌ها (سطح پایه: ساخت پاسپورت، QR/GS1، صفحه عمومی؛ سطوح بالاتر: نسب‌شناسی، محاسبه‌گر کربن، تحلیل‌های ESG/PPWR، برآورد مالیات سبز، تولید انبوه گواهی‌نامه/برچسب).</li>
+          <li><strong>صدور مجوز کرسی ممیزی/راستی‌آزمایی</strong> — ممیزان یک دسته کاربری متمایز و دارای مسئولیت حرفه‌ای هستند، با اعتبارنامه فردی و قیمت‌گذاری جداگانه.</li>
+          <li><strong>دسترسی خریدار B2B/API</strong> — یک Buyer API پایدار و نسخه‌بندی‌شده برای OEMها و تبدیل‌کنندگانی که داده تأمین‌کننده راستی‌آزمایی‌شده را وارد سامانه ERP/CSRD خود می‌کنند، قیمت‌گذاری به ازای حساب یا حجم داده.</li>
+          <li><strong>خدمات صدور گواهی و خروجی انطباق</strong> — کارمزدهای مبتنی بر مصرف برای گواهی‌نامه‌های PDF، برگه‌های برچسب QR قابل چاپ، و کاربرگ‌های خروجی انطباق آماده ممیزی با بررسی زنده یکپارچگی زنجیره هش.</li>
+          <li><strong>خدمات جذب، مهاجرت داده و یکپارچه‌سازی</strong> — کارمزد خدمات حرفه‌ای یک‌باره برای حساب‌های بزرگ‌تر، جداگانه از کارمزد تکرارشونده SaaS قیمت‌گذاری می‌شود.</li>
+          <li><strong>(آینده) صدور مجوز برچسب‌سفید/چندمستأجری</strong> — یک خط درآمدی باارزش‌تر اما کم‌حجم‌تر پس از اثبات معماری چندنقشی در مقیاس؛ گزینه‌ای پس از MVP، نه فرض سال اول.</li>
+        </ul>
+
+        <h3>ساختار هزینه — جزئیات</h3>
+        <p>مهندسی و توسعه محصول غالب‌ترین ردیف هزینه در فاز اولیه است، در کنار زیرساخت ابری (هزینه ساختاری پایین به ازای هر پاسپورت به‌لطف معماری بدون‌حالت)، تخصص انطباق و دومین مستمر (نه یک راه‌اندازی یک‌باره، چون قوانین اجرایی ESPR/PPWR همچنان منتشر می‌شوند)، فروش و موفقیت مشتری (ریزش مشتری در این کسب‌وکار وجودی است)، بازبینی دوره‌ای امنیتی/ممیزی، و سربار گزارش‌دهی که با تأمین مالی عمومی همراه می‌شود.</p>
+
+        <h3>بازار هدف: NRW و اتحادیه اروپا</h3>
+        <p><strong>فوری:</strong> پایگاه پردازش پلیمری و شیمیایی NRW — کریدور شیمیایی راینلند و بخش بازیافت منطقه روهر — با هدف‌گیری ترکیب‌کنندگان، بازیافت‌کنندگان و تبدیل‌کنندگان (۵۰ تا ۵۰۰ کارمند) که از قبل گریدهای PCR/PIR یا زیست‌پایه تولید می‌کنند. <strong>مجاور:</strong> از آنجا که ESPR و PPWR مقررات اتحادیه اروپا هستند، هر تولیدکننده پلیمر در سراسر اتحادیه اروپا با همان مهلت روبه‌روست — NRW سر پل است (پایگاه دسترسی به RWTH Aachen، تراکم بالای مشتری)، با مسیری روشن به DACH و سپس بنلوکس/اتحادیه اروپای گسترده‌تر.</p>
+      </div>
+    </section>
+
+    <!-- ============ 3. NRW GRANT ALIGNMENT ============ -->
+    <section id="grant-alignment">
+      <div class="sec-head"><span class="sec-num">۰۳ — هم‌راستایی با گرنت NRW</span><h2>این پروژه کجا با اولویت‌های راهبردی خود NRW هم‌خوانی دارد</h2></div>
+
+      <div class="callout warn">
+        <div class="ico">⚠️</div>
+        <div class="body"><b>پیش از ثبت هر درخواستی بخوانید</b><p>نام برنامه‌ها، سقف‌ها، نرخ‌های هم‌تأمینی و مهلت‌ها بین هر فراخوان تغییر می‌کنند. هر برنامه زیر تا اوت ۲۰۲۶ با نمایه این پروژه هم‌خوانی داشته — پیش از ثبت، شرایط فعلی را روی صفحه لینک‌شده تأیید کنید.</p></div>
+      </div>
+
+      <div class="prose">
+        <h3>تناسب راهبردی</h3>
+        <p>دولت ایالتی NRW و NRW.BANK تأمین مالی خود را حول تعداد کمی اولویت ثابت سازمان‌دهی می‌کنند که این پروژه مستقیماً با آن‌ها نگاشت می‌شود: <strong>پایداری و اقتصاد چرخشی</strong> (خط Ressource.NRW دقیقاً با ردیابی PCR/PIR و زنجیره توازن جرمی هم‌خوانی دارد)؛ <strong>دیجیتالی‌سازی Mittelstand سنتی</strong> (برنامه MID دقیقاً برای تأمین مالی دیجیتالی‌سازی انطباق و زنجیره تأمین SME وجود دارد)؛ <strong>آمادگی تنظیم‌مقرراتی اتحادیه اروپا برای صنعت منطقه‌ای</strong> (کل بخش شیمیایی NRW مهلت ESPR/PPWR را با هم روبه‌رو می‌شود، منطق صریح پشت اولویت «Gründung und Digitalisierung» برنامه EFRE.NRW/JTF)؛ و <strong>انتقال پژوهش-به-بازار</strong> از طریق پایگاه علمی ایالت — معیاری که تناسب این پروژه با RWTH Aachen مستقیماً پاسخ می‌دهد.</p>
+      </div>
+
+      <h3 style="font-family:'Vazirmatn'; font-size:19px; margin:8px 0 4px;">ابزارهای تأمین مالی نامزد NRW / اتحادیه اروپا</h3>
+      <p style="color:var(--ink-2); font-size:14px; max-width:var(--measure); margin-bottom:6px;">همه، حداقل، به یک محل استقرار ثبت‌شده در NRW و آستانه‌های اندازه SME مشخص برای بهترین شرایط نیاز دارند.</p>
+
+      <div class="card-grid">
+        <div class="card">
+          <span class="card-badge">دیجیتال + پایدار</span>
+          <h4>NRW.BANK.Invest Zukunft</h4>
+          <p>محصول تأمین مالی/سرمایه‌گذاری که صراحتاً هدفش تحول دیجیتال و پایدار کسب‌وکارهاست — مستقیم‌ترین تناسب برای یک پلتفرم SaaS که ارزش پیشنهادی آن دقیقاً همین تحول است.</p>
+          <div class="links"><a href="https://www.nrwbank.de/de/foerderung/foerderprodukte/60274/nrwbank-invest-zukunft.html" target="_blank" rel="noopener">nrwbank.de ↗</a><a href="https://www.nordrhein-westfalen-foerdert.nrw/foerdermassnahmen/nrwbankinvest-zukunft-2026" target="_blank" rel="noopener">2026 program page ↗</a></div>
+        </div>
+        <div class="card">
+          <span class="card-badge">دیجیتالی‌سازی SME</span>
+          <h4>Mittelstand Innovativ &amp; Digital (MID)</h4>
+          <p>خط اصلی دیجیتالی‌سازی SME متعلق به NRW.BANK، شامل یک زیرمسیر واوچری. مرتبط هم برای این شرکت و هم به‌عنوان یک زاویه هم‌تأمینی برای مشتریان بالقوه.</p>
+          <div class="links"><a href="https://www.nrwbank.de/de/foerderung/foerderprodukte/60382/mittelstand-innovativ-und-digital-mid.html" target="_blank" rel="noopener">MID overview ↗</a><a href="https://www.nrwbank.de/de/foerderung/foerderprodukte/60348/mittelstand-innovativ--digital-mid---digitalisierung.html" target="_blank" rel="noopener">Digitalisierung Gutscheine ↗</a></div>
+        </div>
+        <div class="card">
+          <span class="card-badge">هم‌تأمین اتحادیه اروپا</span>
+          <h4>EFRE/JTF‑Programm NRW ۲۰۲۱–۲۰۲۷</h4>
+          <p>پیاده‌سازی NRW از ERDF/EFRE و صندوق انتقال عادلانه اتحادیه اروپا، با اولویت صریح «تأسیس و دیجیتالی‌سازی» — خانه طبیعی برای یک استارتاپ دیجیتال در مرحله رشد.</p>
+          <div class="links"><a href="https://www.nordrhein-westfalen-foerdert.nrw/foerdermassnahmen/efrejtf-programm-nrw-2021-2027-schwerpunkt-gruendung-und-digitalisierung-2026" target="_blank" rel="noopener">Program page ↗</a><a href="https://www.efre.nrw/en/understand/main-topics/foundation-and-digitization" target="_blank" rel="noopener">efre.nrw ↗</a></div>
+        </div>
+        <div class="card">
+          <span class="card-badge">اقتصاد چرخشی</span>
+          <h4>Ressource.NRW (۲۰۲۵–۲۰۲۶)</h4>
+          <p>برنامه اختصاصی بهره‌وری منابع/اقتصاد چرخشی از طریق EFA.NRW — مستقیم‌ترین برنامه هم‌موضوع برای پلتفرمی که کارکرد اصلی آن ردیابی PCR/PIR و شفافیت جریان مواد است.</p>
+          <div class="links"><a href="https://www.efa.nrw/fuer-unternehmen/angebote/beratung-finanzierung/foerderprogramm-ressourcenrw-2025-2026" target="_blank" rel="noopener">efa.nrw ↗</a></div>
+        </div>
+        <div class="card">
+          <span class="card-badge">مشورتی / اولین گام</span>
+          <h4>Innovationsförderagentur NRW (IN.NRW)</h4>
+          <p>نقطه هماهنگی مرکزی ایالت برای تأمین مالی نوآوری — مفید به‌عنوان یک کانال مشورتی اولین-تماس برای شناسایی بهترین فراخوان فعلی.</p>
+          <div class="links"><a href="https://www.in.nrw/" target="_blank" rel="noopener">in.nrw ↗</a></div>
+        </div>
+        <div class="card">
+          <span class="card-badge">نمای کلی</span>
+          <h4>NRW.BANK — نمای کلی تأمین مالی SME</h4>
+          <p>نمای کلی تجمیع‌شده محصولات SME از NRW.BANK برای نوآوری، دیجیتالی‌سازی و انتقال دانش‌فنی — خوب برای بررسی متقابل برنامه‌های جدیدتر یا هم‌خوان‌تر.</p>
+          <div class="links"><a href="https://www.nrwbank.de/de/unternehmen/nrw-bank-innovationspartner/foerderprogramme-kmu/" target="_blank" rel="noopener">nrwbank.de ↗</a></div>
+        </div>
+      </div>
+
+      <div class="prose">
+        <h3>هم‌افزایی با اکوسیستم RWTH Aachen</h3>
+        <p><strong>Center for Circular Economy (CCE)</strong> دانشگاه RWTH Aachen یک مرکز پژوهشی ثابت و به‌خوبی تجهیزشده است که صراحتاً حول همین حوزه سازمان‌دهی شده. (<a href="https://www.cce.rwth-aachen.de/" target="_blank" rel="noopener">cce.rwth-aachen.de ↗</a>)</p>
+      </div>
+      <div class="card-grid">
+        <div class="card"><h4>① راستی‌آزمایی فنی</h4><p>یک رابطه مشاوره‌ای با CCE به ارزیاب‌های گرنت تأییدی مستقل می‌دهد مبنی بر اینکه روش‌شناسی و شِمای داده مواد پلتفرم، عملکرد فعلی علم مواد را بازتاب می‌دهد.</p></div>
+        <div class="card"><h4>② اعتبار صنعتی از طریق تداعی</h4><p>RWTH Aachen از پیش شراکت‌های صنعتی با بازیگران بزرگ شیمیایی/مواد دارد (نظیر Covestro)، نشان می‌دهد بازیگران پرچم‌دار منطقه این اکوسیستم را جدی می‌گیرند.</p></div>
+        <div class="card"><h4>③ خط لوله استعداد و پژوهش آینده</h4><p>نزدیکی به برنامه‌های تحصیلات تکمیلی RWTH یک استدلال عملی برای استعداد است، و مبنایی محتمل برای یک درخواست پژوهشی مشترک آینده.</p></div>
+      </div>
+      <div class="callout">
+        <div class="ico">✅</div>
+        <div class="body"><b>توصیه</b><p>پیش از ثبت هر درخواستی که به این هم‌افزایی استناد می‌کند، حداقل یک رابطه مشورتی غیررسمی یا نامه حمایت با یک مخاطب مشخص در RWTH Aachen برقرار کنید — ارزیاب‌ها یک همکاری واقعی و نام‌دار را بسیار بیشتر از یک ادعای کلی نزدیکی منطقه‌ای وزن می‌دهند.</p></div>
+      </div>
+
+      <div class="prose">
+        <h3>خلاصه موضع‌گیری برای روایت درخواست</h3>
+      </div>
+      <div class="pullquote">
+        <p>«Polymer DPP زیرساخت دیجیتالی را می‌سازد که Mittelstand شیمیایی و پلاستیک NRW برای پاسخ به یک الزام شفافیت قانونی اتحادیه اروپا که از پیش در حال نزدیک‌شدن است نیاز دارد، و هزینه انطباق را به یک دارایی اعتماد قابل‌ممیزی تبدیل می‌کند — با استفاده از معماری فنی که در NRW توسعه یافته و در برابر پایگاه پژوهشی علم مواد خود منطقه اعتبارسنجی شده است.»</p>
+      </div>
+      <p class="prose" style="color:var(--ink-2); font-size:14.5px; max-width:var(--measure);">این چارچوب‌بندی را با زبان اولویت خاص هر برنامه تطبیق دهید، نه اینکه متن یکسانی به همه ارسال شود — ارزیاب‌ها بر اساس معیارهای منتشرشده متفاوتی امتیاز می‌دهند.</p>
+    </section>
+
+    <!-- ============ 4. TECHNICAL ARCHITECTURE ============ -->
+    <section id="tech-architecture">
+      <div class="sec-head"><span class="sec-num">۰۴ — خلاصه معماری فنی</span><h2>آنچه واقعاً زنده است — نوشته‌شده برای یک ارزیاب گرنت</h2></div>
+
+      <div class="callout">
+        <div class="ico">💡</div>
+        <div class="body"><b>نکته کلیدی</b><p>هر قابلیتی که در ادامه شرح داده شده امروز در کدبیس تولیدی زنده است — یک دفترکل ممیزی زنجیره‌ای رمزنگاری‌شده، QR مبتنی بر GS1 Digital Link، یک گردش‌کار اعتماد RBAC چندنقشی، و تحلیل‌های ESG آگاه از PPWR — نه یک وعده نقشه راه.</p></div>
+      </div>
+
+      <div class="chip-row">
+        <span class="chip">Next.js (App Router)</span>
+        <span class="chip">TypeScript</span>
+        <span class="chip">PostgreSQL — Neon</span>
+        <span class="chip">Prisma ORM</span>
+        <span class="chip">Prisma.Decimal precision</span>
+        <span class="chip">SHA-256 hash-chained ledger</span>
+        <span class="chip">GS1 Digital Link</span>
+        <span class="chip">@react-pdf/renderer</span>
+      </div>
+
+      <div class="prose">
+        <p>یک ارزیاب گرنت که یک پروژه دیجیتالی‌سازی یا اقتصاد چرخشی را ارزیابی می‌کند معمولاً باید به دو پرسش فراتر از «آیا این ایده منطقی است» پاسخ دهد: آیا یک سامانه واقعی و کارآمد پشت این درخواست وجود دارد، و آیا رویکرد فنی به‌قدر کافی مستحکم است که مقیاس‌پذیر باشد. این بخش مستقیماً به هر دو پاسخ می‌دهد — پلتفرم یک نمونه اولیه نیست، یک اپلیکیشن مستقر با یک پایگاه‌داده PostgreSQL زنده، مسیرهای API واقعی، و چندین پورتال کاربری کارآمد است.</p>
+
+        <h3>مدل داده پاسپورت دیجیتال محصول</h3>
+        <p>در مرکز شِما، مدل <code>PolymerPassport</code> قرار دارد — یک ردیف به ازای هر بچ فیزیکی — که GTIN، شناسه بچ، نوع و گرید پلیمر، شاخص جریان مذاب مطابق ISO 1133، چگالی، استحکام کششی، محتوای بازیافتی (با تمایز PCR/PIR)، محتوای زیست‌پایه، و یک رقم ردپای کربن راستی‌آزمایی‌شده را نگه می‌دارد. هر پاسپورت یک <code>recordHash</code> مبتنی بر SHA-256 و، پس از بازنگری، یک <code>previousRecordHash</code> دارد.</p>
+        <p>روی این هسته و از پیش زنده: <strong>نسب‌شناسی بچ</strong> (یک درخت ردیابی بالادستی بازگشتی، محدود به عمق کران‌دار)؛ <strong>محاسبه‌گر ردپای کربن</strong> که از رقم LCA راستی‌آزمایی‌شده تولیدکننده جدا نگه داشته می‌شود و همواره نمایشی برچسب‌گذاری می‌شود؛ <strong>گردش‌کار گواهی‌نامه</strong> (ISCC PLUS، ISO 14021، EN 15343، REDcert2) با چرخه عمر رسمی در-انتظار-بررسی ← راستی‌آزمایی‌شده/رد‌شده؛ و یک <strong>resolver واقعی QR مبتنی بر GS1 Digital Link</strong> با برگه برچسب قابل چاپ برای خط تولید.</p>
+
+        <h3>تغییرناپذیری رمزنگارانه و دفترکل ممیزی</h3>
+        <p>هر تغییر وضعیت مهم در همان تراکنش پایگاه‌داده تغییر خودش، در یک <code>AuditLog</code> فقط-افزایشی نوشته می‌شود. هر ورودی با SHA-256 روی فیلدهای خودش به‌علاوه هش ورودی قبلی هش می‌شود، و یک زنجیره هش سراسری به ترتیب درج تشکیل می‌دهد — همان اصل ساختاری بلاک‌چین‌ها، بدون سربار یک دفترکل توزیع‌شده. دو لایه مستقل حفاظت دنبال می‌شود: یک تابع راستی‌آزمایی یکپارچگی زنده، و یک trigger فقط-افزایشی در سطح پایگاه‌داده که هر <code>UPDATE</code> یا <code>DELETE</code> را رد می‌کند. یک رابط اختصاصی دفترکل ممیزی به مدیر اجازه می‌دهد کل مسیر زمانی را فیلتر، صفحه‌بندی و خروجی بگیرد.</p>
+
+        <h3>دسترسی مبتنی بر نقش و اعتماد چندطرفه</h3>
+        <p>یک مدل اعتماد چندطرفه واقعی، نه یک ابزار مدیریتی تک‌مستأجری: <strong>تولیدکنندگان</strong> پاسپورت‌های بچ خودشان را ایجاد و مدیریت می‌کنند؛ <strong>ممیزان مستقل</strong> هر کدام اعتبارنامه رمزنگارانه فردی دارند و ثبت‌های ارسالی را از طریق پورتال اختصاصی بررسی می‌کنند؛ <strong>خریداران B2B</strong> از طریق یک Buyer API نسخه‌بندی‌شده دسترسی دارند؛ <strong>تأمین‌کنندگان بالادستی</strong> از طریق یک گردش‌کار خوداتکا و مبتنی بر توکن دعوت می‌شوند؛ و <strong>مصرف‌کنندگان</strong> تنها داده راستی‌آزمایی‌شده و مناسب انتشار عمومی را می‌بینند — این فیلترینگ در سمت سرور اجرا می‌شود.</p>
+
+        <h3>لایه ESG، انطباق و تحلیل</h3>
+        <p>محاسبه‌شده به‌صورت تازه در هر درخواست به‌جای ذخیره‌سازی موقت: ردیابی جرم PCR/PIR و برآورد نمایشی مواجهه با مالیات پلاستیک اتحادیه اروپا؛ یک تفکیک انطباق گواهی‌نامه با هشدار انقضای زنده؛ یک شاخص آمادگی پایداری شفاف و وزن‌دار؛ ردیابی اهداف محتوای بازیافتی ۲۰۳۰/۲۰۴۰ مطابق PPWR؛ و یک داشبورد رتبه‌بندی عملکرد تأمین‌کننده. هر امتیاز محاسبه‌شده تفکیک کامل مؤلفه‌ها و وزن‌دهی خودش را نشان می‌دهد، نه صرفاً یک عدد خام.</p>
+      </div>
+
+      <div class="callout warn">
+        <div class="ico">🛠️</div>
+        <div class="body"><b>برنامه‌ریزی‌شده، هنوز ساخته نشده — برای شفافیت بیان می‌شود</b><p>احراز هویت نشست در سطح تولیدی برای کنسول تولیدکننده/مدیر (سازوکار موقت فعلی کلیدهای API مشترک به ازای هر نقش است، کافی برای یک پایلوت)؛ یک فیلد جرم بچ درجه‌یک تا شاخص‌های ESG مبتنی بر جرم هر بچی را پوشش دهند؛ و بازبینی رسمی امنیتی/نفوذ شخص ثالث پیش از مدیریت داده مشتریان پرداخت‌کننده خارجی در مقیاس.</p></div>
+      </div>
+    </section>
+
+    <!-- ============ 5. ROADMAP & FINANCIALS ============ -->
+    <section id="roadmap">
+      <div class="sec-head"><span class="sec-num">۰۵ — نقشه راه و پیش‌بینی‌های مالی</span><h2>از راستی‌آزمایی پایلوت تا گسترش DACH/اتحادیه اروپا</h2></div>
+
+      <div class="callout warn">
+        <div class="ico">⚠️</div>
+        <div class="body"><b>همه ارقام زیر جای‌گذارهای نمایشی هستند</b><p>متناسب با یک مسیر محتمل SaaS انطباقی پلیمری NRW — نه حسابرسی‌شده، نه بر پایه قراردادهای امضاشده. پیش از هر ارسال الزام‌آور، با مدل واقعی و از پایین‌به‌بالای تیم جایگزین کنید.</p></div>
+      </div>
+
+      <div class="timeline">
+        <div class="tl-item done">
+          <h4>فاز ۰ — پایه <span class="status-pill complete">تکمیل‌شده</span></h4>
+          <div class="when">از پیش تحویل شده</div>
+          <ul><li>پلتفرم اصلی زنده: مدل داده پاسپورت، دفترکل ممیزی رمزنگارانه، موتور QR/Digital Link مبتنی بر GS1، گردش‌کار گواهی‌نامه، پورتال‌های ممیز و خریدار، تحلیل‌های ESG/انطباق، ورود تأمین‌کنندگان، صفحه عمومی چندزبانه.</li></ul>
+        </div>
+        <div class="tl-item">
+          <h4>فاز ۱ — راستی‌آزمایی پایلوت <span class="status-pill next">بعدی</span></h4>
+          <div class="when">ماه‌های ۱ تا ۶</div>
+          <ul>
+            <li>ورود ۳ تا ۵ مشتری تولیدکننده پایلوت در ترکیب‌سازی، بازیافت و تبدیل</li>
+            <li>ورود یک شبکه اولیه کوچک ممیزان (۲ تا ۴ ممیز یا یک مؤسسه)</li>
+            <li>رسمی‌سازی رابطه مشاوره‌ای RWTH Aachen / CCE</li>
+            <li>تحکیم احراز هویت نشست در سطح تولیدی؛ تکمیل نخستین بازبینی امنیتی خارجی</li>
+            <li>ثبت نخستین درخواست(های) NRW.BANK / EFRE.NRW / Ressource.NRW</li>
+          </ul>
+        </div>
+        <div class="tl-item">
+          <h4>فاز ۲ — مقیاس‌پذیری منطقه‌ای</h4>
+          <div class="when">ماه‌های ۷ تا ۱۸</div>
+          <ul>
+            <li>تبدیل پایلوت‌ها به اشتراک‌های پولی؛ گسترش فروش در پایگاه Mittelstand NRW</li>
+            <li>عرضه تجاری سطح Buyer API/یکپارچه‌سازی CSRD با یک خریدار OEM/تبدیل‌کننده لنگرگاهی</li>
+            <li>تکمیل فیلد وزن بچ درجه‌یک و پوشش کامل ESG مبتنی بر جرم</li>
+            <li>رسمی‌سازی شبکه ممیزان به یک برنامه ساختارمند و آموزش‌دیده</li>
+          </ul>
+        </div>
+        <div class="tl-item">
+          <h4>فاز ۳ — گسترش DACH/اتحادیه اروپا</h4>
+          <div class="when">ماه‌های ۱۹ تا ۳۶</div>
+          <ul>
+            <li>گسترش به خوشه گسترده‌تر شیمیایی DACH با بهره‌گیری از مشتریان مرجع NRW</li>
+            <li>ارزیابی صدور مجوز برچسب‌سفید/چندمستأجری به‌عنوان بردار رشد دوم</li>
+            <li>پیگیری یک گرنت پژوهشی/انتقال فناوری دنباله‌دار بر پایه مجموعه‌داده راستی‌آزمایی‌شده پلتفرم</li>
+            <li>بازارزیابی ورود به بنلوکس/اتحادیه اروپای گسترده‌تر با لازم‌الاجرا شدن قوانین اجرایی ESPR</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="prose"><h3>خلاصه نقاط عطف</h3></div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>نقطه عطف</th><th>هدف</th><th>نشانه موفقیت</th></tr></thead>
+          <tbody>
+            <tr><td>نخستین ۳ تا ۵ مشتری تولیدکننده پایلوت زنده</td><td class="num">ماه ۳ تا ۶</td><td>بچ‌های تولید واقعی صادر شده، نه داده نمایشی</td></tr>
+            <tr><td>احراز هویت نشست + بازبینی امنیتی خارجی تکمیل‌شده</td><td class="num">ماه ۶</td><td>هیچ یافته حیاتی باز باقی نمانده</td></tr>
+            <tr><td>نخستین تبدیل‌های اشتراک پولی</td><td class="num">ماه ۶ تا ۹</td><td>دست‌کم یک پایلوت به مشتری پولی تبدیل شود</td></tr>
+            <tr><td>Buyer API زنده با دست‌کم یک خریدار لنگرگاهی</td><td class="num">ماه ۱۲ تا ۱۵</td><td>یک OEM/تبدیل‌کننده واقعی مصرف‌کننده داده راستی‌آزمایی‌شده</td></tr>
+            <tr><td>شبکه ممیزان رسمی‌سازی‌شده (دست‌کم ۵ فعال)</td><td class="num">ماه ۱۲ تا ۱۸</td><td>SLA زمان چرخش راستی‌آزمایی منتشر شده</td></tr>
+            <tr><td>گرنت از نوع NRW.BANK/EFRE.NRW تضمین‌شده</td><td class="num">ماه ۶ تا ۱۲</td><td>هم‌تأمینی اعطا شده، تعهدات گزارش‌دهی برقرار</td></tr>
+            <tr><td>حرکت فروش گسترش DACH آغاز شده</td><td class="num">ماه ۱۸ تا ۲۴</td><td>نخستین مشتری پولی خارج از NRW</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="prose"><h3>پیش‌بینی‌های مالی نمایشی</h3><p>یک ساختار ساده و شفاف: یک اشتراک ماهانه به ازای هر حساب تولیدکننده (ترکیبی در سطوح مختلف)، یک خط درآمدی کوچک‌تر به ازای هر جایگاه ممیز، و یک خط خدمات/API که هم‌زمان با بلوغ Buyer API رشد می‌کند.</p></div>
+
+      <div class="chart-card">
+        <svg viewBox="0 0 640 215" role="img" aria-labelledby="chartTitle chartDesc">
+          <title id="chartTitle">رشد نمایشی بازه حساب‌ها، سال ۱ تا ۳</title>
+          <desc id="chartDesc">حساب‌های تولیدکننده از بازه ۵ تا ۸ در سال ۱ به ۵۰ تا ۸۰ در سال ۳ رشد می‌کنند؛ جایگاه‌های ممیز از ۳ تا ۵ به ۲۵ تا ۳۵ در همان بازه رشد می‌کنند. همه ارقام نمایشی هستند.</desc>
+          <!-- gridlines -->
+          <g stroke="var(--border)" stroke-width="1">
+            <line x1="90" y1="15" x2="90" y2="196"/>
+            <line x1="222.5" y1="15" x2="222.5" y2="196"/>
+            <line x1="355" y1="15" x2="355" y2="196"/>
+            <line x1="487.5" y1="15" x2="487.5" y2="196"/>
+            <line x1="620" y1="15" x2="620" y2="196"/>
+          </g>
+          <g font-family="Vazirmatn" font-size="10.5" fill="var(--ink-3)">
+            <text x="90" y="210" text-anchor="middle">۰</text>
+            <text x="222.5" y="210" text-anchor="middle">۲۰</text>
+            <text x="355" y="210" text-anchor="middle">۴۰</text>
+            <text x="487.5" y="210" text-anchor="middle">۶۰</text>
+            <text x="620" y="210" text-anchor="middle">۸۰</text>
+          </g>
+          <!-- Year group labels -->
+          <g font-family="Vazirmatn" font-size="12.5" font-weight="700" fill="var(--ink)">
+            <text x="6" y="47">سال ۱</text>
+            <text x="6" y="113">سال ۲</text>
+            <text x="6" y="179">سال ۳</text>
+          </g>
+          <!-- Year 1 -->
+          <line x1="123.1" y1="34" x2="143" y2="34" stroke="var(--accent)" stroke-width="8" stroke-linecap="round"/>
+          <text x="149" y="38" font-family="Vazirmatn" font-size="11" font-weight="600" fill="var(--ink)">۵–۸</text>
+          <line x1="109.9" y1="60" x2="123.1" y2="60" stroke="var(--accent-2)" stroke-width="8" stroke-linecap="round"/>
+          <text x="129" y="64" font-family="Vazirmatn" font-size="11" font-weight="600" fill="var(--ink)">۳–۵</text>
+          <!-- Year 2 -->
+          <line x1="222.5" y1="100" x2="288.75" y2="100" stroke="var(--accent)" stroke-width="8" stroke-linecap="round"/>
+          <text x="294.75" y="104" font-family="Vazirmatn" font-size="11" font-weight="600" fill="var(--ink)">۲۰–۳۰</text>
+          <line x1="156.25" y1="126" x2="189.375" y2="126" stroke="var(--accent-2)" stroke-width="8" stroke-linecap="round"/>
+          <text x="195.375" y="130" font-family="Vazirmatn" font-size="11" font-weight="600" fill="var(--ink)">۱۰–۱۵</text>
+          <!-- Year 3 -->
+          <line x1="421.25" y1="166" x2="620" y2="166" stroke="var(--accent)" stroke-width="8" stroke-linecap="round"/>
+          <text x="421.25" y="156" font-family="Vazirmatn" font-size="11" font-weight="600" fill="var(--ink)">۵۰–۸۰</text>
+          <line x1="255.625" y1="192" x2="322.5" y2="192" stroke="var(--accent-2)" stroke-width="8" stroke-linecap="round"/>
+          <text x="328.5" y="196" font-family="Vazirmatn" font-size="11" font-weight="600" fill="var(--ink)">۲۵–۳۵</text>
+        </svg>
+        <div class="chart-legend">
+          <span><i style="background:var(--accent)"></i>حساب‌های تولیدکننده (بازه)</span>
+          <span><i style="background:var(--accent-2)"></i>جایگاه‌های ممیز (بازه)</span>
+        </div>
+      </div>
+      <p style="max-width:var(--measure); font-size:12.5px; color:var(--ink-3); margin:8px 0 26px;">فقط بازه‌های نمایشی — نه حسابرسی‌شده، نه بر پایه قراردادهای امضاشده. جدول نقاط عطف بالا را برای شرایط هر بازه ببینید.</p>
+
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th></th><th>سال ۱</th><th>سال ۲</th><th>سال ۳</th></tr></thead>
+          <tbody>
+            <tr><td>حساب‌های تولیدکننده پولی (پایان سال)</td><td class="num">۵ تا ۸</td><td class="num">۲۰ تا ۳۰</td><td class="num">۵۰ تا ۸۰</td></tr>
+            <tr><td>جایگاه‌های ممیز (پایان سال)</td><td class="num">۳ تا ۵</td><td class="num">۱۰ تا ۱۵</td><td class="num">۲۵ تا ۳۵</td></tr>
+            <tr><td>درآمد Buyer API / خدمات</td><td>فقط پایلوت</td><td>در حال رشد</td><td>خط تثبیت‌شده</td></tr>
+            <tr><td>محرک‌های اصلی هزینه</td><td>مهندسی، تخصص دومین، زیرساخت</td><td>+ فروش، موفقیت مشتری، بازبینی امنیتی</td><td>+ مشارکت‌ها، هزینه‌های گسترش DACH</td></tr>
+            <tr><td>نقش هم‌تأمینی گرنت</td><td>پر کردن شکاف هزینه فاز پایلوت</td><td>پشتیبانی مقیاس‌پذیری و تحکیم امنیتی</td><td>پشتیبانی پژوهش‌وتوسعه فاز گسترش</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="prose">
+        <h3>یادداشت‌های مدل‌سازی برای تیم — پیش از ارسال جایگزین کنید</h3>
+        <ul>
+          <li>سطوح اشتراک را به گفتگوهای واقعی قیمت‌گذاری پایلوت متصل کنید، نه یک حدس از بالا-به-پایین — قیمت‌گذاری B2B اینجا معمولاً بر پایه هزینه <em>عدم‌انطباق</em> مشتری تعیین می‌شود، نه یک معیار عمومی SaaS.</li>
+          <li>اقلام ساختار هزینه را به یک مدل واقعی سوخت ماهانه تبدیل کنید پیش از بیان هر رقم runway یا نیاز به گرنت — درخواست‌های NRW.BANK/EFRE.NRW معمولاً به یک تفکیک مستندشده از محل مصرف بودجه نیاز دارند.</li>
+          <li>یک مبلغ درخواستی مشخص را تنها پس از بررسی سقف فعلی و نرخ هم‌تأمینی برنامه هدف بیان کنید — هیچ عددی از این الگو را بدون آن بررسی منتقل نکنید.</li>
+          <li>در جایی که یک برنامه به پیش‌بینی ایجاد اشتغال یا اثر منطقه‌ای نیاز دارد، این ارقام را از ردیف نیروی انسانی استخراج کنید، نه یک عدد جداگانه و بی‌ارتباط.</li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- ============ SUBMISSION CHECKLIST ============ -->
+    <section id="checklist">
+      <div class="sec-head"><span class="sec-num">پیش از ارسال</span><h2>چک‌لیست ارسال و ملاحظات</h2></div>
+      <p class="prose" style="color:var(--ink-2);">چهار نکته که باید پیش از تبدیل‌شدن هر بخشی از این سند به یک درخواست الزام‌آور حل شوند، برگرفته از README خود بسته منبع.</p>
+
+      <div class="checklist">
+        <div class="check-item"><span class="num">۱</span><div><h4>پیش از ثبت، پارامترهای فعلی برنامه را تأیید کنید</h4><p>سقف‌های تأمین مالی، نرخ‌های هم‌تأمینی، مهلت‌ها و قواعد واجد شرایط بودن برنامه‌های NRW.BANK و EFRE.NRW بین هر فراخوان تغییر می‌کنند. پیش از ارسال، صفحات زنده برنامه را دوباره بررسی کنید — ارقام این سند قطعی نشده‌اند.</p></div></div>
+        <div class="check-item"><span class="num">۲</span><div><h4>پیش‌بینی‌های مالی نمایشی هستند، نه حسابرسی‌شده</h4><p>ارقام بخش ۵ باید با مدل واقعی و از پایین‌به‌بالای تیم بنیان‌گذار (هزینه نیروی انسانی، قیمت‌گذاری واقعی پایلوت، خط لوله واقعی) جایگزین شوند پیش از ارائه به‌عنوان اعداد الزام‌آور.</p></div></div>
+        <div class="check-item"><span class="num">۳</span><div><h4>هیچ ادعایی درباره گواهی‌نامه‌هایی که پلتفرم ندارد مطرح نشده</h4><p>پلتفرم از <em>ثبت داده و گردش‌کار راستی‌آزمایی</em> استانداردهای ISCC PLUS / ISO 14021 / EN 15343 پشتیبانی می‌کند — خودش یک نهاد صدور گواهی نیست. متن گرنت هرگز نباید اعتباربخشی‌ای را که محصول ندارد القا کند.</p></div></div>
+        <div class="check-item"><span class="num">۴</span><div><h4>جزئیات شخصیت حقوقی و واجد شرایط بودن جای‌نگه‌دار هستند</h4><p>شکل حقوقی شرکت، آدرس ثبت‌شده در NRW، تعداد کارکنان و وضعیت SME اطلاعات خود متقاضی هستند — بیشتر برنامه‌ها محدود به شرکت‌هایی با محل استقرار ثبت‌شده در NRW و طبقه‌بندی‌های مشخص اندازه SME هستند.</p></div></div>
+      </div>
+    </section>
+
+    <footer>
+      پلیمر DPP — پرتفوی گرنت و طرح کسب‌وکار NRW · ترجمه فارسی ۲۰۲۶/۰۹/۱۸ از بسته شش‌سندی <code>docs/grant-nrw/</code> · تهیه‌شده توسط رضا فرزاد (reza.h.farzad@gmail.com) · پیش‌نویس در حال کار — حسابرسی یا بازبینی حقوقی نشده. فایل‌های Markdown منبع در کنار این گزارش برای ویرایش و کنترل نسخه موجودند.
+    </footer>
+
+  </main>
+</div>
+
+<script>
+(function(){
+  try{
+    document.documentElement.setAttribute('dir','rtl');
+    document.documentElement.setAttribute('lang','fa');
+  }catch(e){}
+  try{
+    var links = Array.prototype.slice.call(document.querySelectorAll('.toc a'));
+    var targets = links.map(function(a){
+      var id = a.getAttribute('href').slice(1);
+      return document.getElementById(id);
+    });
+    if(!('IntersectionObserver' in window)) return;
+    var io = new IntersectionObserver(function(entries){
+      entries.forEach(function(entry){
+        if(!entry.isIntersecting) return;
+        var idx = targets.indexOf(entry.target);
+        if(idx === -1) return;
+        links.forEach(function(l){ l.classList.remove('active'); });
+        links[idx].classList.add('active');
+      });
+    }, { rootMargin: '-15% 0px -70% 0px', threshold: 0 });
+    targets.forEach(function(t){ if(t) io.observe(t); });
+  }catch(e){ /* non-fatal: nav highlighting is a convenience only */ }
+})();
+</script>

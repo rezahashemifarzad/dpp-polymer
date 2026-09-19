@@ -1,5 +1,9 @@
 # 2. Business Model Canvas
 
+> **Key takeaway:** Six B2B revenue lines anchored on a tiered manufacturer SaaS subscription, sold first into NRW's dense polymer/chemical cluster and expanded DACH/EU-wide as ESPR/PPWR compliance becomes mandatory everywhere.
+
+**In this document:** [2.1 Canvas overview](#21-canvas-overview) · [2.2 Revenue streams](#22-revenue-streams) · [2.3 Cost structure](#23-cost-structure) · [2.4 Target market: NRW and EU](#24-target-market-nrw-and-eu)
+
 ## 2.1 Canvas overview
 
 | Block | Summary |

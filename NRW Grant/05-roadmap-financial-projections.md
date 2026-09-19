@@ -1,5 +1,9 @@
 # 5. Roadmap & Financial Projections
 
+> **Key takeaway:** A three-phase path from pilot validation (Months 1–6) to DACH/EU expansion (Months 19–36). All financial figures are illustrative placeholders — replace with the team's own bottom-up model before any binding submission.
+
+**In this document:** [5.1 Commercialization roadmap](#51-commercialization-roadmap) · [5.2 Milestone summary](#52-milestone-summary-table) · [5.3 Financial projections](#53-illustrative-financial-projections)
+
 > **All figures in this section are illustrative placeholders**, sized to a plausible trajectory for an NRW-based B2B compliance SaaS serving the polymer/chemical Mittelstand. They are provided as a structural template — the shape and logic of the model — not as validated numbers. Before this section is used in a binding grant application, the founding team must replace every figure with its own bottom-up model built from actual pilot pricing, real customer conversations, and actual cost quotes (cloud hosting, headcount, compliance/legal support).
 
 ## 5.1 Commercialization roadmap

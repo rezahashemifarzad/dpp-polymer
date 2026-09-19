@@ -1,5 +1,9 @@
 # 4. Technical Architecture Summary
 
+> **Key takeaway:** Every capability described below is live in the production codebase today — a cryptographic hash-chained audit ledger, GS1 Digital Link QR, a multi-role RBAC trust workflow, and PPWR-aware ESG analytics — not a roadmap promise.
+
+**In this document:** [4.1 Why this matters](#41-why-this-matters-to-a-funding-reviewer) · [4.2 Core stack](#42-core-technology-stack) · [4.3 DPP data model](#43-the-digital-product-passport-data-model) · [4.4 Immutability & audit ledger](#44-cryptographic-immutability-and-the-audit-ledger) · [4.5 RBAC & trust model](#45-role-based-access-and-multi-party-trust) · [4.6 ESG analytics](#46-esg-compliance-and-analytics-layer) · [4.7 i18n & accessibility](#47-internationalization-and-accessibility) · [4.8 What this demonstrates](#48-what-this-demonstrates-for-a-grant-application)
+
 > Written for a grant reviewer or non-technical evaluator. It describes what is actually live in the codebase today, not a future plan — every capability named below has been implemented and delivered to the production repository. Where a capability is a near-term extension rather than already shipped, it is explicitly marked "planned."
 
 ## 4.1 Why this matters to a funding reviewer

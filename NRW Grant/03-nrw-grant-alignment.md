@@ -1,5 +1,9 @@
 # 3. NRW Grant Alignment
 
+> **Key takeaway:** Five NRW/EU funding instruments fit this project's profile today — NRW.BANK.Invest Zukunft, MID, the EFRE/JTF-Programm NRW, Ressource.NRW, and IN.NRW as an advisory first stop — plus a genuine RWTH Aachen Center for Circular Economy synergy worth formalizing before filing.
+
+**In this document:** [3.1 Strategic fit](#31-how-this-project-matches-nrws-strategic-goals) · [3.2 Candidate funding instruments](#32-candidate-nrw--eu-funding-instruments) · [3.3 RWTH Aachen synergy](#33-rwth-aachen-ecosystem-synergy) · [3.4 Positioning summary](#34-positioning-summary-for-the-application-narrative)
+
 > **Read this before filing anything.** Program names, funding ceilings, co-financing rates, application windows, and eligibility rules for NRW.BANK and EFRE.NRW-family programs are updated between calls. Every program below is named because it fits this project's profile as of August 2026, with a source link — confirm current terms on the linked page (or via NRW.BANK's advisory line / the relevant Bezirksregierung) immediately before submitting an application. Nothing in this section should be copied into a binding application as a guaranteed figure.
 
 ## 3.1 How this project matches NRW's strategic goals

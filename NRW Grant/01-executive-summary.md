@@ -1,5 +1,7 @@
 # 1. Executive Summary & Value Proposition
 
+> **Key takeaway:** A working, deployed DPP platform — not a concept — that turns the EU's incoming ESPR/PPWR transparency mandate into a verifiable trust asset for NRW's polymer and chemical Mittelstand, built on cryptographic tamper-evidence and GS1-standard QR verification.
+
 ## 1.1 The problem
 
 Europe's polymer value chain is being forced, in a short window, to prove things it has historically never had to prove: exactly how much recycled or bio-based content is in a given batch of resin, where that feedstock came from, what its carbon footprint is, and whether every claim on the label is independently verifiable rather than self-declared. The EU's Ecodesign for Sustainable Products Regulation (ESPR), the Packaging and Packaging Waste Regulation (PPWR, (EU) 2025/40), and the broader Digital Product Passport mandate turn "trust us" sustainability marketing into a hard compliance requirement with legal exposure attached — the EU's Green Claims direction explicitly targets unsubstantiated environmental claims.

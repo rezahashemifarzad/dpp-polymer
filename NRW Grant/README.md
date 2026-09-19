@@ -1,6 +1,12 @@
 # Polymer DPP — NRW Grant Documentation Package
 
+> **Key takeaway:** Five source documents covering the full business case for NRW.BANK/EFRE.NRW-type funding, plus a unified, printable executive report (`Polymer-DPP-Grant-Report.html`) that compiles all five into one polished, screen- and tablet-friendly document.
+
 This folder contains the business plan, business model, and grant-alignment documentation for the Polymer Digital Product Passport (DPP) platform, prepared for funding applications and investor/grant conversations in North Rhine-Westphalia (NRW), Germany.
+
+## Start here
+
+**`Polymer-DPP-Grant-Report.html`** — open this file in any browser for the readable version: sticky navigation, a visual Business Model Canvas, a roadmap timeline, a financial-projections chart, and a "Print / Save as PDF" button for a clean printable export. It is generated from the five Markdown files below, so if you edit one of those, regenerate the report (ask Claude) to keep it in sync.
 
 ## Contents
 
@@ -11,14 +17,14 @@ This folder contains the business plan, business model, and grant-alignment docu
 | [`03-nrw-grant-alignment.md`](./03-nrw-grant-alignment.md) | Mapping of the project to NRW/EU strategic priorities and to specific NRW funding instruments (NRW.BANK, EFRE.NRW/JTF, Ressource.NRW, RWTH Aachen ecosystem). |
 | [`04-technical-architecture-summary.md`](./04-technical-architecture-summary.md) | Plain-language technical architecture summary for grant reviewers, grounded in the actual live codebase (Prisma/Neon, Next.js, immutable audit ledger, RBAC portals, GS1 QR). |
 | [`05-roadmap-financial-projections.md`](./05-roadmap-financial-projections.md) | Commercialization roadmap, milestones, and illustrative financial projections. |
+| [`Polymer-DPP-Grant-Report.html`](./Polymer-DPP-Grant-Report.html) | The five documents above, unified into one styled, navigable, printable report. |
 
 ## How to use this package
 
-Each file is a standalone Markdown document that can be:
-
-- Pasted directly into an NRW.BANK / EFRE.NRW / regional cluster grant application form (most accept Markdown-derived plain text or PDF export).
+- Open **`Polymer-DPP-Grant-Report.html`** to read or print the whole package as one document.
+- Each Markdown file is also standalone and can be pasted directly into an NRW.BANK / EFRE.NRW / regional cluster grant application form (most accept Markdown-derived plain text or PDF export).
 - Converted to PDF or DOCX for a formal submission (the `pdf` and `docx` skills in this workspace can do this on request).
-- Used as speaker notes / source material for an investor pitch deck (see `@Product-UI-Pitch` scope in `AGENTS.md`).
+- Used as speaker notes / source material for an investor pitch deck (see `@Product-UI-Pitch` scope in `AGENTS.md`) — a pitch deck built from this same package already lives alongside it in this folder.
 
 ## Important caveats before submission
 
