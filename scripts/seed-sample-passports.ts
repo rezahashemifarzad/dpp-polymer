@@ -46,6 +46,21 @@
  * way to ISSUED (fully signed, ready to show in the public QR scan page
  * and the B2B dashboard); 2 are left at PENDING_VERIFICATION, so the
  * Auditor Portal's review queue also has live items to demo.
+ *
+ * IMPORTANT — this script talks directly to whatever database DATABASE_URL
+ * points at (see .env), which in this repo IS the real production Neon
+ * database — there is no separate local/dev database to sandbox this
+ * against. Running it from a local machine/terminal has none of Vercel's
+ * build-time System Environment Variables (VERCEL_URL etc.) available, so
+ * resolveBaseUrl() below would otherwise silently fall through to
+ * http://localhost:3000 and bake that into these six passports' persisted
+ * public links — exactly what happened the first time this script was run
+ * this way. It now refuses to run unless NEXT_PUBLIC_BASE_URL is passed
+ * explicitly, matching scripts/backfill-gs1-links.ts's own guard:
+ *
+ *   NEXT_PUBLIC_BASE_URL=https://your-real-domain.example npx tsx scripts/seed-sample-passports.ts
+ *
+ * (--allow-localhost bypasses this, for a genuine local/throwaway database.)
  */
 
 import "dotenv/config";
@@ -626,7 +641,33 @@ async function createOnePassport(spec: PassportSpec, manufacturerId: string): Pr
   }
 }
 
+function checkBaseUrlSafeToWrite(): void {
+  const allowLocalhost = process.argv.includes("--allow-localhost");
+  const resolved = resolveBaseUrl();
+  if (resolved.includes("localhost") && !allowLocalhost) {
+    console.error(
+      "Refusing to run: the resolved public base URL is " +
+        `"${resolved}" (NEXT_PUBLIC_BASE_URL is not set, and no VERCEL_* ` +
+        "build env vars are present in this shell — expected when running " +
+        "locally). This script writes directly to whatever DATABASE_URL " +
+        "points at, which is the real production database in this repo — " +
+        "running it like this would bake localhost into every generated " +
+        "passport's public QR/verification link, exactly as happened " +
+        "before. Re-run as:\n" +
+        "  NEXT_PUBLIC_BASE_URL=https://your-real-domain.example npx tsx scripts/seed-sample-passports.ts\n" +
+        "or pass --allow-localhost if you really are pointed at a throwaway/local database."
+    );
+    process.exitCode = 1;
+    throw new Error("Aborted: unsafe base URL for a production database write.");
+  }
+  if (resolved.includes("localhost") && allowLocalhost) {
+    console.warn(`--allow-localhost set — proceeding with base URL "${resolved}" anyway.\n`);
+  }
+}
+
 async function main() {
+  checkBaseUrlSafeToWrite();
+
   console.log("Seeding sample polymer passports for pilot demonstrations...\n");
   const manufacturerIds = await upsertManufacturers();
 
