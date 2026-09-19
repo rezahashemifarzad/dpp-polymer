@@ -97,12 +97,25 @@ function hashRecord(data: Record<string, unknown>): string {
 
 // ----------------------------------------------------------------------------
 // Duplicated from lib/qr.ts's buildGs1VerificationUrl/deriveVerificationToken.
+// This script runs outside the Next.js build (no next.config.ts env
+// injection applies here), so it applies the same VERCEL_* fallback chain
+// next.config.ts now uses for the live app — see that file's own comment
+// for the full rationale. Only matters if this script is ever run in a
+// Vercel build context; for a normal local `npx tsx` run with no VERCEL_*
+// vars set, set NEXT_PUBLIC_BASE_URL yourself first if you want these
+// sample passports' links to point somewhere other than localhost.
 // ----------------------------------------------------------------------------
 function deriveVerificationToken(recordHash: string): string {
   return recordHash.slice(0, 16);
 }
+function resolveBaseUrl(): string {
+  if (process.env.NEXT_PUBLIC_BASE_URL) return process.env.NEXT_PUBLIC_BASE_URL.replace(/\/+$/, "");
+  if (process.env.VERCEL_PROJECT_PRODUCTION_URL) return `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`;
+  if (process.env.VERCEL_URL) return `https://${process.env.VERCEL_URL}`;
+  return "http://localhost:3000";
+}
 function buildGs1VerificationUrl(gtin: string, batchId: string, recordHash: string): { url: string; path: string } {
-  const baseUrl = (process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000").replace(/\/+$/, "");
+  const baseUrl = resolveBaseUrl();
   const path = `/01/${gtin}/21/${encodeURIComponent(batchId)}`;
   const url = `${baseUrl}${path}?v=${deriveVerificationToken(recordHash)}`;
   return { url, path };
