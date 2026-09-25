@@ -37,6 +37,7 @@ import {
   BadgeCheck,
   FileBadge,
   LayoutGrid,
+  ArrowLeft,
 } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 import { useToast } from "@/lib/hooks/use-toast";
@@ -138,6 +139,21 @@ interface BatchDetailsModalProps {
     batchId: string,
     input: { recyclabilityGrade?: string; pfasCompliant?: boolean; pfasConcentrationPpb?: number }
   ) => Promise<unknown>;
+  // Bug fix — "opening a passport management/edit view from the admin
+  // panel still traps the user, with no top navigation bar or 'Back to
+  // Admin Console' button." This modal renders `fixed inset-0 z-50`,
+  // covering the entire viewport including SiteNav (which sits behind it
+  // in the DOM/stacking order) — so while the small "X" in the corner did
+  // technically close it, there was no persistent, clearly-labeled nav
+  // affordance the way every other admin screen has. Same
+  // app/page.tsx-vs-app/admin/page.tsx shared-component split as
+  // QrCodeModal (see that file's own `viewedFromAdmin` prop for the
+  // established convention this mirrors): true only from the admin call
+  // site, so Home's copy of this modal is unchanged. When true, renders a
+  // slim top bar with an explicit "Back to Admin Console" action (calls
+  // onClose — there's no separate route to navigate to; this modal IS the
+  // admin passport management view) above the existing content.
+  viewedFromAdmin?: boolean;
 }
 
 export function BatchDetailsModal({
@@ -150,6 +166,7 @@ export function BatchDetailsModal({
   onAddChainOfCustody,
   onDeclareSvhc,
   onDeclarePpwr,
+  viewedFromAdmin,
 }: BatchDetailsModalProps) {
   const { push } = useToast();
 
@@ -288,6 +305,20 @@ export function BatchDetailsModal({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-xl overflow-y-auto">
       <div className="bg-slate-900 border border-slate-800 w-full max-w-2xl rounded-3xl p-6 relative shadow-2xl my-8">
+        {/* Bug fix — persistent, clearly-labeled return path for the admin
+            passport management/edit view (see viewedFromAdmin's own
+            comment on BatchDetailsModalProps). Placed as its own bar above
+            the title, not just relying on the small "X" in the corner. */}
+        {viewedFromAdmin && (
+          <button
+            onClick={onClose}
+            className="flex items-center gap-1.5 text-xs font-semibold text-emerald-400 hover:text-emerald-300 bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/20 px-3 py-1.5 rounded-lg transition-colors mb-4 -mt-1"
+          >
+            <ArrowLeft className="w-3.5 h-3.5" />
+            Back to Admin Console
+          </button>
+        )}
+
         <button
           onClick={onClose}
           className="absolute right-4 top-4 text-slate-400 hover:text-white p-1.5 rounded-xl bg-slate-800"

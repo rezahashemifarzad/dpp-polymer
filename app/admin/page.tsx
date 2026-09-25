@@ -565,6 +565,11 @@ function AdminDashboardInner() {
         onAddChainOfCustody={addChainOfCustodyRecord}
         onDeclareSvhc={declareSvhcStatus}
         onDeclarePpwr={declarePpwrCompliance}
+        // Bug fix — see batch-details-modal.tsx's own comment on this
+        // prop: this is the admin call site, so the modal shows a
+        // persistent "Back to Admin Console" bar, same convention as
+        // QrCodeModal's viewedFromAdmin just above.
+        viewedFromAdmin
       />
 
       {/* Sprint 2.2 — single-batch QR preview/download (this page had none
