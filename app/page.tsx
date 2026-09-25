@@ -389,7 +389,15 @@ function CompletePolymerDPPInner() {
           below) is desktop-unchanged (`hidden md:flex`) plus a new
           `md:hidden` horizontally-scrollable mirror so phone users can
           still reach every tab instead of losing them outright. */}
-      <header className="border-b border-slate-800/80 bg-[#070c18]/90 backdrop-blur-2xl sticky top-0 z-50">
+      {/* Bug fix — this header was `sticky top-0 z-50`, which collided
+          with SiteNav.tsx once THAT was also made sticky (see its own
+          comment): both would try to stick at the same y=0 viewport
+          position. Offset to `top-14` (SiteNav's fixed h-14 row height)
+          so this header sticks directly beneath SiteNav instead of
+          fighting it for the same spot, and dropped to z-40 (below
+          SiteNav's z-50) to match the same layering every other
+          page-level sticky header in this app now uses. */}
+      <header className="border-b border-slate-800/80 bg-[#070c18]/90 backdrop-blur-2xl sticky top-14 z-40">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 min-h-16 py-3 flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
 
           {/* Logo */}

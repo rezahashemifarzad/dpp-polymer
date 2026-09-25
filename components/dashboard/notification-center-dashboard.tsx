@@ -375,7 +375,11 @@ export function NotificationCenterDashboard({ initialSummary, initialWebhooks, i
 
   return (
     <div className="min-h-screen bg-[#020617] text-slate-100 font-sans overflow-x-hidden">
-      <header className="border-b border-slate-800/80 bg-[#070c18]/90 backdrop-blur-2xl sticky top-0 z-40">
+      {/* Bug fix — top offset bumped from 0 to 5.5rem (SiteNav's 3.5rem +
+          the admin sign-out bar's 2rem — see app/admin/layout.tsx's own
+          comment) now that both of those are sticky too; top-0 here would
+          have made this header fight them for the same viewport position. */}
+      <header className="border-b border-slate-800/80 bg-[#070c18]/90 backdrop-blur-2xl sticky top-[5.5rem] z-40">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 min-h-16 py-3 flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
           <div className="flex items-center gap-4 min-w-0">
             <Link

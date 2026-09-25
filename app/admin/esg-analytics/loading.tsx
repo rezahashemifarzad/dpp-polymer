@@ -29,7 +29,10 @@ function KpiCardSkeleton() {
 export default function EsgAnalyticsLoading() {
   return (
     <div className="min-h-screen bg-[#020617] text-slate-100 font-sans overflow-x-hidden animate-pulse">
-      <header className="border-b border-slate-800/80 bg-[#070c18]/90 backdrop-blur-2xl sticky top-0 z-40">
+      {/* Bug fix — same top-offset fix as EsgAnalyticsDashboard's real
+          header (see that file's own comment); this skeleton mirrors its
+          layout, so it needs the same 5.5rem offset. */}
+      <header className="border-b border-slate-800/80 bg-[#070c18]/90 backdrop-blur-2xl sticky top-[5.5rem] z-40">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 min-h-16 py-3 flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
           <div className="flex items-center gap-4 min-w-0">
             <div className="h-9 w-32 bg-slate-800 rounded-lg shrink-0" />

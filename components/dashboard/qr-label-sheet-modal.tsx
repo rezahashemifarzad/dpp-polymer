@@ -125,7 +125,14 @@ export function QrLabelSheetModal({ open, onClose, passports }: QrLabelSheetModa
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-xl overflow-y-auto">
+    // This modal already followed the "capped-height card + internal
+    // overflow-y-auto region" pattern (see the batch list div below) —
+    // the only change here is dropping the backdrop's own overflow-y-auto,
+    // which was redundant with (and, on short viewports, could compete
+    // with) the card's own max-h-[85vh]/flex-1 scroll region. Same fix
+    // applied to batch-details-modal.tsx and create-passport-modal.tsx —
+    // see those files' own comments.
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-xl">
       <div className="bg-slate-900 border border-slate-800 w-full max-w-2xl rounded-3xl p-6 relative shadow-2xl my-8 flex flex-col max-h-[85vh]">
         <button
           onClick={onClose}

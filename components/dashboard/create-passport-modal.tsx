@@ -209,21 +209,30 @@ export function CreatePassportModal({ open, onClose, onCreated, onCreate }: Crea
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-xl overflow-y-auto">
-      <div className="bg-slate-900 border border-slate-800 w-full max-w-2xl rounded-3xl p-6 relative shadow-2xl my-8">
-        <button
-          onClick={onClose}
-          className="absolute right-4 top-4 text-slate-400 hover:text-white p-1.5 rounded-xl bg-slate-800"
-          aria-label="Close"
-        >
-          <X className="w-4 h-4" />
-        </button>
+    // Bug fix — "modal content often exceeds the viewport height; the top
+    // nav/back button isn't reachable without manual scrolling." Same fix
+    // as batch-details-modal.tsx's own comment on this pattern: the
+    // backdrop no longer scrolls; the card is a flex column capped at 90%
+    // viewport height with a `shrink-0` header (title + close) that never
+    // scrolls, and a separate `overflow-y-auto` body for the (long) form.
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-xl">
+      <div className="bg-slate-900 border border-slate-800 w-full max-w-2xl rounded-3xl shadow-2xl flex flex-col max-h-[90vh] overflow-hidden">
+        <div className="shrink-0 relative px-6 pt-6 pb-4 border-b border-slate-800">
+          <button
+            onClick={onClose}
+            className="absolute right-4 top-4 text-slate-400 hover:text-white p-1.5 rounded-xl bg-slate-800"
+            aria-label="Close"
+          >
+            <X className="w-4 h-4" />
+          </button>
 
-        <h3 className="text-lg font-bold text-white mb-1">Issue New Polymer Passport</h3>
-        <p className="text-xs text-slate-400 mb-4 font-mono">
-          Persists to Neon via POST /api/passports. New records start as PENDING_VERIFICATION.
-        </p>
+          <h3 className="text-lg font-bold text-white mb-1">Issue New Polymer Passport</h3>
+          <p className="text-xs text-slate-400 font-mono">
+            Persists to Neon via POST /api/passports. New records start as PENDING_VERIFICATION.
+          </p>
+        </div>
 
+        <div className="flex-1 overflow-y-auto px-6 py-4">
         {errorEntries.length > 0 && (
           <div className="mb-4 p-3 bg-red-500/10 border border-red-500/30 rounded-xl text-xs font-mono">
             <div className="flex items-center gap-2 text-red-300 font-bold mb-2">
@@ -478,6 +487,7 @@ export function CreatePassportModal({ open, onClose, onCreated, onCreate }: Crea
             </button>
           </div>
         </form>
+        </div>
       </div>
     </div>
   );

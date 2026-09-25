@@ -153,7 +153,16 @@ export default function SiteNav() {
 
   return (
     <>
-    <header className="relative z-50 bg-slate-950 border-b border-slate-800">
+    {/* Bug fix — "top navigation toolbar isn't fixed/sticky, so scrolling
+        a long admin page or a tall modal traps the user away from the
+        Admin Console / Home shortcuts." This header was `relative`, which
+        scrolls away with the page like any other block element. `sticky
+        top-0` pins it to the top of the viewport on every screen size
+        (mobile included — the responsive behavior below is unaffected,
+        this only changes whether the bar scrolls with the page). z-50 is
+        unchanged from before, so this still sits above page content and
+        below nothing else that mattered at that layer. */}
+    <header className="sticky top-0 z-50 bg-slate-950 border-b border-slate-800">
       <div className="px-4 sm:px-6 h-14 flex items-center justify-between gap-2 sm:gap-4">
         <Link
           href="/"

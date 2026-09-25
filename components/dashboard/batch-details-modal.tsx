@@ -303,35 +303,52 @@ export function BatchDetailsModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-xl overflow-y-auto">
-      <div className="bg-slate-900 border border-slate-800 w-full max-w-2xl rounded-3xl p-6 relative shadow-2xl my-8">
-        {/* Bug fix — persistent, clearly-labeled return path for the admin
-            passport management/edit view (see viewedFromAdmin's own
-            comment on BatchDetailsModalProps). Placed as its own bar above
-            the title, not just relying on the small "X" in the corner. */}
-        {viewedFromAdmin && (
+    // Bug fix — "batch management modal content often exceeds the
+    // viewport height; the top nav / back button isn't reachable without
+    // manual scrolling." Previously this backdrop itself scrolled
+    // (overflow-y-auto here, with the card just centered inline via
+    // `my-8`), so the header — including the "Back to Admin Console" bar
+    // added for the earlier "trapped" fix — scrolled away with the rest
+    // of the content on a form this long (6 panels). Fixed below: the
+    // backdrop no longer scrolls; the card itself is a flex column capped
+    // at 90% viewport height, with a `shrink-0` header (title + back/close
+    // buttons) that never scrolls and a separate `overflow-y-auto` body
+    // for everything else — "controlled max-height on the content
+    // container," not the whole window overflowing the screen.
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-xl">
+      <div className="bg-slate-900 border border-slate-800 w-full max-w-2xl rounded-3xl shadow-2xl flex flex-col max-h-[90vh] overflow-hidden">
+        <div className="shrink-0 relative px-6 pt-6 pb-4 border-b border-slate-800">
+          {/* Bug fix — persistent, clearly-labeled return path for the admin
+              passport management/edit view (see viewedFromAdmin's own
+              comment on BatchDetailsModalProps). Placed as its own bar above
+              the title, not just relying on the small "X" in the corner.
+              Now lives in the non-scrolling header, so it stays reachable
+              no matter how far the body below is scrolled. */}
+          {viewedFromAdmin && (
+            <button
+              onClick={onClose}
+              className="flex items-center gap-1.5 text-xs font-semibold text-emerald-400 hover:text-emerald-300 bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/20 px-3 py-1.5 rounded-lg transition-colors mb-4 -mt-1"
+            >
+              <ArrowLeft className="w-3.5 h-3.5" />
+              Back to Admin Console
+            </button>
+          )}
+
           <button
             onClick={onClose}
-            className="flex items-center gap-1.5 text-xs font-semibold text-emerald-400 hover:text-emerald-300 bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/20 px-3 py-1.5 rounded-lg transition-colors mb-4 -mt-1"
+            className="absolute right-4 top-4 text-slate-400 hover:text-white p-1.5 rounded-xl bg-slate-800"
+            aria-label="Close"
           >
-            <ArrowLeft className="w-3.5 h-3.5" />
-            Back to Admin Console
+            <X className="w-4 h-4" />
           </button>
-        )}
 
-        <button
-          onClick={onClose}
-          className="absolute right-4 top-4 text-slate-400 hover:text-white p-1.5 rounded-xl bg-slate-800"
-          aria-label="Close"
-        >
-          <X className="w-4 h-4" />
-        </button>
+          <h3 className="text-lg font-bold text-white mb-1">Manage Batch — {passport.batchId}</h3>
+          <p className="text-xs text-slate-400 font-mono">
+            Supply-chain genealogy and an illustrative Scope 1/2/3 carbon footprint estimate for this batch.
+          </p>
+        </div>
 
-        <h3 className="text-lg font-bold text-white mb-1">Manage Batch — {passport.batchId}</h3>
-        <p className="text-xs text-slate-400 mb-4 font-mono">
-          Supply-chain genealogy and an illustrative Scope 1/2/3 carbon footprint estimate for this batch.
-        </p>
-
+        <div className="flex-1 overflow-y-auto px-6 py-4">
         {/* Certificate & QR panel — Phase 6 (Batch Certificate & Dynamic QR
             Generator Suite). This is the ONE insertion point shared by both
             app/page.tsx's Material Ledger tab and app/admin/page.tsx (both
@@ -692,6 +709,7 @@ export function BatchDetailsModal({
               {addingCoc ? "Adding..." : "Add Chain-of-Custody Tier"}
             </button>
           </form>
+        </div>
         </div>
       </div>
     </div>
