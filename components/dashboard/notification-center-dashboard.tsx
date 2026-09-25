@@ -1,5 +1,10 @@
 "use client";
 
+// FIX (round 4 — language selector didn't translate admin pages): this
+// dashboard's own header (title + subtitle) translated via
+// lib/i18n/app-dictionary.ts — see that file's banner for scope.
+import { useLanguage } from "@/lib/hooks/use-language";
+
 /**
  * components/dashboard/notification-center-dashboard.tsx
  * -----------------------------------------------------------------------
@@ -187,6 +192,7 @@ function ChannelBadge({ channel }: { channel: NotificationChannel }) {
 
 export function NotificationCenterDashboard({ initialSummary, initialWebhooks, initialSettings }: NotificationCenterDashboardProps) {
   const { push } = useToast();
+  const { t } = useLanguage();
 
   const [summary, setSummary] = useState(initialSummary);
   const [webhooks, setWebhooks] = useState(initialWebhooks);
@@ -382,10 +388,10 @@ export function NotificationCenterDashboard({ initialSummary, initialWebhooks, i
             <div className="min-w-0">
               <h1 className="text-base font-bold text-white tracking-tight flex items-center gap-2">
                 <Bell className="w-4 h-4 text-emerald-400 shrink-0" />
-                Notifications &amp; Webhooks
+                {t("notifications.title")}
               </h1>
               <p className="text-[11px] text-slate-400 font-mono">
-                Automated compliance alerts, email notifications, and outbound webhook integrations
+                {t("notifications.subtitle")}
               </p>
             </div>
           </div>

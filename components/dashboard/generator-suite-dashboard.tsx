@@ -1,5 +1,10 @@
 "use client";
 
+// FIX (round 4 — language selector didn't translate admin pages): this
+// dashboard's own header (title + subtitle) translated via
+// lib/i18n/app-dictionary.ts — see that file's banner for scope.
+import { useLanguage } from "@/lib/hooks/use-language";
+
 /**
  * components/dashboard/generator-suite-dashboard.tsx
  * -----------------------------------------------------------------------
@@ -95,6 +100,7 @@ function triggerBlobDownload(blob: Blob, filename: string) {
 }
 
 export function GeneratorSuiteDashboard() {
+  const { t } = useLanguage();
   const { data: passports, loading } = usePassports();
   const { push } = useToast();
   const searchParams = useSearchParams();
@@ -218,10 +224,10 @@ export function GeneratorSuiteDashboard() {
             <div className="min-w-0">
               <h1 className="text-base font-bold text-white tracking-tight flex items-center gap-2">
                 <LayoutGrid className="w-4 h-4 text-emerald-400 shrink-0" />
-                Batch Certificate &amp; QR Generator Suite
+                {t("generator.title")}
               </h1>
               <p className="text-[11px] text-slate-400 font-mono">
-                Preview, customize, and print compliance certificates and factory label sheets
+                {t("generator.subtitle")}
               </p>
             </div>
           </div>

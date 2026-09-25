@@ -25,6 +25,7 @@
  */
 
 import { AccessControlDashboard } from "@/components/dashboard/access-control/access-control-dashboard";
+import { AccountsPageHeader } from "@/components/dashboard/access-control/accounts-page-header";
 import { ToastProvider } from "@/lib/hooks/use-toast";
 
 export const dynamic = "force-dynamic";
@@ -34,14 +35,7 @@ export default function AccountsPage() {
     <ToastProvider>
       <div className="min-h-screen bg-slate-950 text-white p-6 md:p-8">
         <div className="max-w-7xl mx-auto">
-          <div className="mb-8">
-            <h1 className="text-xl font-bold tracking-wide">Access Control — Auditor &amp; Buyer Accounts</h1>
-            <p className="text-xs text-slate-400 mt-1">
-              Provision, deactivate, and manage credentials for Auditor and Client (buyer) accounts — the same
-              capability as scripts/create-auditor.ts / scripts/create-client.ts and their companion password/rotation
-              scripts, from the admin console instead of a terminal.
-            </p>
-          </div>
+          <AccountsPageHeader />
           <AccessControlDashboard />
         </div>
       </div>

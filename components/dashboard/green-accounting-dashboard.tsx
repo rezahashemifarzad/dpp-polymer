@@ -1,5 +1,10 @@
 "use client";
 
+// FIX (round 4 — language selector didn't translate admin pages): this
+// dashboard's own header (title + subtitle) translated via
+// lib/i18n/app-dictionary.ts — see that file's banner for scope.
+import { useLanguage } from "@/lib/hooks/use-language";
+
 /**
  * components/dashboard/green-accounting-dashboard.tsx
  * -----------------------------------------------------------------------
@@ -697,6 +702,7 @@ export function GreenAccountingDashboard({
   taxParameters: TaxParameterSummary[];
   trendForecast: GreenTaxTrendForecastSummary;
 }) {
+  const { t } = useLanguage();
   const router = useRouter();
   const [refreshing, setRefreshing] = useState(false);
   const [pdfExporting, setPdfExporting] = useState(false);
@@ -762,8 +768,8 @@ export function GreenAccountingDashboard({
               Admin Console
             </Link>
             <div className="min-w-0">
-              <h1 className="text-base font-bold text-white tracking-tight">Green Accounting &amp; Plastic Tax</h1>
-              <p className="text-[11px] text-slate-400 font-mono">EU Plastic Packaging Tax Tracker</p>
+              <h1 className="text-base font-bold text-white tracking-tight">{t("greenAccounting.title")}</h1>
+              <p className="text-[11px] text-slate-400 font-mono">{t("greenAccounting.subtitle")}</p>
             </div>
           </div>
           <div className="flex flex-wrap items-center gap-2">

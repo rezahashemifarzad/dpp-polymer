@@ -52,6 +52,13 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { ToastProvider, useToast } from "@/lib/hooks/use-toast";
+// FIX (round 4 — language selector didn't translate admin pages): this
+// page's own header (title/subtitle + "Material Ledger & Active
+// Passports" section title) is the first text a user sees after
+// switching languages, so it's wired to lib/i18n/app-dictionary.ts via
+// t() below — see that file's own banner for the exact, deliberately
+// bounded scope (page headers, not every table/button in the ledger).
+import { useLanguage } from "@/lib/hooks/use-language";
 import { usePassports, type ApiPassport } from "@/lib/hooks/use-passports";
 import { CreatePassportModal } from "@/components/dashboard/create-passport-modal";
 import { BatchDetailsModal } from "@/components/dashboard/batch-details-modal";
@@ -94,6 +101,7 @@ function AdminDashboardInner() {
     declarePpwrCompliance,
   } = usePassports();
   const { push } = useToast();
+  const { t } = useLanguage();
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [manageTarget, setManageTarget] = useState<ApiPassport | null>(null);
   // Sprint 2.3 (Enterprise Compliance Reporting & PDF/Excel Export Module)
@@ -167,8 +175,8 @@ function AdminDashboardInner() {
             <ShieldCheck className="w-6 h-6" />
           </div>
           <div className="min-w-0">
-            <h1 className="text-xl font-bold tracking-wide">DPP Industrial Admin Console</h1>
-            <p className="text-xs text-slate-400">Compounder &amp; Material Lifecycle Management (ESPR Compliance)</p>
+            <h1 className="text-xl font-bold tracking-wide">{t("admin.title")}</h1>
+            <p className="text-xs text-slate-400">{t("admin.subtitle")}</p>
           </div>
         </div>
 
@@ -351,7 +359,7 @@ function AdminDashboardInner() {
             <div className="min-w-0">
               <h3 className="text-base font-semibold flex items-center gap-2">
                 <Layers className="w-5 h-5 text-emerald-400" />
-                Material Ledger &amp; Active Passports
+                {t("admin.ledgerTitle")}
               </h3>
               <p className="text-xs text-slate-400 mt-1">Live data records synchronized with Neon DB</p>
             </div>
@@ -567,6 +575,10 @@ function AdminDashboardInner() {
         batchId={qrTarget?.batchId ?? ""}
         label={qrTarget?.grade ?? ""}
         qrUrl={qrTarget?.qrCodePayloadUrl ?? null}
+        // Bug fix — see qr-code-modal.tsx's own comment on this prop: this
+        // is the admin call site, so its "Open Public Verification Page"
+        // link also gets the back-to-admin flag, same as the "View" link.
+        viewedFromAdmin
         details={
           qrTarget
             ? [

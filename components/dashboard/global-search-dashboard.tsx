@@ -1,5 +1,10 @@
 "use client";
 
+// FIX (round 4 — language selector didn't translate admin pages): this
+// dashboard's own header (title + subtitle) translated via
+// lib/i18n/app-dictionary.ts — see that file's banner for scope.
+import { useLanguage } from "@/lib/hooks/use-language";
+
 /**
  * components/dashboard/global-search-dashboard.tsx
  * -----------------------------------------------------------------------
@@ -152,6 +157,7 @@ export function GlobalSearchDashboard({
   initialResult: GlobalSearchResult;
   initialQuery: string;
 }) {
+  const { t } = useLanguage();
   const router = useRouter();
   const [query, setQuery] = useState(initialQuery);
   const [result, setResult] = useState<GlobalSearchResult>(initialResult);
@@ -286,9 +292,9 @@ export function GlobalSearchDashboard({
             <div className="min-w-0">
               <h1 className="text-base font-bold text-white tracking-tight flex items-center gap-1.5">
                 <Search className="w-4 h-4 text-cyan-400" />
-                Global Search &amp; Filtering
+                {t("search.title")}
               </h1>
-              <p className="text-[11px] text-slate-400 font-mono">Batches · Certificates · Suppliers · Audit Log — all at once</p>
+              <p className="text-[11px] text-slate-400 font-mono">{t("search.subtitle")}</p>
             </div>
           </div>
           <span className="text-[10px] text-slate-500 font-mono hidden md:inline">{result.totalCount} total match(es)</span>

@@ -1,5 +1,10 @@
 "use client";
 
+// FIX (round 4 — language selector didn't translate admin pages): this
+// dashboard's own header (title + subtitle) translated via
+// lib/i18n/app-dictionary.ts — see that file's banner for scope.
+import { useLanguage } from "@/lib/hooks/use-language";
+
 /**
  * components/dashboard/audit-log-dashboard.tsx
  * -----------------------------------------------------------------------
@@ -169,6 +174,7 @@ export function AuditLogDashboard({
   initialResult: AuditLogListResult;
   initialFilterOptions: AuditLogFilterOptions;
 }) {
+  const { t } = useLanguage();
   const [result, setResult] = useState<AuditLogListResult>(initialResult);
   // Fixed for the lifetime of this dashboard (there's no page-size
   // selector) — captured once from the SSR-provided initial page so
@@ -302,8 +308,8 @@ export function AuditLogDashboard({
               Admin Console
             </Link>
             <div className="min-w-0">
-              <h1 className="text-base font-bold text-white tracking-tight">Audit Log &amp; Compliance Ledger</h1>
-              <p className="text-[11px] text-slate-400 font-mono">Immutable, hash-chained record of every platform action</p>
+              <h1 className="text-base font-bold text-white tracking-tight">{t("audit.title")}</h1>
+              <p className="text-[11px] text-slate-400 font-mono">{t("audit.subtitle")}</p>
             </div>
           </div>
           <div className="flex flex-wrap items-center gap-2">

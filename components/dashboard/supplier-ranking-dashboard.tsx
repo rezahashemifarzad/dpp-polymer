@@ -1,5 +1,10 @@
 "use client";
 
+// FIX (round 4 — language selector didn't translate admin pages): this
+// dashboard's own header (title + subtitle) translated via
+// lib/i18n/app-dictionary.ts — see that file's banner for scope.
+import { useLanguage } from "@/lib/hooks/use-language";
+
 /**
  * components/dashboard/supplier-ranking-dashboard.tsx
  * -----------------------------------------------------------------------
@@ -288,6 +293,7 @@ function SupplierDetailRow({ supplier }: { supplier: SupplierScorecard }) {
 }
 
 export function SupplierRankingDashboard({ summary }: { summary: SupplierAnalyticsSummary }) {
+  const { t } = useLanguage();
   const router = useRouter();
   const [refreshing, setRefreshing] = useState(false);
   const [sortKey, setSortKey] = useState<SortKey>("rank");
@@ -376,9 +382,9 @@ export function SupplierRankingDashboard({ summary }: { summary: SupplierAnalyti
             <div className="min-w-0">
               <h1 className="text-base font-bold text-white tracking-tight flex items-center gap-1.5">
                 <Factory className="w-4 h-4 text-sky-400" />
-                Supplier Performance &amp; Compliance Ranking
+                {t("suppliers.title")}
               </h1>
-              <p className="text-[11px] text-slate-400 font-mono">Comparative scorecards across every linked supplier</p>
+              <p className="text-[11px] text-slate-400 font-mono">{t("suppliers.subtitle")}</p>
             </div>
           </div>
           <div className="flex flex-wrap items-center gap-2">

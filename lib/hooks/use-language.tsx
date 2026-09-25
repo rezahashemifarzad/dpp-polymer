@@ -24,14 +24,22 @@
  *
  * Scope: this makes the SELECTOR itself globally visible, and its choice
  * persistent across navigation (via localStorage, same pattern
- * PublicScanPage.tsx already uses for its own locale). It does NOT, by
- * itself, translate every admin page's content — only app/page.tsx
- * currently has a translations dictionary to translate against. Wiring
- * more pages' copy through this same `lang` value is natural future
- * work, not attempted here.
+ * PublicScanPage.tsx already uses for its own locale). app/page.tsx keeps
+ * its own local `translations` object for Home's body content (unchanged,
+ * still fed by this same `lang` value).
+ *
+ * FIX (round 4 — "clicking German/French changes the dropdown state but
+ * doesn't translate admin/internal pages"): this hook previously only
+ * held/persisted the selected language — nothing exposed a way to look up
+ * translated strings for pages other than Home. Added `t(key)` below,
+ * backed by the new lib/i18n/app-dictionary.ts (SiteNav's nav labels +
+ * every admin page's own title/subtitle header — see that file's banner
+ * for the exact, deliberately-bounded scope). Every consumer of
+ * useLanguage() now gets `t` alongside `lang`/`setLang` for free.
  */
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
+import { translateApp } from "@/lib/i18n/app-dictionary";
 
 export type AppLanguage = "EN" | "DE" | "FR";
 
@@ -41,6 +49,9 @@ const STORAGE_KEY = "dpp-app-language";
 interface LanguageContextValue {
   lang: AppLanguage;
   setLang: (lang: AppLanguage) => void;
+  // Looks up `key` in lib/i18n/app-dictionary.ts for the current `lang`,
+  // falling back to English then to the raw key itself.
+  t: (key: string) => string;
 }
 
 const LanguageContext = createContext<LanguageContextValue | null>(null);
@@ -74,7 +85,9 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
-  const value = useMemo(() => ({ lang, setLang }), [lang, setLang]);
+  const t = useCallback((key: string) => translateApp(lang, key), [lang]);
+
+  const value = useMemo(() => ({ lang, setLang, t }), [lang, setLang, t]);
 
   return <LanguageContext.Provider value={value}>{children}</LanguageContext.Provider>;
 }

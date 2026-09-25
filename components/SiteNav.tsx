@@ -86,13 +86,17 @@ import { AiAssistantWidget } from "@/components/dashboard/ai-assistant-widget";
 // header renders on — see lib/hooks/use-language.tsx's file banner for
 // the full rationale.
 import { LanguageSelector } from "@/components/LanguageSelector";
+// FIX (round 4 — nav labels didn't translate): labelKey looks up
+// lib/i18n/app-dictionary.ts via useLanguage()'s t() below at render time
+// instead of a hardcoded English string.
+import { useLanguage } from "@/lib/hooks/use-language";
 
 const NAV_LINKS = [
-  { href: "/", label: "Home", icon: Home },
-  { href: "/admin", label: "Admin Console", icon: ShieldCheck },
-  { href: "/admin/esg-analytics", label: "ESG Analytics", icon: BarChart3 },
-  { href: "/auditor", label: "Auditor Portal", icon: KeyRound },
-  { href: "/client-portal", label: "Client Portal", icon: Building2 },
+  { href: "/", labelKey: "nav.home", icon: Home },
+  { href: "/admin", labelKey: "nav.admin", icon: ShieldCheck },
+  { href: "/admin/esg-analytics", labelKey: "nav.esg", icon: BarChart3 },
+  { href: "/auditor", labelKey: "nav.auditor", icon: KeyRound },
+  { href: "/client-portal", labelKey: "nav.client", icon: Building2 },
   // Role-Based Authentication & Client/Auditor Portal Suite — listed
   // alongside the existing key-based /auditor and /client-portal links,
   // same "always-visible, not an access boundary" treatment (see this
@@ -100,13 +104,14 @@ const NAV_LINKS = [
   // in nav visibility). Routes to /login, which auto-detects AUDITOR vs
   // CUSTOMER by email and lands the signed-in user on /portal/auditor or
   // /portal/customer.
-  { href: "/login", label: "Sign In", icon: LogIn },
+  { href: "/login", labelKey: "nav.signin", icon: LogIn },
 ] as const;
 
 export default function SiteNav() {
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
   const panelRef = useRef<HTMLDivElement>(null);
+  const { t } = useLanguage();
 
   // Auto-close on every route change — the primary mechanism for "clicking
   // a link closes the menu" (belt-and-suspenders with each Link's own
@@ -173,8 +178,9 @@ export default function SiteNav() {
               five links never wrap at exactly the md breakpoint; full
               icon+label from lg up. */}
           <nav className="hidden md:flex items-center gap-1 bg-slate-900 border border-slate-800 p-1 rounded-xl shrink-0">
-            {NAV_LINKS.map(({ href, label, icon: Icon }) => {
+            {NAV_LINKS.map(({ href, labelKey, icon: Icon }) => {
               const active = pathname === href;
+              const label = t(labelKey);
               return (
                 <Link
                   key={href}
@@ -227,7 +233,7 @@ export default function SiteNav() {
             className="md:hidden absolute inset-x-0 top-full z-50 bg-slate-950 border-b border-slate-800 shadow-xl shadow-black/40 animate-[slideDown_180ms_ease-out]"
           >
             <nav className="px-3 py-3 space-y-1">
-              {NAV_LINKS.map(({ href, label, icon: Icon }) => {
+              {NAV_LINKS.map(({ href, labelKey, icon: Icon }) => {
                 const active = pathname === href;
                 return (
                   <Link
@@ -242,7 +248,7 @@ export default function SiteNav() {
                     }`}
                   >
                     <Icon className="w-4.5 h-4.5 shrink-0" />
-                    {label}
+                    {t(labelKey)}
                   </Link>
                 );
               })}

@@ -65,6 +65,17 @@ interface QrCodeModalProps {
   // dropped. Omitted entirely (e.g. from app/admin/page.tsx, which never
   // had this panel) when not passed.
   details?: { label: string; value: string; title?: string }[];
+  // Bug fix — "opening a passport from the admin panel strands the user
+  // with no way back." This modal is shared by app/page.tsx AND
+  // app/admin/page.tsx (see this file's own banner) — the "View" link
+  // sitting next to this modal's own trigger button already appends
+  // "&ref=admin" from the admin page (see that file's own comment), which
+  // flags app/01/.../page.tsx to show a "Back to Admin Console" link on
+  // the public page. This modal's own "Open Public Verification Page"
+  // link is a SECOND, independent way to reach the same public page and
+  // needs the same flag — but only from the admin call site, never from
+  // Home's. Defaults to false (Home's behavior is unchanged).
+  viewedFromAdmin?: boolean;
 }
 
 function triggerBlobDownload(blob: Blob, filename: string) {
@@ -78,10 +89,16 @@ function triggerBlobDownload(blob: Blob, filename: string) {
   URL.revokeObjectURL(url);
 }
 
-export function QrCodeModal({ open, onClose, batchId, label, qrUrl, details }: QrCodeModalProps) {
+export function QrCodeModal({ open, onClose, batchId, label, qrUrl, details, viewedFromAdmin }: QrCodeModalProps) {
   const qrBoxRef = useRef<HTMLDivElement>(null);
 
   if (!open) return null;
+
+  // qrUrl (PolymerPassport.qrCodePayloadUrl) always already has a
+  // "?v=<token>" query string (see lib/qr.ts's buildGs1VerificationUrl),
+  // so appending "&ref=admin" directly is safe — same convention as
+  // app/admin/page.tsx's own "View" link.
+  const publicPageUrl = qrUrl ? (viewedFromAdmin ? `${qrUrl}&ref=admin` : qrUrl) : null;
 
   function getSvgElement(): SVGSVGElement | null {
     return qrBoxRef.current?.querySelector("svg") ?? null;
@@ -198,7 +215,7 @@ export function QrCodeModal({ open, onClose, batchId, label, qrUrl, details }: Q
         </a>
 
         <a
-          href={qrUrl || "#"}
+          href={publicPageUrl || "#"}
           target="_blank"
           rel="noreferrer"
           aria-disabled={!qrUrl}

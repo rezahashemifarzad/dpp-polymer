@@ -1,5 +1,10 @@
 "use client";
 
+// FIX (round 4 — language selector didn't translate admin pages): this
+// dashboard's own header (title + subtitle) translated via
+// lib/i18n/app-dictionary.ts — see that file's banner for scope.
+import { useLanguage } from "@/lib/hooks/use-language";
+
 /**
  * components/dashboard/esg-analytics-dashboard.tsx
  * -----------------------------------------------------------------------
@@ -264,6 +269,7 @@ export function EsgAnalyticsDashboard({
   // simply doesn't render rather than crashing on a missing prop.
   greenAccounting?: PortfolioGreenAccountingSummary;
 }) {
+  const { t } = useLanguage();
   const router = useRouter();
   const [refreshing, setRefreshing] = useState(false);
   // Sprint 2.3 (Enterprise Compliance Reporting & PDF/Excel Export Module)
@@ -441,8 +447,8 @@ export function EsgAnalyticsDashboard({
               Admin Console
             </Link>
             <div className="min-w-0">
-              <h1 className="text-base font-bold text-white tracking-tight">Corporate ESG Analytics</h1>
-              <p className="text-[11px] text-slate-400 font-mono">Sustainability &amp; Circular Economy Summary</p>
+              <h1 className="text-base font-bold text-white tracking-tight">{t("esg.title")}</h1>
+              <p className="text-[11px] text-slate-400 font-mono">{t("esg.subtitle")}</p>
             </div>
           </div>
           <div className="flex flex-wrap items-center gap-2">
