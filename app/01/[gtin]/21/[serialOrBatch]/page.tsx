@@ -39,12 +39,12 @@ export const dynamic = "force-dynamic";
 // GS1/QR resolver 404ing in production. Fixed below.
 interface PageProps {
   params: Promise<{ gtin: string; serialOrBatch: string }>;
-  searchParams: Promise<{ v?: string }>;
+  searchParams: Promise<{ v?: string; ref?: string }>;
 }
 
 export default async function Gs1ResolverPage({ params, searchParams }: PageProps) {
   const { gtin, serialOrBatch } = await params;
-  const { v } = await searchParams;
+  const { v, ref } = await searchParams;
 
   const batchId = decodeURIComponent(serialOrBatch);
   const result = await getVerifiedPassport(batchId);
@@ -196,6 +196,17 @@ export default async function Gs1ResolverPage({ params, searchParams }: PageProp
       integrityVerified={integrityVerified}
       linkTrusted={linkTrusted}
       auditorSignOff={auditorSignOff}
+      // Bug fix — "opening a passport from the admin panel strands the
+      // user with no way back." SiteNav deliberately never renders on
+      // this route (see that file's own banner: a real consumer scanning
+      // a physical QR code shouldn't see "Admin Console" chrome), so an
+      // admin who followed the "View" link on the Material Ledger has no
+      // nav at all here. `ref=admin` is an optional, non-spec query param
+      // (the fixed GS1 path itself is untouched) appended only by that
+      // admin-originated link — see app/admin/page.tsx's own comment on
+      // the "View" link — never present on a real printed/scanned QR
+      // code, so this never affects the consumer-facing experience.
+      viewedFromAdmin={ref === "admin"}
     />
   );
 }

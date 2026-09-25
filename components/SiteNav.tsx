@@ -79,6 +79,13 @@ import { GlobalSearchPalette } from "@/components/dashboard/global-search-palett
 // outside <header> below, not inside it — this is a floating overlay
 // pinned to the viewport, not part of the nav bar itself.
 import { AiAssistantWidget } from "@/components/dashboard/ai-assistant-widget";
+// Bug fix — "the language selector only appears on the home page; it
+// disappears on login/admin/other internal pages." Rendered here,
+// unconditionally (not gated to isAdminSection like GlobalSearchPalette/
+// AiAssistantWidget above), so it's visible on every page this shared
+// header renders on — see lib/hooks/use-language.tsx's file banner for
+// the full rationale.
+import { LanguageSelector } from "@/components/LanguageSelector";
 
 const NAV_LINKS = [
   { href: "/", label: "Home", icon: Home },
@@ -156,6 +163,10 @@ export default function SiteNav() {
               <GlobalSearchPalette />
             </div>
           )}
+
+          <div className="shrink-0">
+            <LanguageSelector />
+          </div>
 
           {/* Desktop / tablet nav — md and up. Icon-only from md to lg (a
               `title` attribute stands in as the accessible/hover label) so

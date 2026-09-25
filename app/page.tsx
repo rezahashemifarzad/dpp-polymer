@@ -11,7 +11,6 @@ import {
   Search,
   Sparkles,
   TrendingUp,
-  Languages,
   Bot,
   Plus,
   RefreshCw,
@@ -30,6 +29,8 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { ToastProvider, useToast } from '@/lib/hooks/use-toast';
+import { useLanguage } from '@/lib/hooks/use-language';
+import { LanguageSelector } from '@/components/LanguageSelector';
 import { usePassports, type ApiPassport } from '@/lib/hooks/use-passports';
 import { usePassportTrend } from '@/lib/hooks/use-passport-trend';
 import { QrCodeModal } from '@/components/dashboard/qr-code-modal';
@@ -247,7 +248,12 @@ function CompletePolymerDPPInner() {
   const [activeTab, setActiveTab] = useState<'dashboard' | 'copilot' | 'ledger' | 'qr_generator' | 'audit'>('dashboard');
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedPassport, setSelectedPassport] = useState<DisplayPassport | null>(null);
-  const [selectedLang, setSelectedLang] = useState<'EN' | 'DE' | 'FR'>('EN');
+  // Bug fix — global language selector: this used to be local state, so
+  // the picker (and the chosen language) only existed on this page. Now
+  // sourced from the shared LanguageProvider (mounted in app/layout.tsx)
+  // so it's the same value SiteNav's own selector reads/sets — see
+  // lib/hooks/use-language.tsx's file banner.
+  const { lang: selectedLang } = useLanguage();
   const [showQrModal, setShowQrModal] = useState<boolean>(false);
   const [showCreateModal, setShowCreateModal] = useState<boolean>(false);
   // Sprint 2.2 — Factory Batch Labeling: bulk QR label sheet picker,
@@ -510,18 +516,11 @@ function CompletePolymerDPPInner() {
               just the status dot below sm, since the label text alone was
               ~110-130px this couldn't otherwise spare on a 360px phone. */}
           <div className="flex items-center gap-2 sm:gap-3 shrink-0">
-            <div className="flex items-center space-x-1 bg-slate-900 border border-slate-800 rounded-xl px-2.5 py-1 text-xs font-mono text-slate-300">
-              <Languages className="w-3.5 h-3.5 text-emerald-400" />
-              <select
-                value={selectedLang}
-                onChange={(e) => setSelectedLang(e.target.value as 'EN' | 'DE' | 'FR')}
-                className="bg-transparent focus:outline-none text-xs cursor-pointer font-bold text-emerald-400"
-              >
-                <option value="EN" className="bg-slate-900 text-white">EN</option>
-                <option value="DE" className="bg-slate-900 text-white">DE</option>
-                <option value="FR" className="bg-slate-900 text-white">FR</option>
-              </select>
-            </div>
+            {/* Bug fix — global language selector: now the shared
+                <LanguageSelector /> (same markup as before, extracted) so
+                this and SiteNav's copy always show/set the same value —
+                see lib/hooks/use-language.tsx. */}
+            <LanguageSelector />
 
             <div
               className={`flex items-center gap-2 px-2.5 sm:px-3 py-1 rounded-xl border text-xs font-mono ${

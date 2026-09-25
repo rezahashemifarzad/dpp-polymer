@@ -195,6 +195,14 @@ interface PublicScanPageProps {
   integrityVerified: boolean;
   linkTrusted: boolean;
   auditorSignOff: AuditorSignOffView | null;
+  // Bug fix — "opening a passport from the admin panel strands the user
+  // with no way back to the admin dashboard, home, or other sections."
+  // True only when this page was reached via the admin console's own
+  // "View" link (app/admin/page.tsx), which appends ?ref=admin — never
+  // set on a real, printed/scanned QR code. Renders one small "Back to
+  // Admin" link in the header (see the header JSX below); everything
+  // else on this page is completely unchanged for a real consumer scan.
+  viewedFromAdmin?: boolean;
 }
 
 const LOCALE_STORAGE_KEY = "dpp-locale";
@@ -388,7 +396,7 @@ function RevokedNotice({
   );
 }
 
-export default function PublicScanPage({ passport, integrityVerified, linkTrusted, auditorSignOff }: PublicScanPageProps) {
+export default function PublicScanPage({ passport, integrityVerified, linkTrusted, auditorSignOff, viewedFromAdmin }: PublicScanPageProps) {
   const circularity = passport.recycledContentPercent + passport.bioBasedPercent;
   const virgin = Math.max(0, 100 - circularity);
   const overallTrusted = integrityVerified && linkTrusted;
@@ -447,6 +455,16 @@ export default function PublicScanPage({ passport, integrityVerified, linkTruste
           <span className="f-mono text-[11px] tracking-widest text-slate-400 truncate">{t("brand")}</span>
         </div>
         <div className="flex items-center gap-3 shrink-0">
+          {viewedFromAdmin && (
+            <Link
+              href="/admin"
+              className="flex items-center gap-1 text-[11px] f-mono font-medium text-slate-300 hover:text-white bg-slate-800 hover:bg-slate-700 border border-slate-700 px-2 py-1 rounded-md transition-colors"
+              title="Return to the Admin Console"
+            >
+              <ChevronRight className="w-3 h-3 rotate-180" />
+              Admin Console
+            </Link>
+          )}
           <LanguageSwitcher locale={locale} onChange={changeLocale} label={t("language.label")} />
           {overallTrusted ? (
             <span className="flex items-center gap-1.5 text-teal-400 text-xs f-body font-medium">

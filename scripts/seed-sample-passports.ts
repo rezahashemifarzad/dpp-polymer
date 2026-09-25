@@ -38,19 +38,42 @@
  * four ever change, mirror the change here too.
  *
  * Safe to run repeatedly: manufacturers are upserted by vatNumber (same
- * convention as prisma/seed.ts), and any batchId that already exists is
- * skipped rather than re-created or overwritten.
+ * convention as prisma/seed.ts), Clients are upserted by contactEmail, and
+ * any batchId that already exists is skipped rather than re-created or
+ * overwritten. Client-passport allocations are upserted by the schema's
+ * own @@unique([clientId, passportId]), same as
+ * scripts/allocate-passport-to-client.ts.
  *
  * Usage:
  *   npx tsx scripts/seed-sample-passports.ts
  *
- * What you get: 8 passports across 4 manufacturers. 6 are walked all the
+ * What you get: 10 passports across 4 manufacturers. 8 are walked all the
  * way to ISSUED (fully signed, ready to show in the public QR scan page
- * and the B2B dashboard) — including both new Niederrhein Polymer Werke
+ * and the B2B dashboard) — including both Niederrhein Polymer Werke
  * batches, deliberately the highest-rated pair in the whole set (96.5%
  * PCR / 98% bio-based, lowest carbon footprints, dual certification,
  * PPWR Grade A); 2 are left at PENDING_VERIFICATION, so the Auditor
  * Portal's review queue also has live items to demo.
+ *
+ * Two of the ISSUED passports (one from the China recycler, one from the
+ * India compounder) are deliberately SVHC_PRESENT — a realistic legacy-
+ * contamination scenario for a PCR/PIR stream (residual DEHP plasticizer
+ * in recycled PVC; residual DecaBDE flame retardant in WEEE-derived ABS)
+ * — with real REACH Article 33 SubstanceDeclaration rows attached, so the
+ * REACH SVHC Compliance widget (components/dashboard/reach-ppwr/
+ * svhc-compliance-banner.tsx) and the public scan page's SVHC notice both
+ * have live, non-empty data to demo instead of an all-clear portfolio.
+ *
+ * Also seeds 2 German (NRW-market) Client (buyer) rows — Rhein-Pack
+ * Verpackungslösungen GmbH and AutoMold Systeme GmbH — each allocated the
+ * top-tier German passports that match their line of business via
+ * ClientPassportAccess, for a ready-to-show B2B Client Portal view in
+ * executive pitches. (Client has no literal "preferred/approved" status
+ * field in the schema — see prisma/schema.prisma's Client model; these
+ * are represented the same way a real preferred/approved buyer would be:
+ * `active: true`, a signed-in portal password, and a framework-agreement
+ * note on each allocation — rather than inventing an unrequested schema
+ * field for it.)
  *
  * IMPORTANT — this script talks directly to whatever database DATABASE_URL
  * points at (see .env), which in this repo IS the real production Neon
@@ -60,17 +83,40 @@
  * resolveBaseUrl() below would otherwise silently fall through to
  * http://localhost:3000 and bake that into these six passports' persisted
  * public links — exactly what happened the first time this script was run
- * this way. It now refuses to run unless NEXT_PUBLIC_BASE_URL is passed
- * explicitly, matching scripts/backfill-gs1-links.ts's own guard:
+ * this way. It now refuses to run unless a real base URL is supplied,
+ * matching scripts/backfill-gs1-links.ts's own guard.
  *
+ * Two equivalent ways to supply it — pick whichever is easiest on your
+ * shell. The --base-url flag is the recommended one: it is plain CLI-
+ * argument syntax, so it runs identically in bash/zsh, Windows cmd.exe,
+ * and PowerShell with no quoting differences to remember:
+ *
+ *   npx tsx scripts/seed-sample-passports.ts --base-url https://your-real-domain.example
+ *
+ * The NEXT_PUBLIC_BASE_URL env var also still works, but its inline
+ * "VAR=value command" form is POSIX/bash-only and does NOT work in Windows
+ * cmd.exe or PowerShell. On Windows, set it with your shell's own syntax
+ * first:
+ *
+ *   # Windows cmd.exe
+ *   set NEXT_PUBLIC_BASE_URL=https://your-real-domain.example && npx tsx scripts/seed-sample-passports.ts
+ *
+ *   # Windows PowerShell
+ *   $env:NEXT_PUBLIC_BASE_URL="https://your-real-domain.example"; npx tsx scripts/seed-sample-passports.ts
+ *
+ *   # macOS/Linux bash/zsh
  *   NEXT_PUBLIC_BASE_URL=https://your-real-domain.example npx tsx scripts/seed-sample-passports.ts
  *
  * (--allow-localhost bypasses this, for a genuine local/throwaway database.)
  */
 
 import "dotenv/config";
-import { createHash } from "crypto";
+import { createHash, randomBytes } from "crypto";
 import { PrismaClient, Prisma, AuditAction, PolymerType, RecycledContentSource, CertificationScheme, SvhcStatus, PpwrRecyclabilityGrade } from "@prisma/client";
+// lib/password.ts has zero internal "@/" imports (only Node's crypto), so
+// it's safe to pull in via a relative path here — same exception
+// scripts/create-auditor.ts's own file banner already carves out.
+import { hashPassword } from "../lib/password";
 
 const prisma = new PrismaClient();
 
@@ -128,7 +174,23 @@ function hashRecord(data: Record<string, unknown>): string {
 function deriveVerificationToken(recordHash: string): string {
   return recordHash.slice(0, 16);
 }
+/**
+ * Reads a `--base-url <value>` (or `--base-url=<value>`) CLI argument, if
+ * present. Added as a shell-agnostic alternative to NEXT_PUBLIC_BASE_URL:
+ * plain argv, so it needs no env-var syntax at all and behaves identically
+ * on bash/zsh, Windows cmd.exe, and PowerShell.
+ */
+function readBaseUrlFlag(): string | undefined {
+  const argv = process.argv;
+  const eqArg = argv.find((a) => a.startsWith("--base-url="));
+  if (eqArg) return eqArg.slice("--base-url=".length);
+  const idx = argv.indexOf("--base-url");
+  if (idx !== -1 && argv[idx + 1]) return argv[idx + 1];
+  return undefined;
+}
 function resolveBaseUrl(): string {
+  const flagValue = readBaseUrlFlag();
+  if (flagValue) return flagValue.replace(/\/+$/, "");
   if (process.env.NEXT_PUBLIC_BASE_URL) return process.env.NEXT_PUBLIC_BASE_URL.replace(/\/+$/, "");
   if (process.env.VERCEL_PROJECT_PRODUCTION_URL) return `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`;
   if (process.env.VERCEL_URL) return `https://${process.env.VERCEL_URL}`;
@@ -198,6 +260,20 @@ async function writeAuditLog(
 }
 
 // ----------------------------------------------------------------------------
+// Duplicated from lib/client-auth.ts's hashClientKey — same SHA-256-of-a-
+// random-token convention as lib/auditor-auth.ts's hashAuditorKey (see
+// scripts/create-auditor.ts's own copy). Used below to provision the two
+// German demo Client rows with a real, working API key/portal password
+// rather than a placeholder value.
+// ----------------------------------------------------------------------------
+function hashClientKey(rawKey: string): string {
+  return createHash("sha256").update(rawKey, "utf8").digest("hex");
+}
+function generateRawKey(): string {
+  return randomBytes(32).toString("hex");
+}
+
+// ----------------------------------------------------------------------------
 // Sample data
 // ----------------------------------------------------------------------------
 
@@ -216,6 +292,17 @@ interface CertSpec {
   validFrom: Date;
   validUntil: Date;
   massBalanceAllocationPercent?: number;
+}
+
+// REACH Article 33 declared substance — mirrors
+// lib/types.ts's SubstanceDeclarationInputSchema field-for-field (casNumber
+// must match its "\d{2,7}-\d{2}-\d" CAS Registry Number shape).
+interface SubstanceSpec {
+  casNumber: string;
+  substanceName: string;
+  concentrationPercent: number; // % w/w — REACH's Article 33 threshold is 0.1%
+  candidateListDate: Date; // which ECHA SVHC Candidate List revision this was checked against
+  safeUseInstructions?: string;
 }
 
 interface PassportSpec {
@@ -239,6 +326,11 @@ interface PassportSpec {
   productionDate: Date;
   certifications: CertSpec[];
   svhcStatus: SvhcStatus;
+  // Required (non-empty) exactly when svhcStatus is "SVHC_PRESENT" — same
+  // rule lib/types.ts's SvhcDeclarationInputSchema enforces at the API
+  // layer; createOnePassport() below only creates SubstanceDeclaration
+  // rows when this is present.
+  svhcSubstances?: SubstanceSpec[];
   ppwr?: { grade: PpwrRecyclabilityGrade; pfasCompliant: boolean; pfasConcentrationPpb: number };
   issueToPublished: boolean; // walk PENDING_VERIFICATION -> ISSUED after creation
 }
@@ -340,6 +432,57 @@ const PASSPORTS: PassportSpec[] = [
     issueToPublished: false,
   },
 
+  // SVHC Sample Passports — a realistic legacy-contamination scenario for
+  // a PCR stream: recycled PVC cable/hose compound sourced from mixed
+  // legacy stock, carrying residual DEHP plasticizer above REACH's 0.1%
+  // w/w Article 33 threshold. Still walked to ISSUED — a declared SVHC is
+  // a transparent, compliant disclosure (that's the whole point of
+  // Article 33), not a reason to withhold the passport. Demonstrates the
+  // full regulatory-compliance-handling path: REACH SVHC Compliance
+  // widget, public scan page SVHC notice, and Auditor Portal all see a
+  // real SVHC_PRESENT record instead of an all-clear-only portfolio.
+  {
+    manufacturerKey: "cn",
+    batchId: "CN-NBGP-2026-0093",
+    gtin: buildGtin(gs1Prefix("690", 100003)),
+    polymerType: "PVC",
+    grade: "Recycled PVC Cable Compound RC-30 (Legacy Mixed Stock)",
+    meltFlowIndex: 2.1,
+    mfiTestStandard: "ISO 1133 (190°C/21.6kg)",
+    density: 1.32,
+    colorAdditives: "Black masterbatch 2.5%",
+    recycledContentSource: "POST_CONSUMER",
+    recycledContentPercent: 55,
+    recycledContentCertScheme: "EN_15343",
+    bioBasedPercent: 0,
+    carbonFootprintKgCO2ePerKg: 1.51,
+    lcaThirdPartyVerified: false,
+    productionDate: new Date("2026-08-09"),
+    certifications: [
+      {
+        scheme: "EN_15343",
+        certificateId: "EN15343-CN-2026-2207",
+        issuingBody: "SGS China",
+        validFrom: new Date("2026-01-01"),
+        validUntil: new Date("2027-12-31"),
+        massBalanceAllocationPercent: 55,
+      },
+    ],
+    svhcStatus: "SVHC_PRESENT",
+    svhcSubstances: [
+      {
+        casNumber: "117-81-7",
+        substanceName: "Bis(2-ethylhexyl) phthalate (DEHP)",
+        concentrationPercent: 0.18,
+        candidateListDate: new Date("2024-06-25"),
+        safeUseInstructions:
+          "Not for use in toys, childcare articles, or food-contact applications. Downstream users must observe REACH Article 33(1) communication obligations when this material is supplied further down the value chain.",
+      },
+    ],
+    ppwr: { grade: "GRADE_C", pfasCompliant: true, pfasConcentrationPpb: 1.8 },
+    issueToPublished: true,
+  },
+
   // --- India — Surat Poly Industries: PIR compounder ----------------------
   {
     manufacturerKey: "in",
@@ -403,6 +546,53 @@ const PASSPORTS: PassportSpec[] = [
     // the "legitimately no PPWR assessment at all" case the field's own
     // schema comment describes.
     issueToPublished: false,
+  },
+
+  // SVHC Sample Passports (2 of 2) — WEEE/e-waste-derived recycled ABS,
+  // the other classic PIR/PCR legacy-contamination scenario: residual
+  // DecaBDE brominated flame retardant from pre-restriction electronics
+  // housings, above the 0.1% w/w Article 33 threshold. See the China
+  // batch above (CN-NBGP-2026-0093) for the full rationale.
+  {
+    manufacturerKey: "in",
+    batchId: "IN-SPIL-2026-0043",
+    gtin: buildGtin(gs1Prefix("890", 200003)),
+    polymerType: "ABS",
+    grade: "Recycled ABS Compound (WEEE-Derived) RABS-20",
+    meltFlowIndex: 18,
+    mfiTestStandard: "ISO 1133 (220°C/10kg)",
+    density: 1.06,
+    colorAdditives: "Dark grey, mixed legacy stock",
+    recycledContentSource: "POST_CONSUMER",
+    recycledContentPercent: 45,
+    recycledContentCertScheme: "GRS",
+    bioBasedPercent: 0,
+    carbonFootprintKgCO2ePerKg: 1.89,
+    lcaThirdPartyVerified: false,
+    productionDate: new Date("2026-08-24"),
+    certifications: [
+      {
+        scheme: "GRS",
+        certificateId: "GRS-IN-2026-3412",
+        issuingBody: "Control Union Certifications",
+        validFrom: new Date("2026-02-01"),
+        validUntil: new Date("2027-01-31"),
+        massBalanceAllocationPercent: 45,
+      },
+    ],
+    svhcStatus: "SVHC_PRESENT",
+    svhcSubstances: [
+      {
+        casNumber: "1163-19-5",
+        substanceName: "Decabromodiphenyl ether (DecaBDE)",
+        concentrationPercent: 0.12,
+        candidateListDate: new Date("2024-06-25"),
+        safeUseInstructions:
+          "Confirm compliance with Regulation (EU) 2019/1021 (POPs) before use in any new article; downstream users must observe REACH Article 33(1) communication obligations when this material is supplied further down the value chain.",
+      },
+    ],
+    ppwr: { grade: "GRADE_D", pfasCompliant: true, pfasConcentrationPpb: 2.6 },
+    issueToPublished: true,
   },
 
   // --- Germany (NRW) — Rheinland Kunststoff Compounding: bio-based -------
@@ -563,6 +753,78 @@ const PASSPORTS: PassportSpec[] = [
   },
 ];
 
+// ----------------------------------------------------------------------------
+// German (NRW-market) sample Clients (buyers) — added for executive pitch
+// material alongside the German manufacturer/passport data above. Client
+// has no literal "preferred/approved" status field in the schema (see
+// prisma/schema.prisma's Client model — just companyName/contactEmail/
+// country/active/passwordHash/apiKeyHash); that qualitative status is
+// represented the same way a real preferred/approved buyer would look in
+// this data model instead: active: true, a working portal password (so
+// this can be logged into live during a pitch), and a framework-agreement
+// note on each allocation below.
+// ----------------------------------------------------------------------------
+
+interface ClientSpec {
+  key: string;
+  companyName: string;
+  contactEmail: string;
+  country: string;
+  /** Demo-only portal password — printed once at the end of this script's
+   *  output, same "shown once" convention as scripts/create-auditor.ts. */
+  demoPassword: string;
+}
+
+const CLIENTS: ClientSpec[] = [
+  {
+    key: "rhein-pack",
+    companyName: "Rhein-Pack Verpackungslösungen GmbH",
+    contactEmail: "einkauf@rhein-pack.example.de",
+    country: "DE",
+    demoPassword: "RheinPack-Demo-2026!",
+  },
+  {
+    key: "automold",
+    companyName: "AutoMold Systeme GmbH",
+    contactEmail: "procurement@automold-systeme.example.de",
+    country: "DE",
+    demoPassword: "AutoMold-Demo-2026!",
+  },
+];
+
+interface ClientAllocationSpec {
+  clientKey: string;
+  batchId: string;
+  quantityKg: number;
+  notes: string;
+}
+
+const CLIENT_ALLOCATIONS: ClientAllocationSpec[] = [
+  // Rhein-Pack — a packaging converter, matched to Niederrhein Polymer
+  // Werke's two premium/rigid PACKAGING-grade batches (the highest-rated
+  // pair in the whole seed set).
+  {
+    clientKey: "rhein-pack",
+    batchId: "DE-NPW-2026-0501",
+    quantityKg: 12000,
+    notes: "Preferred supplier — approved buyer framework agreement, Q3 2026. Premium packaging line conversion.",
+  },
+  {
+    clientKey: "rhein-pack",
+    batchId: "DE-NPW-2026-0502",
+    quantityKg: 8000,
+    notes: "Preferred supplier — approved buyer framework agreement, Q3 2026. Rigid packaging line conversion.",
+  },
+  // AutoMold — an injection molder, matched to Rheinland Kunststoff's
+  // bio-based PLA INJECTION grade batch.
+  {
+    clientKey: "automold",
+    batchId: "DE-RKC-2026-0301",
+    quantityKg: 5000,
+    notes: "Approved supplier — interior trim component qualification passed. Preferred buyer status, Q2 2026 review.",
+  },
+];
+
 const SEED_ACTOR = "ADMIN:seed-sample-passports";
 
 async function upsertManufacturers(): Promise<Record<string, string>> {
@@ -577,6 +839,94 @@ async function upsertManufacturers(): Promise<Record<string, string>> {
     console.log(`Manufacturer ready: ${row.legalName} (${row.country}) — id ${row.id}`);
   }
   return ids;
+}
+
+// Mirrors upsertManufacturers() above, but checked via findUnique + create
+// (rather than prisma.client.upsert) because — unlike a Manufacturer,
+// which has nothing sensitive to generate — a Client needs a freshly
+// generated apiKeyHash/passwordHash only the FIRST time it's created; an
+// upsert's `update` branch would either have to regenerate them on every
+// re-run (rotating a real buyer's credentials out from under them, same
+// class of bug scripts/create-auditor.ts's own banner warns about) or
+// silently skip them, which is harder to reason about than just checking
+// existence directly.
+async function upsertClients(): Promise<Record<string, string>> {
+  const ids: Record<string, string> = {};
+  for (const c of CLIENTS) {
+    const existing = await prisma.client.findUnique({ where: { contactEmail: c.contactEmail } });
+    if (existing) {
+      ids[c.key] = existing.id;
+      console.log(`Client ready: ${existing.companyName} (${existing.country}) — id ${existing.id} [already existed]`);
+      continue;
+    }
+
+    const rawApiKey = generateRawKey();
+    const apiKeyHash = hashClientKey(rawApiKey);
+    const passwordHash = await hashPassword(c.demoPassword);
+
+    const row = await prisma.client.create({
+      data: {
+        companyName: c.companyName,
+        contactEmail: c.contactEmail,
+        country: c.country,
+        apiKeyHash,
+        active: true,
+        passwordHash,
+      },
+    });
+    ids[c.key] = row.id;
+    console.log(`Client created: ${row.companyName} (${row.country}) — id ${row.id}`);
+    console.log(`  Portal sign-in (shown once — /login): ${c.contactEmail} / ${c.demoPassword}`);
+    console.log(`  Buyer API key (x-dpp-client-key header, shown once): ${rawApiKey}`);
+  }
+  return ids;
+}
+
+async function allocateClientPurchases(clientIds: Record<string, string>): Promise<void> {
+  for (const alloc of CLIENT_ALLOCATIONS) {
+    const clientId = clientIds[alloc.clientKey];
+    const passport = await prisma.polymerPassport.findUnique({
+      where: { batchId: alloc.batchId },
+      select: { id: true },
+    });
+    if (!clientId || !passport) {
+      console.log(`  Skipping allocation "${alloc.clientKey}" -> "${alloc.batchId}": client or passport not found.`);
+      continue;
+    }
+
+    const client = CLIENTS.find((c) => c.key === alloc.clientKey);
+    const quantityKg = new Prisma.Decimal(alloc.quantityKg);
+
+    // Same upsert-by-(clientId, passportId) shape as
+    // scripts/allocate-passport-to-client.ts, so a re-run of this script
+    // updates (never duplicates) the allocation — but the audit entry
+    // goes through THIS file's own writeAuditLog() (duplicated from
+    // lib/audit.ts, same as every other audit write in this script)
+    // rather than that reference script's raw prisma.auditLog.create():
+    // AuditLog.sequence/entryHash are both required @unique columns with
+    // no DB default (see prisma/schema.prisma) — only writeAuditLog()
+    // computes them (hash-chain sequence + SHA-256 entryHash), so a raw
+    // create() with neither field set would fail Prisma's validation.
+    const access = await prisma.$transaction(async (tx) => {
+      const row = await tx.clientPassportAccess.upsert({
+        where: { clientId_passportId: { clientId, passportId: passport.id } },
+        update: { quantityKg, notes: alloc.notes },
+        create: { clientId, passportId: passport.id, quantityKg, notes: alloc.notes },
+      });
+      await writeAuditLog(tx, {
+        passportId: passport.id,
+        action: "CLIENT_PURCHASE_RECORDED",
+        actor: SEED_ACTOR,
+        previousHash: null,
+        newHash: null,
+        metadata: { clientId, clientCompanyName: client?.companyName ?? null, quantityKg: alloc.quantityKg },
+      });
+      return row;
+    });
+    console.log(
+      `  Allocated ${alloc.batchId} -> ${client?.companyName ?? clientId} (${alloc.quantityKg} kg) — access ${access.id}.`
+    );
+  }
 }
 
 async function createOnePassport(spec: PassportSpec, manufacturerId: string): Promise<void> {
@@ -658,10 +1008,30 @@ async function createOnePassport(spec: PassportSpec, manufacturerId: string): Pr
   console.log(`  ${spec.batchId}: created (${spec.polymerType}, ${spec.recycledContentPercent}% recycled / ${spec.bioBasedPercent}% bio-based).`);
 
   // --- REACH SVHC declaration (mirrors lib/services/declare-svhc-status.ts) ---
+  const svhcSubstances = spec.svhcSubstances ?? [];
   await prisma.$transaction(async (tx) => {
     await tx.polymerPassport.update({
       where: { id: created.id },
-      data: { svhcStatus: spec.svhcStatus, svhcStatusDeclaredAt: new Date(), svhcStatusDeclaredBy: SEED_ACTOR },
+      data: {
+        svhcStatus: spec.svhcStatus,
+        svhcStatusDeclaredAt: new Date(),
+        svhcStatusDeclaredBy: SEED_ACTOR,
+        // Same shape as declareSvhcStatus's own update call: substance rows
+        // are only ever created when the status is SVHC_PRESENT.
+        substanceDeclarations:
+          spec.svhcStatus === "SVHC_PRESENT"
+            ? {
+                create: svhcSubstances.map((s) => ({
+                  casNumber: s.casNumber,
+                  substanceName: s.substanceName,
+                  concentrationPercent: s.concentrationPercent,
+                  candidateListDate: s.candidateListDate,
+                  safeUseInstructions: s.safeUseInstructions,
+                  declaredBy: SEED_ACTOR,
+                })),
+              }
+            : undefined,
+      },
     });
     await writeAuditLog(tx, {
       passportId: created.id,
@@ -669,9 +1039,12 @@ async function createOnePassport(spec: PassportSpec, manufacturerId: string): Pr
       actor: SEED_ACTOR,
       previousHash: null,
       newHash: null,
-      metadata: { status: spec.svhcStatus, substanceCount: 0 },
+      metadata: { status: spec.svhcStatus, substanceCount: svhcSubstances.length },
     });
   });
+  if (svhcSubstances.length > 0) {
+    console.log(`  ${spec.batchId}: REACH Article 33 — ${svhcSubstances.length} SVHC substance(s) declared.`);
+  }
 
   // --- PPWR declaration (mirrors lib/services/declare-ppwr-compliance.ts), optional ---
   if (spec.ppwr) {
@@ -742,14 +1115,15 @@ function checkBaseUrlSafeToWrite(): void {
   if (resolved.includes("localhost") && !allowLocalhost) {
     console.error(
       "Refusing to run: the resolved public base URL is " +
-        `"${resolved}" (NEXT_PUBLIC_BASE_URL is not set, and no VERCEL_* ` +
-        "build env vars are present in this shell — expected when running " +
-        "locally). This script writes directly to whatever DATABASE_URL " +
-        "points at, which is the real production database in this repo — " +
-        "running it like this would bake localhost into every generated " +
-        "passport's public QR/verification link, exactly as happened " +
-        "before. Re-run as:\n" +
-        "  NEXT_PUBLIC_BASE_URL=https://your-real-domain.example npx tsx scripts/seed-sample-passports.ts\n" +
+        `"${resolved}" (no --base-url flag or NEXT_PUBLIC_BASE_URL was ` +
+        "found, and no VERCEL_* build env vars are present in this shell — " +
+        "expected when running locally). This script writes directly to " +
+        "whatever DATABASE_URL points at, which is the real production " +
+        "database in this repo — running it like this would bake localhost " +
+        "into every generated passport's public QR/verification link, " +
+        "exactly as happened before. Re-run with the --base-url flag " +
+        "(works the same in any shell, including Windows cmd.exe/PowerShell):\n" +
+        "  npx tsx scripts/seed-sample-passports.ts --base-url https://your-real-domain.example\n" +
         "or pass --allow-localhost if you really are pointed at a throwaway/local database."
     );
     process.exitCode = 1;
@@ -770,6 +1144,12 @@ async function main() {
   for (const spec of PASSPORTS) {
     await createOnePassport(spec, manufacturerIds[spec.manufacturerKey]);
   }
+
+  console.log("\nProvisioning German sample Clients (buyers):");
+  const clientIds = await upsertClients();
+
+  console.log("\nAllocating passports to Clients:");
+  await allocateClientPurchases(clientIds);
 
   const finalRows = await prisma.polymerPassport.findMany({
     where: { batchId: { in: PASSPORTS.map((p) => p.batchId) } },

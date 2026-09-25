@@ -488,7 +488,19 @@ function AdminDashboardInner() {
                               <QrCode className="w-3 h-3" />
                             </button>
                             <Link
-                              href={item.qrCodePayloadUrl}
+                              // Bug fix — "opening a passport from the
+                              // admin panel strands the user with no way
+                              // back." qrCodePayloadUrl always already
+                              // has a "?v=<token>" query string (see
+                              // lib/qr.ts's buildGs1VerificationUrl), so
+                              // "&ref=admin" is safe to append directly —
+                              // it flags app/01/.../page.tsx to pass
+                              // viewedFromAdmin to PublicScanPage, which
+                              // then shows a small "Admin Console" link
+                              // back. Never present on a real printed/
+                              // scanned QR code (those encode
+                              // qrCodePayloadUrl as-is, with no ref param).
+                              href={`${item.qrCodePayloadUrl}&ref=admin`}
                               target="_blank"
                               className="inline-flex items-center gap-1 text-xs text-cyan-400 hover:text-cyan-300"
                             >
