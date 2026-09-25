@@ -20,6 +20,7 @@
 
 import { randomBytes } from "crypto";
 import { prisma } from "@/lib/prisma";
+import { wrapSchemaDrift } from "@/lib/services/schema-drift";
 import { dispatchWebhook } from "@/lib/services/webhook-dispatch";
 import type { NotificationEventType, NotificationDeliveryStatus } from "@prisma/client";
 
@@ -84,8 +85,14 @@ function toSummary(row: {
   };
 }
 
+// Wrapped in wrapSchemaDrift(): WebhookEndpoint is a Phase 7 table this
+// project's no-migration-history setup (lib/services/schema-drift.ts's
+// file banner) can leave un-pushed to a given database. This is the call
+// app/admin/notifications/page.tsx's server-rendered Promise.all makes
+// directly, so an unwrapped P2021 here previously crashed that page's
+// render outright rather than surfacing a clear cause.
 export async function listWebhookEndpoints(): Promise<WebhookEndpointSummary[]> {
-  const rows = await prisma.webhookEndpoint.findMany({ orderBy: { createdAt: "desc" } });
+  const rows = await wrapSchemaDrift(() => prisma.webhookEndpoint.findMany({ orderBy: { createdAt: "desc" } }));
   return rows.map(toSummary);
 }
 

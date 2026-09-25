@@ -53,6 +53,7 @@
 import { prisma } from "@/lib/prisma";
 import { writeAuditLog } from "@/lib/audit";
 import type { ExpiryAlertLevel, NotificationEventType, NotificationChannel, NotificationDeliveryStatus } from "@prisma/client";
+import { wrapSchemaDrift } from "@/lib/services/schema-drift";
 import { dispatchWebhook } from "@/lib/services/webhook-dispatch";
 import { sendNotificationEmail, isEmailDispatchConfigured } from "@/lib/services/email-dispatch";
 import { getNotificationSettings } from "@/lib/services/notification-settings";
@@ -361,14 +362,16 @@ export interface NotificationLogRow {
 const MAX_LOG_ROWS = 100;
 
 export async function getRecentNotificationLog(limit: number = MAX_LOG_ROWS): Promise<NotificationLogRow[]> {
-  const rows = await prisma.notificationLog.findMany({
-    orderBy: { createdAt: "desc" },
-    take: Math.min(limit, MAX_LOG_ROWS),
-    include: {
-      passport: { select: { batchId: true } },
-      webhookEndpoint: { select: { id: true, url: true } },
-    },
-  });
+  const rows = await wrapSchemaDrift(() =>
+    prisma.notificationLog.findMany({
+      orderBy: { createdAt: "desc" },
+      take: Math.min(limit, MAX_LOG_ROWS),
+      include: {
+        passport: { select: { batchId: true } },
+        webhookEndpoint: { select: { id: true, url: true } },
+      },
+    })
+  );
 
   return rows.map((row) => ({
     id: row.id,
@@ -399,14 +402,28 @@ export interface NotificationCenterSummary {
 }
 
 /** Overview for the admin Notifications panel — reuses the existing
- * expiry-alert computation rather than re-querying certifications. */
+ * expiry-alert computation rather than re-querying certifications.
+ *
+ * Wrapped in wrapSchemaDrift(): WebhookEndpoint/NotificationLog and
+ * ChainOfCustodyRecord.anomalyNotifiedAt were all added by the Phase 7
+ * notification/webhook sprint, and this project has no migration history
+ * (see lib/services/schema-drift.ts's file banner) — a database that
+ * hasn't had `npx prisma db push` run against it since doesn't have them
+ * yet. This function runs directly in app/admin/notifications/page.tsx's
+ * server-rendered Promise.all with no try/catch of its own, so an
+ * unwrapped P2021/P2022 here previously crashed the whole page render
+ * (no error.tsx existed for this route either, compounding it into a
+ * blank/default error page instead of an actionable message — both are
+ * fixed together in this pass). */
 export async function computeNotificationCenterSummary(): Promise<NotificationCenterSummary> {
-  const [expiryAlerts, pendingAnomalyCount, activeWebhookCount, recentLog] = await Promise.all([
-    computePortfolioExpiryAlerts(),
-    prisma.chainOfCustodyRecord.count({ where: { status: "FLAGGED", anomalyNotifiedAt: null } }),
-    prisma.webhookEndpoint.count({ where: { isActive: true } }),
-    getRecentNotificationLog(50),
-  ]);
+  const [expiryAlerts, pendingAnomalyCount, activeWebhookCount, recentLog] = await wrapSchemaDrift(() =>
+    Promise.all([
+      computePortfolioExpiryAlerts(),
+      prisma.chainOfCustodyRecord.count({ where: { status: "FLAGGED", anomalyNotifiedAt: null } }),
+      prisma.webhookEndpoint.count({ where: { isActive: true } }),
+      getRecentNotificationLog(50),
+    ])
+  );
 
   return {
     expiryAlerts,

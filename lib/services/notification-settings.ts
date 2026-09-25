@@ -10,6 +10,7 @@
 
 import { prisma } from "@/lib/prisma";
 import type { ExpiryAlertLevel } from "@prisma/client";
+import { wrapSchemaDrift } from "@/lib/services/schema-drift";
 
 export interface NotificationSettingsView {
   id: string;
@@ -44,13 +45,23 @@ function toView(row: {
 /** Always returns a row — lazily creates one with schema defaults on first
  * read if the table is still empty, so every other caller in this feature
  * (the dispatcher, the admin UI) can assume a settings row always exists
- * rather than null-checking everywhere. */
+ * rather than null-checking everywhere.
+ *
+ * Wrapped in wrapSchemaDrift(): NotificationSettings is a Phase 7 table
+ * this project's no-migration-history setup (lib/services/schema-drift.ts's
+ * file banner) can leave un-pushed to a given database. This is one of
+ * the three calls app/admin/notifications/page.tsx's server-rendered
+ * Promise.all makes directly, so an unwrapped P2021 here previously
+ * crashed that page's render outright rather than surfacing a clear
+ * cause. */
 export async function getNotificationSettings(): Promise<NotificationSettingsView> {
-  const existing = await prisma.notificationSettings.findFirst({ orderBy: { createdAt: "asc" } });
-  if (existing) return toView(existing);
+  return wrapSchemaDrift(async () => {
+    const existing = await prisma.notificationSettings.findFirst({ orderBy: { createdAt: "asc" } });
+    if (existing) return toView(existing);
 
-  const created = await prisma.notificationSettings.create({ data: {} });
-  return toView(created);
+    const created = await prisma.notificationSettings.create({ data: {} });
+    return toView(created);
+  });
 }
 
 export interface UpdateNotificationSettingsInput {

@@ -3,12 +3,14 @@
  * -----------------------------------------------------------------------
  * CLI seed script: creates a handful of realistic, fully-worked
  * PolymerPassport records for pilot demonstrations and investor/grant
- * pitches — three manufacturers in three different regions (a PCR/rPET
- * recycler in Ningbo, China; a PIR/engineering-grade compounder in Surat,
- * India; and a bio-based PLA/PHA producer in NRW, Germany, matching the
- * platform's own home-market pitch), two batches each, spanning a range
- * of recycled/bio-based content, carbon footprint, and REACH/PPWR
- * compliance profiles.
+ * pitches — four manufacturers across four regions (a PCR/rPET recycler
+ * in Ningbo, China; a PIR/engineering-grade compounder in Surat, India;
+ * and two NRW, Germany producers matching the platform's own home-market
+ * pitch — Rheinland Kunststoff Compounding GmbH, bio-based PLA/PHA, and
+ * Niederrhein Polymer Werke GmbH, an ultra-high-recycled-content/bio-based
+ * "flagship" producer added for executive pitch material), two batches
+ * each, spanning a range of recycled/bio-based content, carbon footprint,
+ * and REACH/PPWR compliance profiles.
  *
  * Deliberately goes through the SAME creation + hash-chain + GS1-link +
  * audit-log machinery every real passport goes through
@@ -42,10 +44,13 @@
  * Usage:
  *   npx tsx scripts/seed-sample-passports.ts
  *
- * What you get: 6 passports across 3 manufacturers. 4 are walked all the
+ * What you get: 8 passports across 4 manufacturers. 6 are walked all the
  * way to ISSUED (fully signed, ready to show in the public QR scan page
- * and the B2B dashboard); 2 are left at PENDING_VERIFICATION, so the
- * Auditor Portal's review queue also has live items to demo.
+ * and the B2B dashboard) — including both new Niederrhein Polymer Werke
+ * batches, deliberately the highest-rated pair in the whole set (96.5%
+ * PCR / 98% bio-based, lowest carbon footprints, dual certification,
+ * PPWR Grade A); 2 are left at PENDING_VERIFICATION, so the Auditor
+ * Portal's review queue also has live items to demo.
  *
  * IMPORTANT — this script talks directly to whatever database DATABASE_URL
  * points at (see .env), which in this repo IS the real production Neon
@@ -260,6 +265,13 @@ const MANUFACTURERS: ManufacturerSpec[] = [
     gln: gs1Prefix("400", 1),
     country: "DE",
   },
+  {
+    key: "de2",
+    legalName: "Niederrhein Polymer Werke GmbH",
+    vatNumber: "DE900123456",
+    gln: gs1Prefix("400", 2),
+    country: "DE",
+  },
 ];
 
 const PASSPORTS: PassportSpec[] = [
@@ -464,6 +476,89 @@ const PASSPORTS: PassportSpec[] = [
     ],
     svhcStatus: "NONE_DECLARED",
     ppwr: { grade: "GRADE_A", pfasCompliant: true, pfasConcentrationPpb: 0.5 },
+    issueToPublished: true,
+  },
+
+  // --- Germany (NRW) — Niederrhein Polymer Werke: second major NRW
+  // manufacturer, added for executive/investor pitch material. Both
+  // batches are deliberately top-tier across every metric (very high
+  // recycled/bio-based content, lowest-in-set carbon footprints, dual
+  // third-party certification, PPWR Grade A, clean SVHC) and walked
+  // straight to ISSUED — same "fully signed, demo-ready" treatment as
+  // the other issueToPublished:true rows above, not a new pattern.
+  {
+    manufacturerKey: "de2",
+    batchId: "DE-NPW-2026-0501",
+    gtin: buildGtin(gs1Prefix("400", 400001)),
+    polymerType: "PP",
+    grade: "Ultra-Pure rPP Premium Packaging Grade RP-96",
+    meltFlowIndex: 8.2,
+    mfiTestStandard: "ISO 1133 (230°C/2.16kg)",
+    density: 0.91,
+    colorAdditives: "Natural (undyed)",
+    recycledContentSource: "POST_CONSUMER",
+    recycledContentPercent: 96.5,
+    recycledContentCertScheme: "ISCC_PLUS",
+    bioBasedPercent: 0,
+    carbonFootprintKgCO2ePerKg: 0.71,
+    lcaThirdPartyVerified: true,
+    lcaVerifierName: "DEKRA Assurance Services",
+    productionDate: new Date("2026-08-05"),
+    certifications: [
+      {
+        scheme: "ISCC_PLUS",
+        certificateId: "ISCC-PLUS-DE-2026-09215",
+        issuingBody: "ISCC System GmbH",
+        validFrom: new Date("2026-01-01"),
+        validUntil: new Date("2028-12-31"),
+        massBalanceAllocationPercent: 96.5,
+      },
+      {
+        scheme: "EN_15343",
+        certificateId: "EN15343-DE-2026-0087",
+        issuingBody: "DEKRA Assurance Services",
+        validFrom: new Date("2026-01-15"),
+        validUntil: new Date("2028-01-14"),
+      },
+    ],
+    svhcStatus: "NONE_DECLARED",
+    ppwr: { grade: "GRADE_A", pfasCompliant: true, pfasConcentrationPpb: 0.6 },
+    issueToPublished: true,
+  },
+  {
+    manufacturerKey: "de2",
+    batchId: "DE-NPW-2026-0502",
+    gtin: buildGtin(gs1Prefix("400", 400002)),
+    polymerType: "PLA",
+    grade: "High-Purity Bio-PLA Rigid Packaging Grade BP-98",
+    meltFlowIndex: 5.8,
+    mfiTestStandard: "ISO 1133 (210°C/2.16kg)",
+    density: 1.25,
+    recycledContentPercent: 0,
+    bioBasedPercent: 98,
+    bioBasedTestStandard: "EN 16785-1 (radiocarbon method)",
+    carbonFootprintKgCO2ePerKg: 0.38,
+    lcaThirdPartyVerified: true,
+    lcaVerifierName: "TÜV Rheinland",
+    productionDate: new Date("2026-08-22"),
+    certifications: [
+      {
+        scheme: "EN_16785",
+        certificateId: "EN16785-DE-2026-0455",
+        issuingBody: "TÜV Rheinland",
+        validFrom: new Date("2026-02-01"),
+        validUntil: new Date("2028-01-31"),
+      },
+      {
+        scheme: "ISCC_PLUS",
+        certificateId: "ISCC-PLUS-DE-2026-09340",
+        issuingBody: "ISCC System GmbH",
+        validFrom: new Date("2025-11-01"),
+        validUntil: new Date("2027-10-31"),
+      },
+    ],
+    svhcStatus: "NONE_DECLARED",
+    ppwr: { grade: "GRADE_A", pfasCompliant: true, pfasConcentrationPpb: 0.3 },
     issueToPublished: true,
   },
 ];
