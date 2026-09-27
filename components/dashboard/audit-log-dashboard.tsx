@@ -297,11 +297,13 @@ export function AuditLogDashboard({
 
   return (
     <div className="min-h-screen bg-[#020617] text-slate-100 font-sans overflow-x-hidden">
-      {/* Bug fix — top offset bumped from 0 to 5.5rem (SiteNav's 3.5rem +
-          the admin sign-out bar's 2rem — see app/admin/layout.tsx's own
-          comment) now that both of those are sticky too; top-0 here would
-          have made this header fight them for the same viewport position. */}
-      <header className="border-b border-slate-800/80 bg-[#070c18]/90 backdrop-blur-2xl sticky top-[5.5rem] z-40">
+      {/* Bug fix — top offset bumped from 0 to the shared admin-offset
+          token (SiteNav's 3.5rem + the admin sign-out bar's 2rem — see
+          app/admin/layout.tsx's own comment and the
+          --spacing-admin-offset definition in app/globals.css) now that
+          both of those are sticky too; top-0 here would have made this
+          header fight them for the same viewport position. */}
+      <header className="border-b border-slate-800/80 bg-[#070c18]/90 backdrop-blur-2xl sticky top-admin-offset z-40">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 min-h-16 py-3 flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
           <div className="flex items-center gap-4 min-w-0">
             <Link
@@ -309,7 +311,7 @@ export function AuditLogDashboard({
               className="shrink-0 flex items-center gap-2 text-xs font-medium bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 px-3 py-2 rounded-lg transition-all"
             >
               <ArrowLeft className="w-3.5 h-3.5" />
-              Admin Console
+              {t("common.adminConsole")}
             </Link>
             <div className="min-w-0">
               <h1 className="text-base font-bold text-white tracking-tight">{t("audit.title")}</h1>
@@ -323,7 +325,7 @@ export function AuditLogDashboard({
               className="flex items-center gap-1.5 text-xs bg-slate-800 hover:bg-slate-700 disabled:opacity-50 text-slate-300 px-3 py-2 rounded-lg transition-all"
             >
               <RefreshCw className={`w-3.5 h-3.5 ${loading ? "animate-spin" : ""}`} />
-              Refresh
+              {t("common.refresh")}
             </button>
             <button
               onClick={handleVerify}
@@ -332,7 +334,7 @@ export function AuditLogDashboard({
               title="Recompute the full hash chain and confirm no entry has been tampered with"
             >
               {verifying ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <ShieldCheck className="w-3.5 h-3.5" />}
-              {verifying ? "Verifying..." : "Verify Full Ledger"}
+              {verifying ? t("audit.button.verifying") : t("audit.button.verifyLedger")}
             </button>
             <button
               onClick={handleExport}
@@ -341,7 +343,7 @@ export function AuditLogDashboard({
               title="Export the currently filtered audit log as an Excel workbook, with an embedded integrity check"
             >
               {exporting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <FileSpreadsheet className="w-3.5 h-3.5" />}
-              {exporting ? "Generating..." : "Export Audit Log Excel"}
+              {exporting ? t("common.generating") : t("audit.button.exportExcel")}
             </button>
           </div>
         </div>
@@ -490,13 +492,13 @@ export function AuditLogDashboard({
             <table className="w-full text-left text-xs text-slate-300">
               <thead className="bg-slate-950 text-slate-400 border-b border-slate-800 uppercase tracking-wider text-[11px]">
                 <tr>
-                  <th className="p-3">Seq</th>
-                  <th className="p-3">Timestamp</th>
-                  <th className="p-3">Action</th>
-                  <th className="p-3">Actor</th>
-                  <th className="p-3">Batch ID</th>
-                  <th className="p-3">Entry Hash</th>
-                  <th className="p-3">Chain Link</th>
+                  <th className="p-3">{t("audit.table.seq")}</th>
+                  <th className="p-3">{t("audit.table.timestamp")}</th>
+                  <th className="p-3">{t("audit.table.action")}</th>
+                  <th className="p-3">{t("audit.table.actor")}</th>
+                  <th className="p-3">{t("audit.table.batchId")}</th>
+                  <th className="p-3">{t("audit.table.entryHash")}</th>
+                  <th className="p-3">{t("audit.table.chainLink")}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-800/60">

@@ -57,6 +57,17 @@ const ENTITY_META: Record<SearchEntityType, { label: string; icon: typeof Packag
   AUDIT_LOG: { label: "Audit Log", icon: ScrollText, colorClass: "text-fuchsia-400", chipClass: "bg-fuchsia-500/10 border-fuchsia-500/30 text-fuchsia-400" },
 };
 
+// Global Language Translation for Page Content fix (2026-09-27) — ENTITY_META
+// above stays English (it's also used for the plain-English "No … match."
+// empty state and can't call the t() hook at module scope); this sibling map
+// gives every render site the app-dictionary.ts key for the same entity type.
+const ENTITY_LABEL_KEY: Record<SearchEntityType, string> = {
+  BATCH: "search.entity.batches",
+  CERTIFICATE: "search.entity.certificates",
+  SUPPLIER: "search.entity.suppliers",
+  AUDIT_LOG: "search.entity.auditLog",
+};
+
 const TONE_CLASS: Record<SearchResultTone, string> = {
   success: "bg-emerald-500/10 text-emerald-400 border-emerald-500/30",
   warning: "bg-amber-500/10 text-amber-400 border-amber-500/30",
@@ -121,19 +132,21 @@ function ResultRow({ item }: { item: SearchResultItem }) {
 }
 
 function EntitySection({ type, items, count }: { type: SearchEntityType; items: SearchResultItem[]; count: number }) {
+  const { t } = useLanguage();
   const meta = ENTITY_META[type];
+  const label = t(ENTITY_LABEL_KEY[type]);
   const Icon = meta.icon;
   return (
     <div className="bg-slate-900/60 border border-slate-800 rounded-3xl p-5 backdrop-blur-xl">
       <div className="flex items-center justify-between mb-3">
         <h3 className="text-sm font-bold text-white flex items-center gap-1.5">
           <Icon className={`w-4 h-4 ${meta.colorClass}`} />
-          {meta.label}
+          {label}
         </h3>
         <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${meta.chipClass}`}>{count} match(es)</span>
       </div>
       {items.length === 0 ? (
-        <div className="text-center py-6 text-xs text-slate-600 font-mono">No {meta.label.toLowerCase()} match.</div>
+        <div className="text-center py-6 text-xs text-slate-600 font-mono">No {label.toLowerCase()} match.</div>
       ) : (
         <div className="divide-y divide-slate-800/60">
           {items.map((item) => (
@@ -279,11 +292,13 @@ export function GlobalSearchDashboard({
 
   return (
     <div className="min-h-screen bg-[#020617] text-slate-100 font-sans overflow-x-hidden">
-      {/* Bug fix — top offset bumped from 0 to 5.5rem (SiteNav's 3.5rem +
-          the admin sign-out bar's 2rem — see app/admin/layout.tsx's own
-          comment) now that both of those are sticky too; top-0 here would
-          have made this header fight them for the same viewport position. */}
-      <header className="border-b border-slate-800/80 bg-[#070c18]/90 backdrop-blur-2xl sticky top-[5.5rem] z-40">
+      {/* Bug fix — top offset bumped from 0 to the shared admin-offset
+          token (SiteNav's 3.5rem + the admin sign-out bar's 2rem — see
+          app/admin/layout.tsx's own comment and the
+          --spacing-admin-offset definition in app/globals.css) now that
+          both of those are sticky too; top-0 here would have made this
+          header fight them for the same viewport position. */}
+      <header className="border-b border-slate-800/80 bg-[#070c18]/90 backdrop-blur-2xl sticky top-admin-offset z-40">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 min-h-16 py-3 flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
           <div className="flex items-center gap-4 min-w-0">
             <Link
@@ -291,7 +306,7 @@ export function GlobalSearchDashboard({
               className="shrink-0 flex items-center gap-2 text-xs font-medium bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 px-3 py-2 rounded-lg transition-all"
             >
               <ArrowLeft className="w-3.5 h-3.5" />
-              Admin Console
+              {t("common.adminConsole")}
             </Link>
             <div className="min-w-0">
               <h1 className="text-base font-bold text-white tracking-tight flex items-center gap-1.5">
@@ -312,7 +327,7 @@ export function GlobalSearchDashboard({
           <input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search batch IDs, grades, certificate numbers, suppliers, actors..."
+            placeholder={t("search.placeholder")}
             className="flex-1 bg-transparent text-sm text-white placeholder:text-slate-600 outline-none min-w-0"
           />
           {loading && <Loader2 className="w-4 h-4 text-slate-500 animate-spin shrink-0" />}
@@ -328,7 +343,7 @@ export function GlobalSearchDashboard({
             }`}
           >
             <SlidersHorizontal className="w-3.5 h-3.5" />
-            Filters
+            {t("search.filters")}
             {showFilters ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
           </button>
         </div>
@@ -348,7 +363,7 @@ export function GlobalSearchDashboard({
                 }`}
               >
                 <Icon className="w-3.5 h-3.5" />
-                {meta.label}
+                {t(ENTITY_LABEL_KEY[type])}
                 <span className="opacity-70">{result.countsByType[type]}</span>
               </button>
             );

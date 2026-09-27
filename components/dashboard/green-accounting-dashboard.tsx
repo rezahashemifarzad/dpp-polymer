@@ -192,6 +192,7 @@ function KpiCard({
 }
 
 function TaxParameterPanel({ taxParameters }: { taxParameters: TaxParameterSummary[] }) {
+  const { t } = useLanguage();
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState<CreateTaxParameterInput>({
@@ -312,11 +313,11 @@ function TaxParameterPanel({ taxParameters }: { taxParameters: TaxParameterSumma
         <table className="w-full text-left font-mono text-xs min-w-[520px]">
           <thead>
             <tr className="text-slate-500 uppercase text-[10px] border-b border-slate-800">
-              <th className="py-2 pr-4">Jurisdiction</th>
-              <th className="py-2 pr-4">Label</th>
-              <th className="py-2 pr-4 text-right">Rate</th>
-              <th className="py-2 pr-4">Effective From</th>
-              <th className="py-2">Active</th>
+              <th className="py-2 pr-4">{t("greenAccounting.table.jurisdiction")}</th>
+              <th className="py-2 pr-4">{t("greenAccounting.table.label")}</th>
+              <th className="py-2 pr-4 text-right">{t("greenAccounting.table.rate")}</th>
+              <th className="py-2 pr-4">{t("greenAccounting.table.effectiveFrom")}</th>
+              <th className="py-2">{t("greenAccounting.table.active")}</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-800/60">
@@ -430,6 +431,7 @@ function TrendEmptyState({ quartersAvailable, minQuartersRequired }: { quartersA
 }
 
 function TrendForecastSection({ trendForecast }: { trendForecast: GreenTaxTrendForecastSummary }) {
+  const { t } = useLanguage();
   const lastActualIdx = useMemo(
     () => trendForecast.quarterly.reduce((acc, q, i) => (!q.isForecast ? i : acc), -1),
     [trendForecast.quarterly]
@@ -482,21 +484,21 @@ function TrendForecastSection({ trendForecast }: { trendForecast: GreenTaxTrendF
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <KpiCard
           icon={CalendarRange}
-          label="Next Quarter Forecast (Net)"
+          label={t("greenAccounting.forecast.nextQuarter")}
           value={trendForecast.nextQuarterForecast ? eurFmt(trendForecast.nextQuarterForecast.netLiabilityEur) : "—"}
           accent="text-amber-400"
           sub={trendForecast.nextQuarterForecast ? <>{trendForecast.nextQuarterForecast.quarter}</> : undefined}
         />
         <KpiCard
           icon={TrendingUp}
-          label="Next 12 Months Forecast (Net)"
+          label={t("greenAccounting.forecast.next12Months")}
           value={trendForecast.next12MonthsForecast ? eurFmt(trendForecast.next12MonthsForecast.netLiabilityEur) : "—"}
           accent="text-rose-400"
           sub={<>Rolling 4-quarter projection</>}
         />
         <KpiCard
           icon={Coins}
-          label="Trailing Actual (Net)"
+          label={t("greenAccounting.forecast.trailingActual")}
           value={trendForecast.trailingActual ? eurFmt(trendForecast.trailingActual.netLiabilityEur) : "—"}
           accent="text-slate-300"
           sub={trendForecast.trailingActual ? <>Last {trendForecast.trailingActual.quarterCount} actual quarters</> : undefined}
@@ -509,7 +511,7 @@ function TrendForecastSection({ trendForecast }: { trendForecast: GreenTaxTrendF
                 ? ArrowDownRight
                 : ArrowUpRight
           }
-          label="Projected Net Change"
+          label={t("greenAccounting.forecast.projectedChange")}
           value={
             trendForecast.projectedNetChangePercent !== null
               ? `${trendForecast.projectedNetChangePercent > 0 ? "+" : ""}${trendForecast.projectedNetChangePercent}%`
@@ -628,10 +630,10 @@ function TrendForecastSection({ trendForecast }: { trendForecast: GreenTaxTrendF
           <table className="w-full text-left font-mono text-xs min-w-[420px]">
             <thead>
               <tr className="text-slate-500 uppercase text-[10px] border-b border-slate-800">
-                <th className="py-2">Quarter</th>
-                <th className="py-2 text-right">Gross</th>
-                <th className="py-2 text-right">Savings</th>
-                <th className="py-2 text-right">Net</th>
+                <th className="py-2">{t("greenAccounting.table.quarter")}</th>
+                <th className="py-2 text-right">{t("greenAccounting.table.gross")}</th>
+                <th className="py-2 text-right">{t("greenAccounting.table.savings")}</th>
+                <th className="py-2 text-right">{t("greenAccounting.table.net")}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-800/60">
@@ -659,11 +661,11 @@ function TrendForecastSection({ trendForecast }: { trendForecast: GreenTaxTrendF
           <table className="w-full text-left font-mono text-xs min-w-[420px]">
             <thead>
               <tr className="text-slate-500 uppercase text-[10px] border-b border-slate-800">
-                <th className="py-2">Year</th>
-                <th className="py-2 text-right">Quarters</th>
-                <th className="py-2 text-right">Gross</th>
-                <th className="py-2 text-right">Savings</th>
-                <th className="py-2 text-right">Net</th>
+                <th className="py-2">{t("greenAccounting.table.year")}</th>
+                <th className="py-2 text-right">{t("greenAccounting.table.quarters")}</th>
+                <th className="py-2 text-right">{t("greenAccounting.table.gross")}</th>
+                <th className="py-2 text-right">{t("greenAccounting.table.savings")}</th>
+                <th className="py-2 text-right">{t("greenAccounting.table.net")}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-800/60">
@@ -757,11 +759,13 @@ export function GreenAccountingDashboard({
 
   return (
     <div className="min-h-screen bg-[#020617] text-slate-100 font-sans overflow-x-hidden">
-      {/* Bug fix — top offset bumped from 0 to 5.5rem (SiteNav's 3.5rem +
-          the admin sign-out bar's 2rem — see app/admin/layout.tsx's own
-          comment) now that both of those are sticky too; top-0 here would
-          have made this header fight them for the same viewport position. */}
-      <header className="border-b border-slate-800/80 bg-[#070c18]/90 backdrop-blur-2xl sticky top-[5.5rem] z-40">
+      {/* Bug fix — top offset bumped from 0 to the shared admin-offset
+          token (SiteNav's 3.5rem + the admin sign-out bar's 2rem — see
+          app/admin/layout.tsx's own comment and the
+          --spacing-admin-offset definition in app/globals.css) now that
+          both of those are sticky too; top-0 here would have made this
+          header fight them for the same viewport position. */}
+      <header className="border-b border-slate-800/80 bg-[#070c18]/90 backdrop-blur-2xl sticky top-admin-offset z-40">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 min-h-16 py-3 flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
           <div className="flex items-center gap-4 min-w-0">
             <Link
@@ -769,7 +773,7 @@ export function GreenAccountingDashboard({
               className="shrink-0 flex items-center gap-2 text-xs font-medium bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 px-3 py-2 rounded-lg transition-all"
             >
               <ArrowLeft className="w-3.5 h-3.5" />
-              Admin Console
+              {t("common.adminConsole")}
             </Link>
             <div className="min-w-0">
               <h1 className="text-base font-bold text-white tracking-tight">{t("greenAccounting.title")}</h1>
@@ -785,21 +789,21 @@ export function GreenAccountingDashboard({
               className="flex items-center gap-1.5 text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 px-3 py-2 rounded-lg transition-all"
             >
               <RefreshCw className={`w-3.5 h-3.5 ${refreshing ? "animate-spin" : ""}`} />
-              Refresh
+              {t("common.refresh")}
             </button>
             <button
               onClick={handleExportCsv}
               className="flex items-center gap-1.5 text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 px-3 py-2 rounded-lg transition-all"
             >
               <Download className="w-3.5 h-3.5" />
-              CSV
+              {t("common.csv")}
             </button>
             <button
               onClick={handleExportJson}
               className="flex items-center gap-1.5 text-xs bg-lime-500 hover:bg-lime-400 text-slate-950 font-bold px-3 py-2 rounded-lg transition-all"
             >
               <FileJson className="w-3.5 h-3.5" />
-              JSON
+              {t("common.json")}
             </button>
             <button
               onClick={handleExportXlsx}
@@ -812,7 +816,7 @@ export function GreenAccountingDashboard({
               ) : (
                 <FileSpreadsheet className="w-3.5 h-3.5" />
               )}
-              {xlsxExporting ? "Generating..." : "Export Tax & Financial Excel"}
+              {xlsxExporting ? t("common.generating") : t("greenAccounting.button.exportExcel")}
             </button>
             <button
               onClick={handleExportPdf}
@@ -821,7 +825,7 @@ export function GreenAccountingDashboard({
               title="Generate the Green Tax & Plastic Packaging Compliance Report PDF"
             >
               {pdfExporting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <FileText className="w-3.5 h-3.5" />}
-              {pdfExporting ? "Generating..." : "Export Green Tax PDF"}
+              {pdfExporting ? t("common.generating") : t("greenAccounting.button.exportPdf")}
             </button>
           </div>
         </div>
@@ -848,28 +852,28 @@ export function GreenAccountingDashboard({
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <KpiCard
             icon={TrendingDown}
-            label="Gross Liability"
+            label={t("greenAccounting.kpi.grossLiability")}
             value={eurFmt(summary.totalGrossLiabilityEur)}
             accent="text-amber-400"
             sub={<>If 0% of active mass were recycled — {numberFmt(summary.totalMassKg / 1000, 2)} t total</>}
           />
           <KpiCard
             icon={Recycle}
-            label="PCR Tax Savings"
+            label={t("greenAccounting.kpi.pcrTaxSavings")}
             value={eurFmt(summary.totalPcrTaxSavingsEur)}
             accent="text-emerald-400"
             sub={<>{numberFmt(summary.totalPcrMassKg / 1000, 2)} t PCR mass offsetting liability</>}
           />
           <KpiCard
             icon={Coins}
-            label="Net Liability"
+            label={t("greenAccounting.kpi.netLiability")}
             value={eurFmt(summary.totalNetLiabilityEur)}
             accent="text-rose-400"
             sub={<>On {numberFmt(summary.totalTaxableMassKg / 1000, 2)} t non-recycled taxable mass</>}
           />
           <KpiCard
             icon={Gauge}
-            label="Active Rate"
+            label={t("greenAccounting.kpi.activeRate")}
             value={`${summary.ratePerTonneEur}`}
             unit={`EUR/t · ${summary.jurisdiction}`}
             accent="text-lime-400"
@@ -891,14 +895,14 @@ export function GreenAccountingDashboard({
           <table className="w-full text-left font-mono text-xs min-w-[760px]">
             <thead>
               <tr className="text-slate-500 uppercase text-[10px] border-b border-slate-800">
-                <th className="py-2 pr-4">Batch</th>
-                <th className="py-2 pr-4">Manufacturer</th>
-                <th className="py-2 pr-4 text-right">Mass (kg)</th>
-                <th className="py-2 pr-4 text-right">PCR (kg)</th>
-                <th className="py-2 pr-4 text-right">Gross</th>
-                <th className="py-2 pr-4 text-right">Savings</th>
-                <th className="py-2 pr-4 text-right">Net</th>
-                <th className="py-2 text-right">Valuation</th>
+                <th className="py-2 pr-4">{t("greenAccounting.table.batch")}</th>
+                <th className="py-2 pr-4">{t("greenAccounting.table.manufacturer")}</th>
+                <th className="py-2 pr-4 text-right">{t("greenAccounting.table.massKg")}</th>
+                <th className="py-2 pr-4 text-right">{t("greenAccounting.table.pcrKg")}</th>
+                <th className="py-2 pr-4 text-right">{t("greenAccounting.table.gross")}</th>
+                <th className="py-2 pr-4 text-right">{t("greenAccounting.table.savings")}</th>
+                <th className="py-2 pr-4 text-right">{t("greenAccounting.table.net")}</th>
+                <th className="py-2 text-right">{t("greenAccounting.table.valuation")}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-800/60">

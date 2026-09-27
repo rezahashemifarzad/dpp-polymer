@@ -42,6 +42,13 @@ import {
   X,
 } from "lucide-react";
 import { useToast } from "@/lib/hooks/use-toast";
+// Global Language Translation for Page Content fix (2026-09-27) — this
+// dashboard previously had no useLanguage() import at all (see
+// accounts-page-header.tsx's own banner: only that tiny title/subtitle
+// header component was wired up). Both panels below now translate their
+// own section header and table columns the same way every other admin
+// dashboard does.
+import { useLanguage } from "@/lib/hooks/use-language";
 import {
   listAuditorAccountsAction,
   createAuditorAccountAction,
@@ -549,6 +556,7 @@ function CreateClientModal({ onClose, onCreated }: { onClose: () => void; onCrea
 // Auditor Accounts panel
 // ----------------------------------------------------------------------------
 function AuditorAccountsPanel() {
+  const { t } = useLanguage();
   const { push } = useToast();
   const [rows, setRows] = useState<AuditorRow[] | null>(null);
   const [loading, setLoading] = useState(true);
@@ -600,7 +608,7 @@ function AuditorAccountsPanel() {
         <div className="flex items-center gap-2.5 min-w-0">
           <ShieldCheck className="w-5 h-5 text-amber-400 shrink-0" />
           <div className="min-w-0">
-            <h3 className="text-sm font-bold text-white">Auditor Accounts</h3>
+            <h3 className="text-sm font-bold text-white">{t("accounts.section.auditorAccounts")}</h3>
             <p className="text-[11px] text-slate-400 font-mono">
               {loading ? "Loading..." : `${rows?.length ?? 0} auditor account(s)`}
             </p>
@@ -612,7 +620,7 @@ function AuditorAccountsPanel() {
             className="flex items-center gap-1.5 text-[11px] bg-slate-800 hover:bg-slate-700 text-slate-300 px-2.5 py-1.5 rounded-lg transition-all"
           >
             <RefreshCw className={`w-3 h-3 ${loading ? "animate-spin" : ""}`} />
-            Refresh
+            {t("common.refresh")}
           </button>
           <button
             onClick={() => setShowCreate(true)}
@@ -639,12 +647,12 @@ function AuditorAccountsPanel() {
           <table className="w-full text-left font-mono text-xs min-w-[720px]">
             <thead>
               <tr className="text-slate-500 uppercase text-[10px] border-b border-slate-800">
-                <th className="py-2 pr-3">Name</th>
-                <th className="py-2 pr-3">Organization</th>
-                <th className="py-2 pr-3">Email</th>
-                <th className="py-2 pr-3">Status</th>
-                <th className="py-2 pr-3">Password</th>
-                <th className="py-2 text-right">Actions</th>
+                <th className="py-2 pr-3">{t("common.name")}</th>
+                <th className="py-2 pr-3">{t("accounts.table.organization")}</th>
+                <th className="py-2 pr-3">{t("common.email")}</th>
+                <th className="py-2 pr-3">{t("common.status")}</th>
+                <th className="py-2 pr-3">{t("common.password")}</th>
+                <th className="py-2 text-right">{t("common.actions")}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-800/60">
@@ -729,6 +737,7 @@ function AuditorAccountsPanel() {
 // see this file's own banner for why these stay separate components.
 // ----------------------------------------------------------------------------
 function ClientAccountsPanel() {
+  const { t } = useLanguage();
   const { push } = useToast();
   const [rows, setRows] = useState<ClientRow[] | null>(null);
   const [loading, setLoading] = useState(true);
@@ -780,7 +789,7 @@ function ClientAccountsPanel() {
         <div className="flex items-center gap-2.5 min-w-0">
           <Building2 className="w-5 h-5 text-cyan-400 shrink-0" />
           <div className="min-w-0">
-            <h3 className="text-sm font-bold text-white">Buyer (Client) Accounts</h3>
+            <h3 className="text-sm font-bold text-white">{t("accounts.section.buyerAccounts")}</h3>
             <p className="text-[11px] text-slate-400 font-mono">
               {loading ? "Loading..." : `${rows?.length ?? 0} buyer account(s)`}
             </p>
@@ -792,7 +801,7 @@ function ClientAccountsPanel() {
             className="flex items-center gap-1.5 text-[11px] bg-slate-800 hover:bg-slate-700 text-slate-300 px-2.5 py-1.5 rounded-lg transition-all"
           >
             <RefreshCw className={`w-3 h-3 ${loading ? "animate-spin" : ""}`} />
-            Refresh
+            {t("common.refresh")}
           </button>
           <button
             onClick={() => setShowCreate(true)}
@@ -819,12 +828,12 @@ function ClientAccountsPanel() {
           <table className="w-full text-left font-mono text-xs min-w-[720px]">
             <thead>
               <tr className="text-slate-500 uppercase text-[10px] border-b border-slate-800">
-                <th className="py-2 pr-3">Company</th>
-                <th className="py-2 pr-3">Country</th>
-                <th className="py-2 pr-3">Contact Email</th>
-                <th className="py-2 pr-3">Status</th>
-                <th className="py-2 pr-3">Password</th>
-                <th className="py-2 text-right">Actions</th>
+                <th className="py-2 pr-3">{t("accounts.table.company")}</th>
+                <th className="py-2 pr-3">{t("accounts.table.country")}</th>
+                <th className="py-2 pr-3">{t("accounts.table.contactEmail")}</th>
+                <th className="py-2 pr-3">{t("common.status")}</th>
+                <th className="py-2 pr-3">{t("common.password")}</th>
+                <th className="py-2 text-right">{t("common.actions")}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-800/60">

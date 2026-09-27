@@ -1,8 +1,33 @@
 @import "tailwindcss";
 
+/* Sticky Header Overlap fix (2026-09-27) — single source of truth for the
+   vertical space every /admin/* page's own content must clear before it's
+   safe to start, now that BOTH global bars above it are sticky:
+   components/SiteNav.tsx (`sticky top-0`, h-14 = 3.5rem) stacked with
+   app/admin/layout.tsx's sign-out bar (`sticky top-14`, h-8 = 2rem) =
+   5.5rem combined. Previously this 5.5rem figure was hand-copied as a raw
+   Tailwind arbitrary value (`top-[5.5rem]`) into every admin dashboard
+   component that needed it — correct wherever it was applied, but with no
+   shared source: a page that forgot to add it (app/admin/page.tsx, the
+   main console home; app/admin/accounts/*) shipped with its own header/
+   content unprotected, scrolling up and disappearing behind the two
+   sticky bars exactly as reported.
+   `--spacing-admin-offset` below is a Tailwind v4 theme token (see the
+   `@theme` block further down), so every admin page reaches the same
+   number through readable utilities — `sticky top-admin-offset` for a
+   page that gives ITSELF a sticky sub-header (the established pattern:
+   green-accounting-dashboard.tsx and its siblings), or plain
+   `pt-admin-offset` for a page with no sticky sub-header of its own
+   (app/admin/page.tsx, app/admin/accounts/*) — instead of a magic literal
+   repeated per file. If SiteNav's or the sign-out bar's height ever
+   changes, this is the only line that needs to change. */
 :root {
   --background: #ffffff;
   --foreground: #171717;
+}
+
+@theme {
+  --spacing-admin-offset: 5.5rem;
 }
 
 @theme inline {

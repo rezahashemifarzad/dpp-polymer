@@ -68,10 +68,17 @@ export default async function AdminLayout({
           `h-8` (instead of letting padding size this) gives it a known,
           exact 32px height, so every /admin/* page's own sticky header
           (audit-log-dashboard.tsx and its siblings — see their own
-          comments) can stack below both bars using a single shared
-          constant: 3.5rem (SiteNav) + 2rem (this bar) = 5.5rem. z-40 keeps
-          this below SiteNav's z-50 (its mobile dropdown panel should
-          always render above this bar, never behind it). */}
+          comments) can stack below both bars.
+          Sticky Header Overlap fix (2026-09-27): that combined height —
+          3.5rem (SiteNav) + 2rem (this bar) = 5.5rem — used to be a raw
+          `top-[5.5rem]` arbitrary value hand-copied into every dashboard
+          that needed it, with no shared source. It's now the
+          `--spacing-admin-offset` Tailwind v4 theme token defined once in
+          app/globals.css — every admin page reaches it via
+          `top-admin-offset` (a page with its own sticky sub-header) or
+          `pt-admin-offset` (a page with none) instead of restating 5.5rem.
+          z-40 keeps this below SiteNav's z-50 (its mobile dropdown panel
+          should always render above this bar, never behind it). */}
       <div className="sticky top-14 z-40 h-8 bg-slate-950 border-b border-slate-800 text-slate-400 text-xs px-4 flex items-center justify-end gap-3">
         <span>
           Signed in as <span className="text-slate-200 font-medium">{admin.email}</span>

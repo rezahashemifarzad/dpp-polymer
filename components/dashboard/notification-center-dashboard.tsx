@@ -375,11 +375,13 @@ export function NotificationCenterDashboard({ initialSummary, initialWebhooks, i
 
   return (
     <div className="min-h-screen bg-[#020617] text-slate-100 font-sans overflow-x-hidden">
-      {/* Bug fix — top offset bumped from 0 to 5.5rem (SiteNav's 3.5rem +
-          the admin sign-out bar's 2rem — see app/admin/layout.tsx's own
-          comment) now that both of those are sticky too; top-0 here would
-          have made this header fight them for the same viewport position. */}
-      <header className="border-b border-slate-800/80 bg-[#070c18]/90 backdrop-blur-2xl sticky top-[5.5rem] z-40">
+      {/* Bug fix — top offset bumped from 0 to the shared admin-offset
+          token (SiteNav's 3.5rem + the admin sign-out bar's 2rem — see
+          app/admin/layout.tsx's own comment and the
+          --spacing-admin-offset definition in app/globals.css) now that
+          both of those are sticky too; top-0 here would have made this
+          header fight them for the same viewport position. */}
+      <header className="border-b border-slate-800/80 bg-[#070c18]/90 backdrop-blur-2xl sticky top-admin-offset z-40">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 min-h-16 py-3 flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
           <div className="flex items-center gap-4 min-w-0">
             <Link
@@ -387,7 +389,7 @@ export function NotificationCenterDashboard({ initialSummary, initialWebhooks, i
               className="flex items-center gap-1.5 text-xs text-slate-400 hover:text-white bg-slate-900 hover:bg-slate-800 border border-slate-800 px-3 py-1.5 rounded-lg transition-all shrink-0"
             >
               <ArrowLeft className="w-3.5 h-3.5" />
-              Admin Console
+              {t("common.adminConsole")}
             </Link>
             <div className="min-w-0">
               <h1 className="text-base font-bold text-white tracking-tight flex items-center gap-2">
@@ -406,7 +408,7 @@ export function NotificationCenterDashboard({ initialSummary, initialWebhooks, i
             title="Run the certificate-expiry check and compliance anomaly sweep now, dispatching any due notifications"
           >
             {sweeping ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />}
-            Run Sweep Now
+            {t("notifications.button.runSweep")}
           </button>
         </div>
       </header>
@@ -423,11 +425,11 @@ export function NotificationCenterDashboard({ initialSummary, initialWebhooks, i
             Overview
           </h2>
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-            <SummaryChip Icon={AlertOctagon} label="Expired" count={summary.expiryAlerts.expiredCount} cls="bg-rose-500/10 border-rose-500/30 text-rose-400" />
-            <SummaryChip Icon={AlertTriangle} label="Urgent" count={summary.expiryAlerts.expiringUrgentCount} cls="bg-orange-500/10 border-orange-500/30 text-orange-400" />
-            <SummaryChip Icon={Clock} label="Soon" count={summary.expiryAlerts.expiringSoonCount} cls="bg-amber-500/10 border-amber-500/30 text-amber-400" />
-            <SummaryChip Icon={ShieldAlert} label="Anomalies" count={summary.pendingAnomalyCount} cls="bg-fuchsia-500/10 border-fuchsia-500/30 text-fuchsia-400" />
-            <SummaryChip Icon={WebhookIcon} label="Active Webhooks" count={summary.activeWebhookCount} cls="bg-cyan-500/10 border-cyan-500/30 text-cyan-400" />
+            <SummaryChip Icon={AlertOctagon} label={t("notifications.chip.expired")} count={summary.expiryAlerts.expiredCount} cls="bg-rose-500/10 border-rose-500/30 text-rose-400" />
+            <SummaryChip Icon={AlertTriangle} label={t("notifications.chip.urgent")} count={summary.expiryAlerts.expiringUrgentCount} cls="bg-orange-500/10 border-orange-500/30 text-orange-400" />
+            <SummaryChip Icon={Clock} label={t("notifications.chip.soon")} count={summary.expiryAlerts.expiringSoonCount} cls="bg-amber-500/10 border-amber-500/30 text-amber-400" />
+            <SummaryChip Icon={ShieldAlert} label={t("notifications.chip.anomalies")} count={summary.pendingAnomalyCount} cls="bg-fuchsia-500/10 border-fuchsia-500/30 text-fuchsia-400" />
+            <SummaryChip Icon={WebhookIcon} label={t("notifications.chip.activeWebhooks")} count={summary.activeWebhookCount} cls="bg-cyan-500/10 border-cyan-500/30 text-cyan-400" />
             <SummaryChip Icon={Mail} label={summary.emailConfigured ? "Email Ready" : "Email Off"} count={summary.recentFailureCount} cls={summary.emailConfigured ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-400" : "bg-slate-800 border-slate-700 text-slate-400"} />
           </div>
           {!summary.emailConfigured && settings.emailEnabled && (
@@ -699,12 +701,12 @@ export function NotificationCenterDashboard({ initialSummary, initialWebhooks, i
               <table className="w-full text-left font-mono text-xs min-w-[720px]">
                 <thead>
                   <tr className="text-slate-500 uppercase text-[10px] border-b border-slate-800">
-                    <th className="py-2 pr-3">When</th>
-                    <th className="py-2 pr-3">Batch</th>
-                    <th className="py-2 pr-3">Event</th>
-                    <th className="py-2 pr-3">Channel</th>
-                    <th className="py-2 pr-3">Status</th>
-                    <th className="py-2">Detail</th>
+                    <th className="py-2 pr-3">{t("notifications.table.when")}</th>
+                    <th className="py-2 pr-3">{t("notifications.table.batch")}</th>
+                    <th className="py-2 pr-3">{t("notifications.table.event")}</th>
+                    <th className="py-2 pr-3">{t("notifications.table.channel")}</th>
+                    <th className="py-2 pr-3">{t("common.status")}</th>
+                    <th className="py-2">{t("notifications.table.detail")}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-800/60">

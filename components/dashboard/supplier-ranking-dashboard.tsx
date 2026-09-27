@@ -369,11 +369,13 @@ export function SupplierRankingDashboard({ summary }: { summary: SupplierAnalyti
           /admin/* analytics header in this app (see esg-analytics-dashboard.tsx's
           own comment on why a fixed-height, no-wrap row overflows on
           narrow viewports). */}
-      {/* Bug fix — top offset bumped from 0 to 5.5rem (SiteNav's 3.5rem +
-          the admin sign-out bar's 2rem — see app/admin/layout.tsx's own
-          comment) now that both of those are sticky too; top-0 here would
-          have made this header fight them for the same viewport position. */}
-      <header className="border-b border-slate-800/80 bg-[#070c18]/90 backdrop-blur-2xl sticky top-[5.5rem] z-40">
+      {/* Bug fix — top offset bumped from 0 to the shared admin-offset
+          token (SiteNav's 3.5rem + the admin sign-out bar's 2rem — see
+          app/admin/layout.tsx's own comment and the
+          --spacing-admin-offset definition in app/globals.css) now that
+          both of those are sticky too; top-0 here would have made this
+          header fight them for the same viewport position. */}
+      <header className="border-b border-slate-800/80 bg-[#070c18]/90 backdrop-blur-2xl sticky top-admin-offset z-40">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 min-h-16 py-3 flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
           <div className="flex items-center gap-4 min-w-0">
             <Link
@@ -381,7 +383,7 @@ export function SupplierRankingDashboard({ summary }: { summary: SupplierAnalyti
               className="shrink-0 flex items-center gap-2 text-xs font-medium bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 px-3 py-2 rounded-lg transition-all"
             >
               <ArrowLeft className="w-3.5 h-3.5" />
-              Admin Console
+              {t("common.adminConsole")}
             </Link>
             <div className="min-w-0">
               <h1 className="text-base font-bold text-white tracking-tight flex items-center gap-1.5">
@@ -400,14 +402,14 @@ export function SupplierRankingDashboard({ summary }: { summary: SupplierAnalyti
               className="flex items-center gap-1.5 text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 px-3 py-2 rounded-lg transition-all"
             >
               <RefreshCw className={`w-3.5 h-3.5 ${refreshing ? "animate-spin" : ""}`} />
-              Refresh
+              {t("common.refresh")}
             </button>
             <button
               onClick={handleExportCsv}
               className="flex items-center gap-1.5 text-xs bg-sky-500 hover:bg-sky-400 text-slate-950 font-bold px-3 py-2 rounded-lg transition-all"
             >
               <Download className="w-3.5 h-3.5" />
-              Export CSV
+              {t("suppliers.button.exportCsv")}
             </button>
           </div>
         </div>
@@ -419,37 +421,37 @@ export function SupplierRankingDashboard({ summary }: { summary: SupplierAnalyti
           <SummaryChip
             icon={Factory}
             value={summary.rankedSupplierCount}
-            label="Ranked Suppliers"
+            label={t("suppliers.kpi.rankedSuppliers")}
             colorClass="bg-sky-500/10 border-sky-500/30 text-sky-300"
           />
           <SummaryChip
             icon={Award}
             value={summary.tierCounts.Preferred}
-            label="Preferred"
+            label={t("suppliers.tier.preferred")}
             colorClass="bg-emerald-500/10 border-emerald-500/30 text-emerald-300"
           />
           <SummaryChip
             icon={BadgeCheck}
             value={summary.tierCounts.Approved}
-            label="Approved"
+            label={t("suppliers.tier.approved")}
             colorClass="bg-teal-500/10 border-teal-500/30 text-teal-300"
           />
           <SummaryChip
             icon={Clock}
             value={summary.tierCounts.Watch}
-            label="Watch"
+            label={t("suppliers.tier.watch")}
             colorClass="bg-amber-500/10 border-amber-500/30 text-amber-300"
           />
           <SummaryChip
             icon={AlertTriangle}
             value={summary.tierCounts["At Risk"]}
-            label="At Risk"
+            label={t("suppliers.tier.atRisk")}
             colorClass="bg-rose-500/10 border-rose-500/30 text-rose-300"
           />
           <SummaryChip
             icon={FileWarning}
             value={summary.expiringCertificatesTotal}
-            label="Certs Expiring/Expired"
+            label={t("suppliers.kpi.certsExpiring")}
             colorClass="bg-orange-500/10 border-orange-500/30 text-orange-300"
           />
         </div>
@@ -513,15 +515,15 @@ export function SupplierRankingDashboard({ summary }: { summary: SupplierAnalyti
               <table className="w-full text-left font-mono text-xs min-w-[880px]">
                 <thead>
                   <tr className="text-slate-500 uppercase text-[10px] border-b border-slate-800">
-                    <th className="py-2 px-2 text-left">Supplier</th>
-                    <th className="py-2 px-2 text-left">Tier</th>
-                    <SortHeader label="Batches" k="batches" />
-                    <SortHeader label="Compliance" k="compliance" />
-                    <SortHeader label="Currency" k="currency" />
-                    <SortHeader label="Avg PCR" k="pcr" />
-                    <SortHeader label="Avg PCF" k="pcf" />
-                    <th className="py-2 px-2 text-center">Cert Expiry</th>
-                    <SortHeader label="Score" k="rank" />
+                    <th className="py-2 px-2 text-left">{t("suppliers.table.supplier")}</th>
+                    <th className="py-2 px-2 text-left">{t("suppliers.table.tier")}</th>
+                    <SortHeader label={t("greenAccounting.table.batches")} k="batches" />
+                    <SortHeader label={t("suppliers.table.compliance")} k="compliance" />
+                    <SortHeader label={t("suppliers.table.currency")} k="currency" />
+                    <SortHeader label={t("suppliers.table.avgPcr")} k="pcr" />
+                    <SortHeader label={t("suppliers.table.avgPcf")} k="pcf" />
+                    <th className="py-2 px-2 text-center">{t("suppliers.table.certExpiry")}</th>
+                    <SortHeader label={t("suppliers.table.score")} k="rank" />
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-800/60">

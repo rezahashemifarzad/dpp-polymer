@@ -436,11 +436,13 @@ export function EsgAnalyticsDashboard({
           (instead of a fixed height + no-wrap) lets the button block drop to
           its own line instead of forcing horizontal overflow, and the button
           block itself also wraps as a safety net for in-between widths. */}
-      {/* Bug fix — top offset bumped from 0 to 5.5rem (SiteNav's 3.5rem +
-          the admin sign-out bar's 2rem — see app/admin/layout.tsx's own
-          comment) now that both of those are sticky too; top-0 here would
-          have made this header fight them for the same viewport position. */}
-      <header className="border-b border-slate-800/80 bg-[#070c18]/90 backdrop-blur-2xl sticky top-[5.5rem] z-40">
+      {/* Bug fix — top offset bumped from 0 to the shared admin-offset
+          token (SiteNav's 3.5rem + the admin sign-out bar's 2rem — see
+          app/admin/layout.tsx's own comment and the
+          --spacing-admin-offset definition in app/globals.css) now that
+          both of those are sticky too; top-0 here would have made this
+          header fight them for the same viewport position. */}
+      <header className="border-b border-slate-800/80 bg-[#070c18]/90 backdrop-blur-2xl sticky top-admin-offset z-40">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 min-h-16 py-3 flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
           <div className="flex items-center gap-4 min-w-0">
             <Link
@@ -448,7 +450,7 @@ export function EsgAnalyticsDashboard({
               className="shrink-0 flex items-center gap-2 text-xs font-medium bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 px-3 py-2 rounded-lg transition-all"
             >
               <ArrowLeft className="w-3.5 h-3.5" />
-              Admin Console
+              {t("common.adminConsole")}
             </Link>
             <div className="min-w-0">
               <h1 className="text-base font-bold text-white tracking-tight">{t("esg.title")}</h1>
@@ -464,21 +466,21 @@ export function EsgAnalyticsDashboard({
               className="flex items-center gap-1.5 text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 px-3 py-2 rounded-lg transition-all"
             >
               <RefreshCw className={`w-3.5 h-3.5 ${refreshing ? "animate-spin" : ""}`} />
-              Refresh
+              {t("common.refresh")}
             </button>
             <button
               onClick={handleExportCsv}
               className="flex items-center gap-1.5 text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 px-3 py-2 rounded-lg transition-all"
             >
               <Download className="w-3.5 h-3.5" />
-              CSV
+              {t("common.csv")}
             </button>
             <button
               onClick={handleExportJson}
               className="flex items-center gap-1.5 text-xs bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold px-3 py-2 rounded-lg transition-all"
             >
               <FileJson className="w-3.5 h-3.5" />
-              JSON
+              {t("common.json")}
             </button>
             <button
               onClick={handleExportEsgXlsx}
@@ -491,7 +493,7 @@ export function EsgAnalyticsDashboard({
               ) : (
                 <FileSpreadsheet className="w-3.5 h-3.5" />
               )}
-              {esgXlsxExporting ? "Generating..." : "Export ESG Data Sheets"}
+              {esgXlsxExporting ? t("common.generating") : t("esg.button.exportDataSheets")}
             </button>
             <button
               onClick={handleExportPdf}
@@ -504,7 +506,7 @@ export function EsgAnalyticsDashboard({
               ) : (
                 <FileText className="w-3.5 h-3.5" />
               )}
-              {pdfExporting ? "Generating..." : "Export Compliance PDF"}
+              {pdfExporting ? t("common.generating") : t("esg.button.exportCompliancePdf")}
             </button>
           </div>
         </div>
@@ -531,7 +533,7 @@ export function EsgAnalyticsDashboard({
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <KpiCard
             icon={Recycle}
-            label="PCR Mass Consumed"
+            label={t("esg.kpi.pcrMass")}
             value={numberFmt(summary.pcrMass.pcrMassKg)}
             unit="kg"
             accent="text-emerald-400"
@@ -544,7 +546,7 @@ export function EsgAnalyticsDashboard({
           />
           <KpiCard
             icon={Leaf}
-            label="Carbon Footprint (Verified)"
+            label={t("esg.kpi.carbonFootprint")}
             value={summary.carbon.totalVerifiedKgCO2e !== null ? numberFmt(summary.carbon.totalVerifiedKgCO2e) : "—"}
             unit={summary.carbon.totalVerifiedKgCO2e !== null ? "kg CO2e" : undefined}
             accent="text-teal-400"
@@ -559,14 +561,14 @@ export function EsgAnalyticsDashboard({
           />
           <KpiCard
             icon={TrendingUp}
-            label="Est. EU Plastic Tax Relief"
+            label={t("esg.kpi.taxRelief")}
             value={`€${numberFmt(summary.taxRelief.estimatedReliefEur, 0)}`}
             accent="text-amber-400"
             sub={<>€{summary.taxRelief.ratePerTonneEur}/tonne on {numberFmt(summary.taxRelief.pcrMassTonnes, 2)} t PCR — illustrative only</>}
           />
           <KpiCard
             icon={BadgeCheck}
-            label="Certification Compliance"
+            label={t("esg.kpi.certCompliance")}
             value={`${summary.compliance.verifiedPercent}%`}
             accent="text-blue-400"
             sub={
@@ -764,8 +766,8 @@ export function EsgAnalyticsDashboard({
             <table className="w-full text-left font-mono text-xs">
               <thead>
                 <tr className="text-slate-500 uppercase text-[10px] border-b border-slate-800">
-                  <th className="py-2">Status</th>
-                  <th className="py-2 text-right">Count</th>
+                  <th className="py-2">{t("common.status")}</th>
+                  <th className="py-2 text-right">{t("greenAccounting.table.count")}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-800/60">
@@ -793,10 +795,10 @@ export function EsgAnalyticsDashboard({
               <table className="w-full text-left font-mono text-xs min-w-[420px]">
                 <thead>
                   <tr className="text-slate-500 uppercase text-[10px] border-b border-slate-800">
-                    <th className="py-2">Month</th>
-                    <th className="py-2 text-right">Batches</th>
-                    <th className="py-2 text-right">Avg PCR %</th>
-                    <th className="py-2 text-right">Avg Carbon (kg/kg)</th>
+                    <th className="py-2">{t("greenAccounting.table.month")}</th>
+                    <th className="py-2 text-right">{t("greenAccounting.table.batches")}</th>
+                    <th className="py-2 text-right">{t("greenAccounting.table.avgPcr")}</th>
+                    <th className="py-2 text-right">{t("greenAccounting.table.avgCarbon")}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-800/60">
@@ -849,20 +851,20 @@ export function EsgAnalyticsDashboard({
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div className="bg-slate-950 border border-slate-800 rounded-xl p-4">
-                <div className="text-[10px] font-mono text-slate-500 uppercase tracking-wider">Gross Liability</div>
+                <div className="text-[10px] font-mono text-slate-500 uppercase tracking-wider">{t("greenAccounting.kpi.grossLiability")}</div>
                 <div className="text-xl font-extrabold font-mono mt-1 text-amber-400">
                   €{numberFmt(greenAccounting.totalGrossLiabilityEur, 0)}
                 </div>
               </div>
               <div className="bg-slate-950 border border-slate-800 rounded-xl p-4">
-                <div className="text-[10px] font-mono text-slate-500 uppercase tracking-wider">PCR Tax Savings</div>
+                <div className="text-[10px] font-mono text-slate-500 uppercase tracking-wider">{t("greenAccounting.kpi.pcrTaxSavings")}</div>
                 <div className="text-xl font-extrabold font-mono mt-1 text-emerald-400">
                   €{numberFmt(greenAccounting.totalPcrTaxSavingsEur, 0)}
                 </div>
               </div>
               <div className="bg-slate-950 border border-slate-800 rounded-xl p-4">
                 <div className="text-[10px] font-mono text-slate-500 uppercase tracking-wider flex items-center gap-1">
-                  Net Liability
+                  {t("greenAccounting.kpi.netLiability")}
                   <Lock className="w-2.5 h-2.5 text-slate-600" />
                 </div>
                 <div className="text-xl font-extrabold font-mono mt-1 text-rose-400">
@@ -885,7 +887,7 @@ export function EsgAnalyticsDashboard({
                 ) : (
                   <FileSpreadsheet className="w-3.5 h-3.5" />
                 )}
-                Export Tax &amp; Financial Excel
+                {t("greenAccounting.button.exportExcel")}
               </button>
               <button
                 onClick={handleExportGreenPdf}
@@ -897,7 +899,7 @@ export function EsgAnalyticsDashboard({
                 ) : (
                   <FileText className="w-3.5 h-3.5" />
                 )}
-                Export Green Tax PDF
+                {t("greenAccounting.button.exportPdf")}
               </button>
             </div>
             {(greenPdfError || greenXlsxError) && (
@@ -1137,6 +1139,7 @@ function ManufacturerDistributionCard({
 }: {
   manufacturers: EsgAnalyticsSummary["manufacturerDistribution"];
 }) {
+  const { t } = useLanguage();
   return (
     <div className="bg-slate-900/60 border border-slate-800 rounded-3xl p-6 backdrop-blur-xl">
       <h3 className="text-sm font-bold text-white flex items-center gap-1.5 mb-1">
@@ -1150,10 +1153,10 @@ function ManufacturerDistributionCard({
           <table className="w-full text-left font-mono text-xs min-w-[480px]">
             <thead className="sticky top-0 bg-slate-900">
               <tr className="text-slate-500 uppercase text-[10px] border-b border-slate-800">
-                <th className="py-2">Manufacturer</th>
-                <th className="py-2 text-right">Batches</th>
-                <th className="py-2 text-right">Avg PCR %</th>
-                <th className="py-2 text-right">Avg Carbon</th>
+                <th className="py-2">{t("esg.table.manufacturer")}</th>
+                <th className="py-2 text-right">{t("greenAccounting.table.batches")}</th>
+                <th className="py-2 text-right">{t("greenAccounting.table.avgPcr")}</th>
+                <th className="py-2 text-right">{t("esg.table.avgCarbon")}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-800/60">
@@ -1181,6 +1184,7 @@ function ManufacturerDistributionCard({
 }
 
 function GradeDistributionCard({ grades }: { grades: EsgAnalyticsSummary["gradeDistribution"] }) {
+  const { t } = useLanguage();
   return (
     <div className="bg-slate-900/60 border border-slate-800 rounded-3xl p-6 backdrop-blur-xl">
       <h3 className="text-sm font-bold text-white flex items-center gap-1.5 mb-1">
@@ -1194,9 +1198,9 @@ function GradeDistributionCard({ grades }: { grades: EsgAnalyticsSummary["gradeD
           <table className="w-full text-left font-mono text-xs min-w-[420px]">
             <thead className="sticky top-0 bg-slate-900">
               <tr className="text-slate-500 uppercase text-[10px] border-b border-slate-800">
-                <th className="py-2">Polymer / Grade</th>
-                <th className="py-2 text-right">Batches</th>
-                <th className="py-2 text-right">Avg PCR %</th>
+                <th className="py-2">{t("esg.table.polymerGrade")}</th>
+                <th className="py-2 text-right">{t("greenAccounting.table.batches")}</th>
+                <th className="py-2 text-right">{t("greenAccounting.table.avgPcr")}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-800/60">

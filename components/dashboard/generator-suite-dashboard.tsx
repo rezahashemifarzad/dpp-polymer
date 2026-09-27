@@ -211,11 +211,13 @@ export function GeneratorSuiteDashboard() {
 
   return (
     <div className="min-h-screen bg-[#020617] text-slate-100 font-sans overflow-x-hidden">
-      {/* Bug fix — top offset bumped from 0 to 5.5rem (SiteNav's 3.5rem +
-          the admin sign-out bar's 2rem — see app/admin/layout.tsx's own
-          comment) now that both of those are sticky too; top-0 here would
-          have made this header fight them for the same viewport position. */}
-      <header className="border-b border-slate-800/80 bg-[#070c18]/90 backdrop-blur-2xl sticky top-[5.5rem] z-40">
+      {/* Bug fix — top offset bumped from 0 to the shared admin-offset
+          token (SiteNav's 3.5rem + the admin sign-out bar's 2rem — see
+          app/admin/layout.tsx's own comment and the
+          --spacing-admin-offset definition in app/globals.css) now that
+          both of those are sticky too; top-0 here would have made this
+          header fight them for the same viewport position. */}
+      <header className="border-b border-slate-800/80 bg-[#070c18]/90 backdrop-blur-2xl sticky top-admin-offset z-40">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 min-h-16 py-3 flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
           <div className="flex items-center gap-4 min-w-0">
             <Link
@@ -223,7 +225,7 @@ export function GeneratorSuiteDashboard() {
               className="flex items-center gap-1.5 text-xs text-slate-400 hover:text-white bg-slate-900 hover:bg-slate-800 border border-slate-800 px-3 py-1.5 rounded-lg transition-all shrink-0"
             >
               <ArrowLeft className="w-3.5 h-3.5" />
-              Admin Console
+              {t("common.adminConsole")}
             </Link>
             <div className="min-w-0">
               <h1 className="text-base font-bold text-white tracking-tight flex items-center gap-2">
@@ -346,7 +348,7 @@ export function GeneratorSuiteDashboard() {
           {/* Live preview + export controls */}
           <div className="lg:col-span-5 space-y-6">
             <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-5">
-              <h2 className="text-sm font-semibold text-slate-100 mb-3">Live Preview</h2>
+              <h2 className="text-sm font-semibold text-slate-100 mb-3">{t("generator.section.livePreview")}</h2>
               {focusedPassport ? (
                 <div className="flex items-center gap-4">
                   <div className="p-3 bg-white rounded-xl w-fit shrink-0">
@@ -388,7 +390,7 @@ export function GeneratorSuiteDashboard() {
             </div>
 
             <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-5 space-y-4">
-              <h2 className="text-sm font-semibold text-slate-100">Label Sheet Settings</h2>
+              <h2 className="text-sm font-semibold text-slate-100">{t("generator.section.labelSheetSettings")}</h2>
 
               <div className="space-y-2">
                 <span className="text-[11px] text-slate-400 font-mono block">Layout</span>
@@ -453,7 +455,7 @@ export function GeneratorSuiteDashboard() {
                 className="w-full flex items-center justify-center gap-2 py-2.5 bg-emerald-500 hover:bg-emerald-400 disabled:opacity-40 disabled:cursor-not-allowed text-slate-950 font-bold rounded-xl transition text-xs"
               >
                 {preparingSheet ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Printer className="w-3.5 h-3.5" />}
-                {preparingSheet ? "Preparing..." : `Download Label Sheet PDF (${selectedEligible.length})`}
+                {preparingSheet ? t("common.preparing") : `${t("generator.button.downloadLabelSheet")} (${selectedEligible.length})`}
               </button>
 
               {focusedPassport && (
@@ -464,7 +466,7 @@ export function GeneratorSuiteDashboard() {
                   className="w-full flex items-center justify-center gap-2 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold rounded-xl transition text-xs"
                 >
                   <Download className="w-3.5 h-3.5" />
-                  Download Certificate PDF ({focusedPassport.batchId})
+                  {t("generator.button.downloadCertPdf")} ({focusedPassport.batchId})
                 </a>
               )}
             </div>

@@ -186,35 +186,35 @@ function AdminDashboardInner() {
             className="flex items-center gap-2 text-xs font-medium bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 text-emerald-400 px-4 py-2 rounded-lg transition-all"
           >
             <BarChart3 className="w-4 h-4" />
-            ESG Analytics
+            {t("adminHome.link.esg")}
           </Link>
           <Link
             href="/auditor"
             className="flex items-center gap-2 text-xs font-medium bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 text-amber-400 px-4 py-2 rounded-lg transition-all"
           >
             <KeyRound className="w-4 h-4" />
-            Auditor Portal
+            {t("adminHome.link.auditor")}
           </Link>
           <Link
             href="/client-portal"
             className="flex items-center gap-2 text-xs font-medium bg-cyan-500/10 hover:bg-cyan-500/20 border border-cyan-500/30 text-cyan-400 px-4 py-2 rounded-lg transition-all"
           >
             <Building2 className="w-4 h-4" />
-            Client Portal
+            {t("adminHome.link.client")}
           </Link>
           <Link
             href="/admin/green-accounting"
             className="flex items-center gap-2 text-xs font-medium bg-lime-500/10 hover:bg-lime-500/20 border border-lime-500/30 text-lime-400 px-4 py-2 rounded-lg transition-all"
           >
             <Coins className="w-4 h-4" />
-            Green Accounting
+            {t("adminHome.link.greenAccounting")}
           </Link>
           <Link
             href="/admin/audit"
             className="flex items-center gap-2 text-xs font-medium bg-fuchsia-500/10 hover:bg-fuchsia-500/20 border border-fuchsia-500/30 text-fuchsia-400 px-4 py-2 rounded-lg transition-all"
           >
             <ScrollText className="w-4 h-4" />
-            Audit Log
+            {t("adminHome.link.audit")}
           </Link>
           {/* Phase 7 - Step 1 (Automated Notification & Webhook Suite) —
               admin-console-only nav link, same precedent as Audit Log and
@@ -228,7 +228,7 @@ function AdminDashboardInner() {
             className="flex items-center gap-2 text-xs font-medium bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/30 text-rose-400 px-4 py-2 rounded-lg transition-all"
           >
             <Bell className="w-4 h-4" />
-            Notifications
+            {t("adminHome.link.notifications")}
           </Link>
           {/* Phase 7 - Step 2 (Supplier Performance & Compliance Ranking
               Dashboard) — same admin-console-only precedent as Notifications
@@ -244,7 +244,7 @@ function AdminDashboardInner() {
             className="flex items-center gap-2 text-xs font-medium bg-sky-500/10 hover:bg-sky-500/20 border border-sky-500/30 text-sky-400 px-4 py-2 rounded-lg transition-all"
           >
             <Factory className="w-4 h-4" />
-            Suppliers
+            {t("adminHome.link.suppliers")}
           </Link>
           {/* Phase 6 (Batch Certificate & Dynamic QR Generator Suite) —
               same nav-pill slot as every other /admin/* destination above;
@@ -256,7 +256,7 @@ function AdminDashboardInner() {
             className="flex items-center gap-2 text-xs font-medium bg-violet-500/10 hover:bg-violet-500/20 border border-violet-500/30 text-violet-400 px-4 py-2 rounded-lg transition-all"
           >
             <LayoutGrid className="w-4 h-4" />
-            Generator Suite
+            {t("adminHome.link.generator")}
           </Link>
           {/* Admin UI for Auditor & Buyer Accounts — same
               admin-console-only nav precedent as Notifications/Suppliers
@@ -269,14 +269,14 @@ function AdminDashboardInner() {
             className="flex items-center gap-2 text-xs font-medium bg-teal-500/10 hover:bg-teal-500/20 border border-teal-500/30 text-teal-400 px-4 py-2 rounded-lg transition-all"
           >
             <Users className="w-4 h-4" />
-            Accounts
+            {t("adminHome.link.accounts")}
           </Link>
           <Link
             href="/"
             className="flex items-center gap-2 text-xs font-medium bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 px-4 py-2 rounded-lg transition-all"
           >
             <ArrowLeft className="w-4 h-4" />
-            Public View
+            {t("adminHome.link.publicView")}
           </Link>
         </div>
       </div>
