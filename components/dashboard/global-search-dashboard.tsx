@@ -291,14 +291,26 @@ export function GlobalSearchDashboard({
   for (const item of result.results) resultsByType[item.entityType].push(item);
 
   return (
-    <div className="min-h-screen bg-[#020617] text-slate-100 font-sans overflow-x-hidden">
+    <div className="min-h-screen bg-[#020617] text-slate-100 font-sans">
       {/* Bug fix — top offset bumped from 0 to the shared admin-offset
           token (SiteNav's 3.5rem + the admin sign-out bar's 2rem — see
           app/admin/layout.tsx's own comment and the
-          --spacing-admin-offset definition in app/globals.css) now that
+          --admin-content-offset definition in app/globals.css) now that
           both of those are sticky too; top-0 here would have made this
-          header fight them for the same viewport position. */}
-      <header className="border-b border-slate-800/80 bg-[#070c18]/90 backdrop-blur-2xl sticky top-admin-offset z-40">
+          header fight them for the same viewport position.
+          Sticky Header Overlap fix, round 2 (2026-09-28) — this header
+          previously never actually stuck: the outer div above was
+          `overflow-x-hidden`, which (per the CSS overflow spec) forces
+          `overflow-y: auto` too, turning it into an accidental scroll
+          container that neutralizes `position: sticky` for this header.
+          Moved `overflow-x-hidden` down to <main> below (where the wide
+          tables it exists for actually are) and switched the offset from
+          a Tailwind utility class to a plain CSS custom property consumed
+          via inline style — see app/globals.css's own comment. */}
+      <header
+        className="border-b border-slate-800/80 bg-[#070c18]/90 backdrop-blur-2xl sticky z-40"
+        style={{ top: "var(--admin-content-offset)" }}
+      >
         <div className="max-w-5xl mx-auto px-4 sm:px-6 min-h-16 py-3 flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
           <div className="flex items-center gap-4 min-w-0">
             <Link
@@ -320,7 +332,7 @@ export function GlobalSearchDashboard({
         </div>
       </header>
 
-      <main className="max-w-5xl mx-auto px-4 sm:px-6 py-6 space-y-5">
+      <main className="max-w-5xl mx-auto px-4 sm:px-6 py-6 space-y-5 overflow-x-hidden">
         {/* --- Search bar ----------------------------------------------------- */}
         <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-3 flex items-center gap-3">
           <Search className="w-4 h-4 text-slate-500 shrink-0" />

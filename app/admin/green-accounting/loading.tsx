@@ -33,11 +33,18 @@ function KpiCardSkeleton() {
 
 export default function GreenAccountingLoading() {
   return (
-    <div className="min-h-screen bg-[#020617] text-slate-100 font-sans overflow-x-hidden animate-pulse">
-      {/* Bug fix — same top-offset fix as GreenAccountingDashboard's real
-          header (see that file's own comment); this skeleton mirrors its
-          layout, so it needs the same shared admin-offset token. */}
-      <header className="border-b border-slate-800/80 bg-[#070c18]/90 backdrop-blur-2xl sticky top-admin-offset z-40">
+    <div className="min-h-screen bg-[#020617] text-slate-100 font-sans animate-pulse">
+      {/* Sticky Header Overlap fix, round 2 (2026-09-28) — mirrors
+          GreenAccountingDashboard's real header fix (see that file's own
+          comment and app/globals.css's): `overflow-x-hidden` moved off this
+          wrapper (it was silently turning it into a scroll container that
+          broke `position: sticky` below) and onto <main>, and the offset
+          switched from a Tailwind utility class to the `--admin-content-
+          offset` CSS custom property via inline style. */}
+      <header
+        className="border-b border-slate-800/80 bg-[#070c18]/90 backdrop-blur-2xl sticky z-40"
+        style={{ top: "var(--admin-content-offset)" }}
+      >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 min-h-16 py-3 flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
           <div className="flex items-center gap-4 min-w-0">
             <div className="h-9 w-32 bg-slate-800 rounded-lg shrink-0" />
@@ -55,7 +62,7 @@ export default function GreenAccountingLoading() {
         </div>
       </header>
 
-      <main className="max-w-7xl mx-auto px-6 py-8 space-y-8">
+      <main className="max-w-7xl mx-auto px-6 py-8 space-y-8 overflow-x-hidden">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <KpiCardSkeleton />
           <KpiCardSkeleton />

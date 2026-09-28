@@ -69,16 +69,15 @@ export default async function AdminLayout({
           exact 32px height, so every /admin/* page's own sticky header
           (audit-log-dashboard.tsx and its siblings — see their own
           comments) can stack below both bars.
-          Sticky Header Overlap fix (2026-09-27): that combined height —
-          3.5rem (SiteNav) + 2rem (this bar) = 5.5rem — used to be a raw
-          `top-[5.5rem]` arbitrary value hand-copied into every dashboard
-          that needed it, with no shared source. It's now the
-          `--spacing-admin-offset` Tailwind v4 theme token defined once in
-          app/globals.css — every admin page reaches it via
-          `top-admin-offset` (a page with its own sticky sub-header) or
-          `pt-admin-offset` (a page with none) instead of restating 5.5rem.
-          z-40 keeps this below SiteNav's z-50 (its mobile dropdown panel
-          should always render above this bar, never behind it). */}
+          Sticky Header Overlap fix, round 2 (2026-09-28) — see
+          app/globals.css's own comment for the actual root cause (an
+          `overflow-x-hidden` wrapper inside each dashboard was silently
+          breaking `position: sticky` for its own sub-header, independent
+          of whatever `top` value that sub-header used) and the
+          `--admin-content-offset` custom property that replaces the
+          Tailwind theme-token attempt from round 1. z-40 keeps this below
+          SiteNav's z-50 (its mobile dropdown panel should always render
+          above this bar, never behind it). */}
       <div className="sticky top-14 z-40 h-8 bg-slate-950 border-b border-slate-800 text-slate-400 text-xs px-4 flex items-center justify-end gap-3">
         <span>
           Signed in as <span className="text-slate-200 font-medium">{admin.email}</span>
@@ -92,7 +91,16 @@ export default async function AdminLayout({
           </button>
         </form>
       </div>
-      {children}
+      {/* Sticky Header Overlap fix, round 2 (2026-09-28) — guaranteed floor,
+          applied here so it protects EVERY /admin/* page whether or not
+          that page also gives itself a sticky sub-header (app/admin/page.tsx,
+          the console home, and app/admin/accounts/* have none of their own
+          and were shipping with zero protection before this). For a page
+          that DOES have its own sticky sub-header pinned at the same
+          `--admin-content-offset`, this padding just sets that header's
+          initial (pre-scroll) flow position to exactly where it will stick
+          — no extra gap, no double-offset; see app/globals.css's comment. */}
+      <div style={{ paddingTop: "var(--admin-content-offset)" }}>{children}</div>
     </>
   );
 }

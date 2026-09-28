@@ -364,7 +364,7 @@ export function SupplierRankingDashboard({ summary }: { summary: SupplierAnalyti
   );
 
   return (
-    <div className="min-h-screen bg-[#020617] text-slate-100 font-sans overflow-x-hidden">
+    <div className="min-h-screen bg-[#020617] text-slate-100 font-sans">
       {/* Header — same min-h-16 + flex-wrap pattern as every other
           /admin/* analytics header in this app (see esg-analytics-dashboard.tsx's
           own comment on why a fixed-height, no-wrap row overflows on
@@ -372,10 +372,22 @@ export function SupplierRankingDashboard({ summary }: { summary: SupplierAnalyti
       {/* Bug fix — top offset bumped from 0 to the shared admin-offset
           token (SiteNav's 3.5rem + the admin sign-out bar's 2rem — see
           app/admin/layout.tsx's own comment and the
-          --spacing-admin-offset definition in app/globals.css) now that
+          --admin-content-offset definition in app/globals.css) now that
           both of those are sticky too; top-0 here would have made this
-          header fight them for the same viewport position. */}
-      <header className="border-b border-slate-800/80 bg-[#070c18]/90 backdrop-blur-2xl sticky top-admin-offset z-40">
+          header fight them for the same viewport position.
+          Sticky Header Overlap fix, round 2 (2026-09-28) — this header
+          previously never actually stuck: the outer div above was
+          `overflow-x-hidden`, which (per the CSS overflow spec) forces
+          `overflow-y: auto` too, turning it into an accidental scroll
+          container that neutralizes `position: sticky` for this header.
+          Moved `overflow-x-hidden` down to <main> below (where the wide
+          tables it exists for actually are) and switched the offset from
+          a Tailwind utility class to a plain CSS custom property consumed
+          via inline style — see app/globals.css's own comment. */}
+      <header
+        className="border-b border-slate-800/80 bg-[#070c18]/90 backdrop-blur-2xl sticky z-40"
+        style={{ top: "var(--admin-content-offset)" }}
+      >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 min-h-16 py-3 flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
           <div className="flex items-center gap-4 min-w-0">
             <Link
@@ -415,7 +427,7 @@ export function SupplierRankingDashboard({ summary }: { summary: SupplierAnalyti
         </div>
       </header>
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 py-6 space-y-6">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 py-6 space-y-6 overflow-x-hidden">
         {/* --- Overview KPI chips ------------------------------------------- */}
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
           <SummaryChip

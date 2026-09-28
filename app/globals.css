@@ -1,33 +1,39 @@
 @import "tailwindcss";
 
-/* Sticky Header Overlap fix (2026-09-27) — single source of truth for the
-   vertical space every /admin/* page's own content must clear before it's
-   safe to start, now that BOTH global bars above it are sticky:
-   components/SiteNav.tsx (`sticky top-0`, h-14 = 3.5rem) stacked with
-   app/admin/layout.tsx's sign-out bar (`sticky top-14`, h-8 = 2rem) =
-   5.5rem combined. Previously this 5.5rem figure was hand-copied as a raw
-   Tailwind arbitrary value (`top-[5.5rem]`) into every admin dashboard
-   component that needed it — correct wherever it was applied, but with no
-   shared source: a page that forgot to add it (app/admin/page.tsx, the
-   main console home; app/admin/accounts/*) shipped with its own header/
-   content unprotected, scrolling up and disappearing behind the two
-   sticky bars exactly as reported.
-   `--spacing-admin-offset` below is a Tailwind v4 theme token (see the
-   `@theme` block further down), so every admin page reaches the same
-   number through readable utilities — `sticky top-admin-offset` for a
-   page that gives ITSELF a sticky sub-header (the established pattern:
-   green-accounting-dashboard.tsx and its siblings), or plain
-   `pt-admin-offset` for a page with no sticky sub-header of its own
-   (app/admin/page.tsx, app/admin/accounts/*) — instead of a magic literal
-   repeated per file. If SiteNav's or the sign-out bar's height ever
-   changes, this is the only line that needs to change. */
+/* Sticky Header Overlap fix, round 2 (2026-09-28) — the 2026-09-27 attempt
+   (a Tailwind `@theme` token generating a `top-admin-offset` utility) was
+   verified still broken in production. Root cause was never the offset
+   VALUE — it was that every admin dashboard's outer wrapper
+   (`min-h-screen ... overflow-x-hidden`) also contained that dashboard's
+   own `position: sticky` sub-header as a descendant. Per the CSS overflow
+   spec, setting `overflow-x` to anything but `visible` while `overflow-y`
+   is left `visible` forces the computed `overflow-y` to `auto` too — so
+   that wrapper silently became a scroll container. A `position: sticky`
+   descendant then sticks relative to THAT container's scrollport, not the
+   real page viewport; since the wrapper never scrolls internally (it has
+   no fixed height — it's exactly as tall as its own content), the
+   descendant's "sticky" top value is compared against a scrollport that
+   never moves, so it never engages — the header just scrolls away like
+   ordinary content and disappears behind the two genuinely-sticky global
+   bars above it (components/SiteNav.tsx + the sign-out bar in
+   app/admin/layout.tsx), which is exactly what was reported. No `top`
+   value, Tailwind class, or CSS variable could have fixed that — the fix
+   is moving `overflow-x-hidden` off the header's containing block (see
+   each dashboard's own comment; it now lives on `<main>` instead, which
+   is where the wide tables it was protecting against actually are).
+   `--admin-content-offset` below is a plain `:root` custom property
+   (not a Tailwind `@theme` token this time, to remove any dependency on
+   Tailwind's utility-generation rules) — every sticky sub-header and
+   app/admin/layout.tsx's own guaranteed top-padding wrapper both read it
+   via an inline `style={{ top: "var(--admin-content-offset)" }}` /
+   `style={{ paddingTop: "var(--admin-content-offset)" }}`, so the number
+   still has exactly one source, it's just consumed as real CSS instead of
+   through a utility class whose generation couldn't be verified without a
+   build this session doesn't have access to run. */
 :root {
   --background: #ffffff;
   --foreground: #171717;
-}
-
-@theme {
-  --spacing-admin-offset: 5.5rem;
+  --admin-content-offset: 5.5rem;
 }
 
 @theme inline {

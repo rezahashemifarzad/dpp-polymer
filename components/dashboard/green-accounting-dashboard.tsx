@@ -758,14 +758,24 @@ export function GreenAccountingDashboard({
   };
 
   return (
-    <div className="min-h-screen bg-[#020617] text-slate-100 font-sans overflow-x-hidden">
-      {/* Bug fix — top offset bumped from 0 to the shared admin-offset
-          token (SiteNav's 3.5rem + the admin sign-out bar's 2rem — see
-          app/admin/layout.tsx's own comment and the
-          --spacing-admin-offset definition in app/globals.css) now that
-          both of those are sticky too; top-0 here would have made this
-          header fight them for the same viewport position. */}
-      <header className="border-b border-slate-800/80 bg-[#070c18]/90 backdrop-blur-2xl sticky top-admin-offset z-40">
+    <div className="min-h-screen bg-[#020617] text-slate-100 font-sans">
+      {/* Sticky Header Overlap fix, round 2 (2026-09-28) — this header's
+          `overflow-x-hidden` used to live on the OUTER div above, which
+          silently turned it into a scroll container and broke this
+          header's `position: sticky` entirely (see app/globals.css's
+          comment for the CSS mechanics). Moved to <main> below, which is
+          actually where the wide tables it was guarding against live; the
+          header and its sticky positioning are unaffected by it now.
+          top offset via inline style, not a Tailwind class, reading the
+          single shared --admin-content-offset custom property in
+          app/globals.css (SiteNav's 3.5rem + the admin sign-out bar's
+          2rem) now that both of those are sticky too; top-0 here would
+          have made this header fight them for the same viewport
+          position. */}
+      <header
+        className="border-b border-slate-800/80 bg-[#070c18]/90 backdrop-blur-2xl sticky z-40"
+        style={{ top: "var(--admin-content-offset)" }}
+      >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 min-h-16 py-3 flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
           <div className="flex items-center gap-4 min-w-0">
             <Link
@@ -847,7 +857,7 @@ export function GreenAccountingDashboard({
         )}
       </header>
 
-      <main className="max-w-7xl mx-auto px-6 py-8 space-y-8">
+      <main className="max-w-7xl mx-auto px-6 py-8 space-y-8 overflow-x-hidden">
         {/* KPI Cards */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <KpiCard
