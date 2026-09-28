@@ -91,16 +91,35 @@ export default async function AdminLayout({
           </button>
         </form>
       </div>
-      {/* Sticky Header Overlap fix, round 2 (2026-09-28) — guaranteed floor,
-          applied here so it protects EVERY /admin/* page whether or not
-          that page also gives itself a sticky sub-header (app/admin/page.tsx,
-          the console home, and app/admin/accounts/* have none of their own
-          and were shipping with zero protection before this). For a page
-          that DOES have its own sticky sub-header pinned at the same
-          `--admin-content-offset`, this padding just sets that header's
-          initial (pre-scroll) flow position to exactly where it will stick
-          — no extra gap, no double-offset; see app/globals.css's comment. */}
-      <div style={{ paddingTop: "var(--admin-content-offset)" }}>{children}</div>
+      {/* Sticky Header Overlap fix, round 2 (2026-09-28) — a "guaranteed
+          floor" padding wrapper was added here on the mistaken belief that
+          app/admin/page.tsx and app/admin/accounts/* (pages with no
+          sticky sub-header of their own) rendered their content with zero
+          offset from SiteNav + the sign-out bar above. That was wrong:
+          `position: sticky` elements still occupy their own height in
+          normal document flow (only `position: fixed` removes an element
+          from flow) — SiteNav (h-14, 3.5rem) and this bar (h-8, 2rem)
+          already push every subsequent sibling, i.e. `children` below,
+          down by their combined 5.5rem naturally, with no extra CSS
+          needed. Adding a second, explicit `paddingTop:
+          var(--admin-content-offset)` (also 5.5rem) here DOUBLED that to
+          11rem for every /admin/* page, and since that extra padding band
+          had no background of its own, it showed app/globals.css's
+          `body` background straight through — solid white for anyone not
+          in OS dark mode (`body`'s dark background only applies under a
+          `prefers-color-scheme: dark` media query) — as a large box
+          spanning the full page width, reported as a "White Box" bug
+          (2026-09-28). Removed entirely: `{children}` here relies purely
+          on the natural flow height above it, exactly as it always did
+          for pages with no sticky sub-header of their own — no wrapper,
+          no padding, nothing to double up. Pages that DO have their own
+          sticky sub-header (see each dashboard's own comment) still pin
+          it at `top: var(--admin-content-offset)` via inline style; its
+          natural (unscrolled) flow position already lands at exactly
+          5.5rem too, since it's the very first thing rendered inside
+          `children`, so it coincides with its own sticky offset with no
+          gap either. */}
+      {children}
     </>
   );
 }

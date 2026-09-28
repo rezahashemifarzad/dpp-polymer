@@ -23,13 +23,28 @@
    is where the wide tables it was protecting against actually are).
    `--admin-content-offset` below is a plain `:root` custom property
    (not a Tailwind `@theme` token this time, to remove any dependency on
-   Tailwind's utility-generation rules) — every sticky sub-header and
-   app/admin/layout.tsx's own guaranteed top-padding wrapper both read it
-   via an inline `style={{ top: "var(--admin-content-offset)" }}` /
-   `style={{ paddingTop: "var(--admin-content-offset)" }}`, so the number
-   still has exactly one source, it's just consumed as real CSS instead of
-   through a utility class whose generation couldn't be verified without a
-   build this session doesn't have access to run. */
+   Tailwind's utility-generation rules) — every dashboard's own sticky
+   sub-header reads it via an inline `style={{ top: "var(--admin-content-
+   offset)" }}`, so the number still has exactly one source, it's just
+   consumed as real CSS instead of through a utility class whose
+   generation couldn't be verified without a build this session doesn't
+   have access to run.
+
+   White Box fix (2026-09-28) — a same-day follow-up briefly also added a
+   `style={{ paddingTop: "var(--admin-content-offset)" }}` wrapper around
+   `{children}` in app/admin/layout.tsx, on the mistaken belief that pages
+   with no sticky sub-header of their own (app/admin/page.tsx, app/admin/
+   accounts/*) needed it to clear SiteNav + the admin sign-out bar. They
+   didn't: `position: sticky` elements still occupy their own height in
+   normal document flow (unlike `position: fixed`), so SiteNav (3.5rem)
+   and the sign-out bar (2rem) already push every page's own content down
+   by their combined 5.5rem with zero extra CSS. That padding wrapper
+   doubled the offset to 11rem for every /admin/* page, and since it had
+   no background of its own, the empty band it created let `body`'s
+   background below show through — solid white for any visitor not in OS
+   dark mode (`body`'s own dark background only applies inside the
+   `prefers-color-scheme: dark` media query above), across the full page
+   width. Removed in app/admin/layout.tsx; see that file's own comment. */
 :root {
   --background: #ffffff;
   --foreground: #171717;
