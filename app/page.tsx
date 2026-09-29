@@ -380,7 +380,16 @@ function CompletePolymerDPPInner() {
   };
 
   return (
-    <div className="min-h-screen bg-[#020617] text-slate-100 font-sans selection:bg-emerald-500 selection:text-black overflow-x-hidden">
+    // Scroll-trap fix (2026-09-29) — `overflow-x-hidden` -> `overflow-x-clip`.
+    // Same root cause already documented in app/globals.css for the admin
+    // dashboards: `overflow-x: hidden` forces the computed `overflow-y` to
+    // `auto`, silently turning this wrapper into a scroll container, which
+    // breaks `position: sticky` for the <header> below (it never sticks
+    // under SiteNav and scrolls away with the page). `overflow-x: clip`
+    // still clips horizontal overflow but does NOT create a scroll
+    // container, so the header's `sticky top-14` works against the real
+    // viewport again.
+    <div className="min-h-screen bg-[#020617] text-slate-100 font-sans selection:bg-emerald-500 selection:text-black overflow-x-clip">
 
       {/* Top Navigation Bar. Row 1 (logo + language/DB status) uses
           min-h-16 + flex-wrap instead of a fixed h-16 + no-wrap, so the

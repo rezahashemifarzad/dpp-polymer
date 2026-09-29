@@ -163,7 +163,12 @@ function AdminDashboardInner() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 p-4 sm:p-6 font-sans overflow-x-hidden">
+    // Scroll-trap fix (2026-09-29) — `overflow-x-clip` instead of
+    // `overflow-x-hidden`: clips horizontal overflow without turning this
+    // wrapper into an accidental scroll container (see app/page.tsx and
+    // app/globals.css for the full explanation), so window-level scrolling
+    // and every sticky/fixed layer above stay anchored to the real viewport.
+    <div className="min-h-screen bg-slate-950 text-slate-100 p-4 sm:p-6 font-sans overflow-x-clip">
       {/* Header — stacks title above the action-link row below md so four
           pill links never force horizontal overflow on a phone; the link
           row itself also wraps (flex-wrap) as a safety net for the

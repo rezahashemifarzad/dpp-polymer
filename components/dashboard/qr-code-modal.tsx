@@ -50,6 +50,8 @@
 import { useRef } from "react";
 import { X, Download, ExternalLink, FileBadge } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
+// Scroll-trap fix (2026-09-29) — see lib/hooks/use-body-scroll-lock.ts.
+import { useBodyScrollLock } from "@/lib/hooks/use-body-scroll-lock";
 
 interface QrCodeModalProps {
   open: boolean;
@@ -91,6 +93,7 @@ function triggerBlobDownload(blob: Blob, filename: string) {
 
 export function QrCodeModal({ open, onClose, batchId, label, qrUrl, details, viewedFromAdmin }: QrCodeModalProps) {
   const qrBoxRef = useRef<HTMLDivElement>(null);
+  useBodyScrollLock(open);
 
   if (!open) return null;
 
@@ -140,93 +143,112 @@ export function QrCodeModal({ open, onClose, batchId, label, qrUrl, details, vie
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-xl overflow-y-auto">
-      <div className="bg-slate-900 border border-slate-800 w-full max-w-sm rounded-3xl p-6 relative shadow-2xl my-8">
-        <button
-          onClick={onClose}
-          className="absolute right-4 top-4 text-slate-400 hover:text-white p-1.5 rounded-xl bg-slate-800"
-          aria-label="Close"
-        >
-          <X className="w-4 h-4" />
-        </button>
-
-        <div className="text-center mb-5">
-          <div ref={qrBoxRef} className="p-4 bg-white rounded-2xl w-fit mx-auto mb-3 shadow-xl">
-            {qrUrl ? (
-              <QRCodeSVG value={qrUrl} size={180} bgColor="#FFFFFF" fgColor="#0f172a" level="M" />
-            ) : (
-              <div className="w-[180px] h-[180px] flex items-center justify-center text-slate-400 text-[10px] font-mono text-center px-4">
-                No QR link recorded for this batch yet
-              </div>
-            )}
-          </div>
-          <h4 className="font-bold text-base text-white break-words">{label}</h4>
-          <p className="text-xs text-slate-400 font-mono mt-0.5">{batchId}</p>
-        </div>
-
-        {qrUrl && (
-          <p className="text-[10px] text-slate-500 font-mono text-center mb-5 break-all px-2 leading-relaxed">
-            {qrUrl}
-          </p>
-        )}
-
-        {details && details.length > 0 && (
-          <div className="space-y-2.5 font-mono text-xs bg-slate-950 p-4 rounded-xl border border-slate-800 mb-5">
-            {details.map((d, i) => (
-              <div
-                key={d.label}
-                className={`flex justify-between gap-3 ${
-                  i < details.length - 1 ? "border-b border-slate-800 pb-2" : ""
-                }`}
-              >
-                <span className="text-slate-500 shrink-0">{d.label}</span>
-                <span className="text-white font-bold text-[10px] truncate max-w-[180px]" title={d.title}>
-                  {d.value}
-                </span>
-              </div>
-            ))}
-          </div>
-        )}
-
-        <div className="grid grid-cols-2 gap-2 mb-2">
+    // Scroll-trap fix (2026-09-29) — same two-part fix as
+    // batch-details-modal.tsx (see its comment for the full reasoning):
+    // (1) the overlay previously was `fixed inset-0 z-50` and covered the
+    // sticky SiteNav toolbar; it now starts below the global chrome at z-40
+    // so the toolbar stays reachable; (2) the whole backdrop used to scroll
+    // (`overflow-y-auto` + `my-8` card), which carried the close button off
+    // screen on short viewports. Now the card is capped to the space under
+    // the toolbar, the close button sits in a non-scrolling header row, and
+    // only the card body scrolls; the window is scroll-locked while open.
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-label={`QR code — ${batchId}`}
+      className="fixed inset-x-0 bottom-0 z-40 flex items-center justify-center p-4 bg-black/80 backdrop-blur-xl"
+      style={{ top: viewedFromAdmin ? "var(--admin-content-offset)" : "var(--site-nav-height)" }}
+    >
+      <div className="bg-slate-900 border border-slate-800 w-full max-w-sm rounded-3xl shadow-2xl flex flex-col max-h-full min-h-0 overflow-hidden">
+        <div className="shrink-0 flex justify-end px-4 pt-4">
           <button
-            onClick={handleDownloadPng}
-            disabled={!qrUrl}
-            className="flex items-center justify-center gap-1.5 py-2.5 bg-emerald-500 hover:bg-emerald-400 disabled:opacity-40 disabled:cursor-not-allowed text-slate-950 font-bold rounded-xl transition text-xs"
+            onClick={onClose}
+            className="text-slate-400 hover:text-white p-1.5 rounded-xl bg-slate-800"
+            aria-label="Close"
           >
-            <Download className="w-3.5 h-3.5" /> PNG
-          </button>
-          <button
-            onClick={handleDownloadSvg}
-            disabled={!qrUrl}
-            className="flex items-center justify-center gap-1.5 py-2.5 bg-slate-800 hover:bg-slate-700 disabled:opacity-40 disabled:cursor-not-allowed text-slate-200 font-bold rounded-xl transition text-xs"
-          >
-            <Download className="w-3.5 h-3.5" /> SVG
+            <X className="w-4 h-4" />
           </button>
         </div>
 
-        <a
-          href={`/api/passports/${encodeURIComponent(batchId)}/certificate.pdf`}
-          target="_blank"
-          rel="noreferrer"
-          className="flex items-center justify-center gap-1.5 w-full py-2.5 mb-2 bg-slate-800 hover:bg-slate-700 text-slate-200 font-mono font-bold text-xs rounded-xl transition"
-        >
-          <FileBadge className="w-3.5 h-3.5" /> Download Certificate PDF
-        </a>
+        <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-6 pb-6">
+          <div className="text-center mb-5">
+            <div ref={qrBoxRef} className="p-4 bg-white rounded-2xl w-fit mx-auto mb-3 shadow-xl">
+              {qrUrl ? (
+                <QRCodeSVG value={qrUrl} size={180} bgColor="#FFFFFF" fgColor="#0f172a" level="M" />
+              ) : (
+                <div className="w-[180px] h-[180px] flex items-center justify-center text-slate-400 text-[10px] font-mono text-center px-4">
+                  No QR link recorded for this batch yet
+                </div>
+              )}
+            </div>
+            <h4 className="font-bold text-base text-white break-words">{label}</h4>
+            <p className="text-xs text-slate-400 font-mono mt-0.5">{batchId}</p>
+          </div>
 
-        <a
-          href={publicPageUrl || "#"}
-          target="_blank"
-          rel="noreferrer"
-          aria-disabled={!qrUrl}
-          className={`flex items-center justify-center gap-1.5 w-full py-2.5 font-mono font-bold text-xs rounded-xl transition ${
-            qrUrl
-              ? "bg-slate-800 hover:bg-slate-700 text-slate-200"
-              : "bg-slate-800/50 text-slate-600 cursor-not-allowed pointer-events-none"
-          }`}
-        >
-          Open Public Verification Page <ExternalLink className="w-3 h-3" />
-        </a>
+          {qrUrl && (
+            <p className="text-[10px] text-slate-500 font-mono text-center mb-5 break-all px-2 leading-relaxed">
+              {qrUrl}
+            </p>
+          )}
+
+          {details && details.length > 0 && (
+            <div className="space-y-2.5 font-mono text-xs bg-slate-950 p-4 rounded-xl border border-slate-800 mb-5">
+              {details.map((d, i) => (
+                <div
+                  key={d.label}
+                  className={`flex justify-between gap-3 ${
+                    i < details.length - 1 ? "border-b border-slate-800 pb-2" : ""
+                  }`}
+                >
+                  <span className="text-slate-500 shrink-0">{d.label}</span>
+                  <span className="text-white font-bold text-[10px] truncate max-w-[180px]" title={d.title}>
+                    {d.value}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+
+          <div className="grid grid-cols-2 gap-2 mb-2">
+            <button
+              onClick={handleDownloadPng}
+              disabled={!qrUrl}
+              className="flex items-center justify-center gap-1.5 py-2.5 bg-emerald-500 hover:bg-emerald-400 disabled:opacity-40 disabled:cursor-not-allowed text-slate-950 font-bold rounded-xl transition text-xs"
+            >
+              <Download className="w-3.5 h-3.5" /> PNG
+            </button>
+            <button
+              onClick={handleDownloadSvg}
+              disabled={!qrUrl}
+              className="flex items-center justify-center gap-1.5 py-2.5 bg-slate-800 hover:bg-slate-700 disabled:opacity-40 disabled:cursor-not-allowed text-slate-200 font-bold rounded-xl transition text-xs"
+            >
+              <Download className="w-3.5 h-3.5" /> SVG
+            </button>
+          </div>
+
+          <a
+            href={`/api/passports/${encodeURIComponent(batchId)}/certificate.pdf`}
+            target="_blank"
+            rel="noreferrer"
+            className="flex items-center justify-center gap-1.5 w-full py-2.5 mb-2 bg-slate-800 hover:bg-slate-700 text-slate-200 font-mono font-bold text-xs rounded-xl transition"
+          >
+            <FileBadge className="w-3.5 h-3.5" /> Download Certificate PDF
+          </a>
+
+          <a
+            href={publicPageUrl || "#"}
+            target="_blank"
+            rel="noreferrer"
+            aria-disabled={!qrUrl}
+            className={`flex items-center justify-center gap-1.5 w-full py-2.5 font-mono font-bold text-xs rounded-xl transition ${
+              qrUrl
+                ? "bg-slate-800 hover:bg-slate-700 text-slate-200"
+                : "bg-slate-800/50 text-slate-600 cursor-not-allowed pointer-events-none"
+            }`}
+          >
+            Open Public Verification Page <ExternalLink className="w-3 h-3" />
+          </a>
+        </div>
       </div>
     </div>
   );

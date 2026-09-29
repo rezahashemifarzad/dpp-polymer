@@ -441,6 +441,18 @@ export default function PublicScanPage({ passport, integrityVerified, linkTruste
         .f-mono { font-family: 'IBM Plex Mono', monospace; }
       `}</style>
 
+      {/* Scroll-trap fix (2026-09-29) — the detailed passport view is long
+          (composition, LCA, chain of custody, certifications…), and its
+          toolbar — including the "Admin Console" back link shown when opened
+          from /admin — used to scroll away with the content, leaving the
+          user stranded at the bottom of the page. The trust banner and the
+          toolbar are now one `sticky top-0 z-50` block, so both stay pinned
+          to the top of the viewport however far the user scrolls. (SiteNav
+          deliberately does not render on this page — see its banner — so
+          there is no other sticky bar to offset against.) The outer
+          min-h-screen wrapper has no overflow set, so nothing interferes
+          with `position: sticky` here. */}
+      <div className="sticky top-0 z-50 shadow-sm">
       {/* Trust banner — only shown when something is actually wrong */}
       {!overallTrusted && (
         <div className="bg-rose-600 text-white text-center py-2 px-4 text-xs f-body font-medium flex items-center justify-center gap-2">
@@ -476,6 +488,7 @@ export default function PublicScanPage({ passport, integrityVerified, linkTruste
             </span>
           )}
         </div>
+      </div>
       </div>
 
       {/* Role-Based Authentication & Client/Auditor Portal Suite — a

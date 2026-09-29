@@ -60,6 +60,8 @@ import type { SvhcStatusValue } from "@/lib/hooks/use-passports";
 // retyped (and potentially mis-spelled) on every batch. See
 // lib/services/form-suggestions.ts.
 import { useFormSuggestions } from "@/lib/hooks/use-form-suggestions";
+// Scroll-trap fix (2026-09-29) — see lib/hooks/use-body-scroll-lock.ts.
+import { useBodyScrollLock } from "@/lib/hooks/use-body-scroll-lock";
 
 const TRANSPORT_MODES: Array<"TRUCK" | "RAIL" | "SEA" | "AIR"> = ["TRUCK", "RAIL", "SEA", "AIR"];
 
@@ -208,6 +210,11 @@ export function BatchDetailsModal({
 
   const { suggestions } = useFormSuggestions(open);
 
+  // Scroll-trap fix (2026-09-29): while this modal is open, the window
+  // itself must not scroll — only the modal body below does. Called before
+  // the early return so hook order stays stable across renders.
+  useBodyScrollLock(open && passport !== null);
+
   if (!open || !passport) return null;
 
   const handleLinkParent = async (e: React.FormEvent) => {
@@ -303,27 +310,39 @@ export function BatchDetailsModal({
   };
 
   return (
-    // Bug fix — "batch management modal content often exceeds the
-    // viewport height; the top nav / back button isn't reachable without
-    // manual scrolling." Previously this backdrop itself scrolled
-    // (overflow-y-auto here, with the card just centered inline via
-    // `my-8`), so the header — including the "Back to Admin Console" bar
-    // added for the earlier "trapped" fix — scrolled away with the rest
-    // of the content on a form this long (6 panels). Fixed below: the
-    // backdrop no longer scrolls; the card itself is a flex column capped
-    // at 90% viewport height, with a `shrink-0` header (title + back/close
-    // buttons) that never scrolls and a separate `overflow-y-auto` body
-    // for everything else — "controlled max-height on the content
-    // container," not the whole window overflowing the screen.
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-xl">
-      <div className="bg-slate-900 border border-slate-800 w-full max-w-2xl rounded-3xl shadow-2xl flex flex-col max-h-[90vh] overflow-hidden">
+    // Scroll-trap fix (2026-09-29) — "content exceeds the viewport height
+    // and traps the user down the page; the top toolbar / admin shortcuts
+    // aren't reachable." Two remaining causes, both fixed here:
+    //
+    // 1. This overlay was `fixed inset-0 z-50`. SiteNav is also z-50 and
+    //    earlier in the DOM, so the overlay painted OVER the sticky global
+    //    toolbar — Home / Admin Console / ESG shortcuts were unreachable for
+    //    as long as the modal was open, no matter how the toolbar itself
+    //    was positioned. The overlay now starts BELOW the global chrome
+    //    (`top` = SiteNav height, or SiteNav + the admin sign-out bar on
+    //    /admin — both values live in app/globals.css) and sits at z-40,
+    //    so the sticky toolbar stays visible and clickable above it.
+    //
+    // 2. The card was capped at `max-h-[90vh]`, measured against the full
+    //    viewport rather than the space actually left under the toolbar,
+    //    and the page behind kept scrolling on wheel/touch (scroll
+    //    chaining). The card is now `max-h-full` of the overlay (which is
+    //    exactly "viewport minus toolbar"), the body is the ONLY scroll
+    //    container (`min-h-0 overflow-y-auto overscroll-contain`), and the
+    //    window is scroll-locked while open (useBodyScrollLock above).
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-label={`Manage Batch — ${passport.batchId}`}
+      className="fixed inset-x-0 bottom-0 z-40 flex items-center justify-center p-4 bg-black/80 backdrop-blur-xl"
+      style={{ top: viewedFromAdmin ? "var(--admin-content-offset)" : "var(--site-nav-height)" }}
+    >
+      <div className="bg-slate-900 border border-slate-800 w-full max-w-2xl rounded-3xl shadow-2xl flex flex-col max-h-full min-h-0 overflow-hidden">
         <div className="shrink-0 relative px-6 pt-6 pb-4 border-b border-slate-800">
-          {/* Bug fix — persistent, clearly-labeled return path for the admin
-              passport management/edit view (see viewedFromAdmin's own
-              comment on BatchDetailsModalProps). Placed as its own bar above
-              the title, not just relying on the small "X" in the corner.
-              Now lives in the non-scrolling header, so it stays reachable
-              no matter how far the body below is scrolled. */}
+          {/* Persistent, clearly-labeled return path for the admin passport
+              management view (see viewedFromAdmin's own comment on
+              BatchDetailsModalProps). Lives in the non-scrolling header, so
+              it stays reachable no matter how far the body is scrolled. */}
           {viewedFromAdmin && (
             <button
               onClick={onClose}
@@ -348,7 +367,7 @@ export function BatchDetailsModal({
           </p>
         </div>
 
-        <div className="flex-1 overflow-y-auto px-6 py-4">
+        <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-6 py-4">
         {/* Certificate & QR panel — Phase 6 (Batch Certificate & Dynamic QR
             Generator Suite). This is the ONE insertion point shared by both
             app/page.tsx's Material Ledger tab and app/admin/page.tsx (both

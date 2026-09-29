@@ -49,6 +49,12 @@
   --background: #ffffff;
   --foreground: #171717;
   --admin-content-offset: 5.5rem;
+  /* Scroll-trap fix (2026-09-29) — height of components/SiteNav.tsx's
+     sticky row (h-14). Overlays (batch-details-modal.tsx, qr-code-modal.tsx)
+     start below this on non-admin pages, and below --admin-content-offset
+     (SiteNav + admin sign-out bar) on /admin, so the global toolbar is
+     never covered while a modal is open. */
+  --site-nav-height: 3.5rem;
 }
 
 @theme inline {
