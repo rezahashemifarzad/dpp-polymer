@@ -13,6 +13,12 @@
  */
 
 import { runNotificationSweep, type NotificationSweepResult } from "@/lib/services/notification-service";
+// Security (2026-09-29): admin-only Server Action. A Server Action is a
+// public POST endpoint in its own right, so being mounted only under
+// /admin is not a guard. Every export below re-verifies an active ADMIN
+// session first (outside any try/catch, so requireAdminSession()'s
+// redirect to /login propagates instead of being swallowed).
+import { requireAdminSession } from "@/lib/session-auth";
 
 export interface RunNotificationSweepActionResult {
   ok: boolean;
@@ -21,6 +27,8 @@ export interface RunNotificationSweepActionResult {
 }
 
 export async function runNotificationSweepAction(): Promise<RunNotificationSweepActionResult> {
+  await requireAdminSession();
+
   try {
     const data = await runNotificationSweep("ADMIN");
     return { ok: true, data };

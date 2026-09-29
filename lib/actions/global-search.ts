@@ -14,6 +14,12 @@
  */
 
 import { searchGlobal, type GlobalSearchFilters, type GlobalSearchResult } from "@/lib/services/global-search";
+// Security (2026-09-29): admin-only Server Action. A Server Action is a
+// public POST endpoint in its own right, so being mounted only under
+// /admin is not a guard. Every export below re-verifies an active ADMIN
+// session first (outside any try/catch, so requireAdminSession()'s
+// redirect to /login propagates instead of being swallowed).
+import { requireAdminSession } from "@/lib/session-auth";
 
 export interface GlobalSearchActionResult {
   ok: boolean;
@@ -22,6 +28,8 @@ export interface GlobalSearchActionResult {
 }
 
 export async function globalSearchAction(filters: GlobalSearchFilters): Promise<GlobalSearchActionResult> {
+  await requireAdminSession();
+
   try {
     const data = await searchGlobal(filters);
     return { ok: true, data };

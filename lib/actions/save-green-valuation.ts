@@ -14,6 +14,12 @@ import {
   saveBatchGreenValuation,
   type BatchGreenAccountingResult,
 } from "@/lib/services/plastic-tax-calculator";
+// Security (2026-09-29): admin-only Server Action. A Server Action is a
+// public POST endpoint in its own right, so being mounted only under
+// /admin is not a guard. Every export below re-verifies an active ADMIN
+// session first (outside any try/catch, so requireAdminSession()'s
+// redirect to /login propagates instead of being swallowed).
+import { requireAdminSession } from "@/lib/session-auth";
 
 export interface SaveGreenValuationActionResult {
   ok: boolean;
@@ -25,6 +31,8 @@ export async function saveGreenValuationAction(
   batchId: string,
   jurisdiction?: string
 ): Promise<SaveGreenValuationActionResult> {
+  await requireAdminSession();
+
   try {
     const result = await saveBatchGreenValuation(batchId, "ADMIN", jurisdiction);
     if (!result.ok) {

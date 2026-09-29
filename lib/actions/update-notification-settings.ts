@@ -15,6 +15,12 @@ import {
   type NotificationSettingsView,
   type UpdateNotificationSettingsInput,
 } from "@/lib/services/notification-settings";
+// Security (2026-09-29): admin-only Server Action. A Server Action is a
+// public POST endpoint in its own right, so being mounted only under
+// /admin is not a guard. Every export below re-verifies an active ADMIN
+// session first (outside any try/catch, so requireAdminSession()'s
+// redirect to /login propagates instead of being swallowed).
+import { requireAdminSession } from "@/lib/session-auth";
 
 export interface UpdateNotificationSettingsActionResult {
   ok: boolean;
@@ -25,6 +31,8 @@ export interface UpdateNotificationSettingsActionResult {
 export async function updateNotificationSettingsAction(
   input: UpdateNotificationSettingsInput
 ): Promise<UpdateNotificationSettingsActionResult> {
+  await requireAdminSession();
+
   try {
     const result = await updateNotificationSettings("ADMIN", input);
     if (!result.ok) {

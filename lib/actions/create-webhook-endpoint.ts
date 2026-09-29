@@ -11,6 +11,12 @@
  */
 
 import { createWebhookEndpoint, type WebhookEndpointSummary, type CreateWebhookEndpointInput } from "@/lib/services/webhook-endpoints";
+// Security (2026-09-29): admin-only Server Action. A Server Action is a
+// public POST endpoint in its own right, so being mounted only under
+// /admin is not a guard. Every export below re-verifies an active ADMIN
+// session first (outside any try/catch, so requireAdminSession()'s
+// redirect to /login propagates instead of being swallowed).
+import { requireAdminSession } from "@/lib/session-auth";
 
 export interface CreateWebhookEndpointActionResult {
   ok: boolean;
@@ -19,6 +25,8 @@ export interface CreateWebhookEndpointActionResult {
 }
 
 export async function createWebhookEndpointAction(input: CreateWebhookEndpointInput): Promise<CreateWebhookEndpointActionResult> {
+  await requireAdminSession();
+
   try {
     const result = await createWebhookEndpoint("ADMIN", input);
     if (!result.ok) {

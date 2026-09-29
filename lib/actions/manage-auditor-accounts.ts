@@ -21,6 +21,12 @@ import {
   setAuditorPassword,
   type AuditorAccountRow,
 } from "@/lib/services/manage-auditor-accounts";
+// Security (2026-09-29): admin-only Server Action. A Server Action is a
+// public POST endpoint in its own right, so being mounted only under
+// /admin is not a guard. Every export below re-verifies an active ADMIN
+// session first (outside any try/catch, so requireAdminSession()'s
+// redirect to /login propagates instead of being swallowed).
+import { requireAdminSession } from "@/lib/session-auth";
 
 function toPlainJson<T>(value: T): T {
   return JSON.parse(JSON.stringify(value)) as T;
@@ -35,6 +41,8 @@ export interface ListAuditorAccountsActionResult {
 }
 
 export async function listAuditorAccountsAction(): Promise<ListAuditorAccountsActionResult> {
+  await requireAdminSession();
+
   try {
     const data = await listAuditorAccounts();
     return { ok: true, data: toPlainJson(data) };
@@ -57,6 +65,8 @@ export async function createAuditorAccountAction(input: {
   email?: string;
   password?: string;
 }): Promise<CreateAuditorAccountActionResult> {
+  await requireAdminSession();
+
   try {
     const result = await createAuditorAccount(input, "ADMIN");
     if (!result.ok) {
@@ -76,6 +86,8 @@ export interface SetAuditorActiveActionResult {
 }
 
 export async function setAuditorActiveAction(id: string, active: boolean): Promise<SetAuditorActiveActionResult> {
+  await requireAdminSession();
+
   try {
     const result = await setAuditorActive(id, active, "ADMIN");
     if (!result.ok) return { ok: false, error: result.error };
@@ -93,6 +105,8 @@ export interface RotateAuditorApiKeyActionResult {
 }
 
 export async function rotateAuditorApiKeyAction(id: string): Promise<RotateAuditorApiKeyActionResult> {
+  await requireAdminSession();
+
   try {
     const result = await rotateAuditorApiKey(id, "ADMIN");
     if (!result.ok) return { ok: false, error: result.error };
@@ -110,6 +124,8 @@ export interface SetAuditorPasswordActionResult {
 }
 
 export async function setAuditorPasswordAction(id: string, password: string): Promise<SetAuditorPasswordActionResult> {
+  await requireAdminSession();
+
   try {
     const result = await setAuditorPassword(id, { password }, "ADMIN");
     if (!result.ok) return { ok: false, error: result.error };

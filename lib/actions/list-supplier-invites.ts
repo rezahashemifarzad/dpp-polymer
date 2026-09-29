@@ -9,6 +9,12 @@
  */
 
 import { listSupplierInvites, revokeSupplierInvite } from "@/lib/services/supplier-submission";
+// Security (2026-09-29): admin-only Server Action. A Server Action is a
+// public POST endpoint in its own right, so being mounted only under
+// /admin is not a guard. Every export below re-verifies an active ADMIN
+// session first (outside any try/catch, so requireAdminSession()'s
+// redirect to /login propagates instead of being swallowed).
+import { requireAdminSession } from "@/lib/session-auth";
 
 function toPlainJson(value: unknown): unknown {
   return JSON.parse(JSON.stringify(value));
@@ -21,6 +27,8 @@ export interface ListSupplierInvitesActionResult {
 }
 
 export async function listSupplierInvitesAction(): Promise<ListSupplierInvitesActionResult> {
+  await requireAdminSession();
+
   try {
     const invites = await listSupplierInvites();
     return { ok: true, data: toPlainJson(invites) as unknown[] };
@@ -36,6 +44,8 @@ export interface RevokeSupplierInviteActionResult {
 }
 
 export async function revokeSupplierInviteAction(inviteId: string): Promise<RevokeSupplierInviteActionResult> {
+  await requireAdminSession();
+
   try {
     const result = await revokeSupplierInvite(inviteId);
     if (!result.ok) {

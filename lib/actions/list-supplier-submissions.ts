@@ -19,6 +19,12 @@
 
 import { listSupplierSubmissions } from "@/lib/services/supplier-submission";
 import type { SupplierSubmissionStatus } from "@prisma/client";
+// Security (2026-09-29): admin-only Server Action. A Server Action is a
+// public POST endpoint in its own right, so being mounted only under
+// /admin is not a guard. Every export below re-verifies an active ADMIN
+// session first (outside any try/catch, so requireAdminSession()'s
+// redirect to /login propagates instead of being swallowed).
+import { requireAdminSession } from "@/lib/session-auth";
 
 export interface ListSupplierSubmissionsActionResult {
   ok: boolean;
@@ -41,6 +47,8 @@ function toPlainJson(value: unknown): unknown {
 export async function listSupplierSubmissionsAction(
   status?: SupplierSubmissionStatus
 ): Promise<ListSupplierSubmissionsActionResult> {
+  await requireAdminSession();
+
   try {
     const submissions = await listSupplierSubmissions(status);
     return { ok: true, data: toPlainJson(submissions) as unknown[] };

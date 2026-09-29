@@ -18,6 +18,12 @@ import {
   setClientPassword,
   type ClientAccountRow,
 } from "@/lib/services/manage-client-accounts";
+// Security (2026-09-29): admin-only Server Action. A Server Action is a
+// public POST endpoint in its own right, so being mounted only under
+// /admin is not a guard. Every export below re-verifies an active ADMIN
+// session first (outside any try/catch, so requireAdminSession()'s
+// redirect to /login propagates instead of being swallowed).
+import { requireAdminSession } from "@/lib/session-auth";
 
 function toPlainJson<T>(value: T): T {
   return JSON.parse(JSON.stringify(value)) as T;
@@ -32,6 +38,8 @@ export interface ListClientAccountsActionResult {
 }
 
 export async function listClientAccountsAction(): Promise<ListClientAccountsActionResult> {
+  await requireAdminSession();
+
   try {
     const data = await listClientAccounts();
     return { ok: true, data: toPlainJson(data) };
@@ -54,6 +62,8 @@ export async function createClientAccountAction(input: {
   contactEmail?: string;
   password?: string;
 }): Promise<CreateClientAccountActionResult> {
+  await requireAdminSession();
+
   try {
     const result = await createClientAccount(input, "ADMIN");
     if (!result.ok) {
@@ -73,6 +83,8 @@ export interface SetClientActiveActionResult {
 }
 
 export async function setClientActiveAction(id: string, active: boolean): Promise<SetClientActiveActionResult> {
+  await requireAdminSession();
+
   try {
     const result = await setClientActive(id, active, "ADMIN");
     if (!result.ok) return { ok: false, error: result.error };
@@ -90,6 +102,8 @@ export interface RotateClientApiKeyActionResult {
 }
 
 export async function rotateClientApiKeyAction(id: string): Promise<RotateClientApiKeyActionResult> {
+  await requireAdminSession();
+
   try {
     const result = await rotateClientApiKey(id, "ADMIN");
     if (!result.ok) return { ok: false, error: result.error };
@@ -107,6 +121,8 @@ export interface SetClientPasswordActionResult {
 }
 
 export async function setClientPasswordAction(id: string, password: string): Promise<SetClientPasswordActionResult> {
+  await requireAdminSession();
+
   try {
     const result = await setClientPassword(id, { password }, "ADMIN");
     if (!result.ok) return { ok: false, error: result.error };
