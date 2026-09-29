@@ -108,6 +108,10 @@
  *   NEXT_PUBLIC_BASE_URL=https://your-real-domain.example npx tsx scripts/seed-sample-passports.ts
  *
  * (--allow-localhost bypasses this, for a genuine local/throwaway database.)
+ *
+ * Buyers only (no passports, no base URL needed):
+ *
+ *   npx tsx scripts/seed-sample-passports.ts --clients-only
  */
 
 import "dotenv/config";
@@ -1134,7 +1138,29 @@ function checkBaseUrlSafeToWrite(): void {
   }
 }
 
+// --clients-only: provision just the German sample buyers (Rhein-Pack,
+// AutoMold) and their allocations, without creating or touching any
+// passport. Needs no --base-url, because no GS1 link is written. Use it
+// when /admin/accounts is missing a sample buyer — existing Client rows are
+// detected by contactEmail and left untouched (credentials never rotated).
+const CLIENTS_ONLY = process.argv.includes("--clients-only");
+
+async function runClientsOnly(): Promise<void> {
+  console.log("Clients-only mode: provisioning missing sample buyers. No passports are created or changed.\n");
+  const clientIds = await upsertClients();
+
+  console.log("\nAllocating passports to Clients (skipped where a passport does not exist yet):");
+  await allocateClientPurchases(clientIds);
+
+  const [total, active] = await Promise.all([prisma.client.count(), prisma.client.count({ where: { active: true } })]);
+  console.log(`\nDone. The Client table now holds ${total} buyer account(s), ${active} active — /admin/accounts lists all of them.`);
+}
+
 async function main() {
+  if (CLIENTS_ONLY) {
+    await runClientsOnly();
+    return;
+  }
   checkBaseUrlSafeToWrite();
 
   console.log("Seeding sample polymer passports for pilot demonstrations...\n");

@@ -105,6 +105,8 @@ interface NotificationCenterSummary {
   expiryAlerts: PortfolioExpiryAlertSummary;
   pendingAnomalyCount: number;
   emailConfigured: boolean;
+  /** Optional so an older server payload (pre-deploy) still type-checks. */
+  emailMissingEnvVars?: string[];
   activeWebhookCount: number;
   recentFailureCount: number;
   recentLog: NotificationLogRow[];
@@ -187,6 +189,44 @@ function ChannelBadge({ channel }: { channel: NotificationChannel }) {
       {channel === "EMAIL" ? <Mail className="w-3 h-3" /> : <WebhookIcon className="w-3 h-3" />}
       {channel}
     </span>
+  );
+}
+
+// ----------------------------------------------------------------------------
+// Email setup notice — a calm, informational note (not a warning): with the
+// email env vars unset nothing is lost, alerts are still listed on this page,
+// logged, and delivered to webhooks. Setup steps are collapsed by default so
+// the note stays one line for admins who don't manage the deployment.
+// ----------------------------------------------------------------------------
+function EmailSetupNotice({ missingEnvVars }: { missingEnvVars: string[] }) {
+  return (
+    <details className="group mt-3 text-[11px] font-mono bg-slate-800/40 border border-slate-700/60 rounded-lg px-3 py-2 text-slate-400">
+      <summary className="flex items-start gap-1.5 cursor-pointer list-none select-none">
+        <Info className="w-3.5 h-3.5 mt-0.5 shrink-0 text-sky-400" />
+        <span className="flex-1">
+          Email delivery isn&apos;t set up yet. Alerts are still shown here, logged, and sent to active webhooks.
+          <span className="ml-1 text-sky-400 group-open:hidden">How to enable email</span>
+        </span>
+        <ChevronDown className="w-3.5 h-3.5 mt-0.5 shrink-0 transition-transform group-open:rotate-180" />
+      </summary>
+      <ol className="mt-2 ml-5 list-decimal space-y-1 text-slate-400">
+        <li>
+          In Vercel, open Project → Settings → Environment Variables (Production) and add:{" "}
+          {missingEnvVars.map((name, i) => (
+            <span key={name}>
+              <code className="text-slate-200">{name}</code>
+              {i < missingEnvVars.length - 1 ? ", " : ""}
+            </span>
+          ))}
+          .
+        </li>
+        <li>
+          <code className="text-slate-200">RESEND_API_KEY</code> comes from resend.com/api-keys;{" "}
+          <code className="text-slate-200">DPP_NOTIFICATION_EMAIL_FROM</code> must be a sender on a domain verified in Resend.
+        </li>
+        <li>Redeploy, then add recipients below and use Run Sweep to send a test.</li>
+      </ol>
+    </details>
   );
 }
 
@@ -442,13 +482,10 @@ export function NotificationCenterDashboard({ initialSummary, initialWebhooks, i
             <SummaryChip Icon={Clock} label={t("notifications.chip.soon")} count={summary.expiryAlerts.expiringSoonCount} cls="bg-amber-500/10 border-amber-500/30 text-amber-400" />
             <SummaryChip Icon={ShieldAlert} label={t("notifications.chip.anomalies")} count={summary.pendingAnomalyCount} cls="bg-fuchsia-500/10 border-fuchsia-500/30 text-fuchsia-400" />
             <SummaryChip Icon={WebhookIcon} label={t("notifications.chip.activeWebhooks")} count={summary.activeWebhookCount} cls="bg-cyan-500/10 border-cyan-500/30 text-cyan-400" />
-            <SummaryChip Icon={Mail} label={summary.emailConfigured ? "Email Ready" : "Email Off"} count={summary.recentFailureCount} cls={summary.emailConfigured ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-400" : "bg-slate-800 border-slate-700 text-slate-400"} />
+            <SummaryChip Icon={Mail} label={summary.emailConfigured ? "Email Ready" : "In-app Only"} count={summary.recentFailureCount} cls={summary.emailConfigured ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-400" : "bg-slate-800 border-slate-700 text-slate-400"} />
           </div>
-          {!summary.emailConfigured && settings.emailEnabled && (
-            <div className="mt-3 flex items-start gap-1.5 text-[11px] text-amber-400 font-mono bg-amber-500/5 border border-amber-500/20 rounded-lg px-3 py-2">
-              <Info className="w-3.5 h-3.5 mt-0.5 shrink-0" />
-              Email is enabled but not configured — set RESEND_API_KEY and DPP_NOTIFICATION_EMAIL_FROM in your environment to actually send emails.
-            </div>
+          {!summary.emailConfigured && (settings.emailEnabled || emailEnabledDraft) && (
+            <EmailSetupNotice missingEnvVars={summary.emailMissingEnvVars ?? ["RESEND_API_KEY", "DPP_NOTIFICATION_EMAIL_FROM"]} />
           )}
         </div>
 
@@ -461,7 +498,12 @@ export function NotificationCenterDashboard({ initialSummary, initialWebhooks, i
             </h2>
 
             <label className="flex items-center justify-between gap-3 cursor-pointer">
-              <span className="text-xs text-slate-300">Email notifications</span>
+              <span className="text-xs text-slate-300">
+                Email notifications
+                {!summary.emailConfigured && (
+                  <span className="block text-[10px] text-slate-500 font-mono mt-0.5">Delivery not set up — alerts stay in-app until configured</span>
+                )}
+              </span>
               <button
                 type="button"
                 onClick={() => setEmailEnabledDraft((v) => !v)}

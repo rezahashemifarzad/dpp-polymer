@@ -791,7 +791,9 @@ function ClientAccountsPanel() {
           <div className="min-w-0">
             <h3 className="text-sm font-bold text-white">{t("accounts.section.buyerAccounts")}</h3>
             <p className="text-[11px] text-slate-400 font-mono">
-              {loading ? "Loading..." : `${rows?.length ?? 0} buyer account(s)`}
+              {loading
+                ? "Loading..."
+                : `${rows?.length ?? 0} buyer account(s) · ${rows?.filter((r) => r.active).length ?? 0} active`}
             </p>
           </div>
         </div>

@@ -55,7 +55,7 @@ import { writeAuditLog } from "@/lib/audit";
 import type { ExpiryAlertLevel, NotificationEventType, NotificationChannel, NotificationDeliveryStatus } from "@prisma/client";
 import { wrapSchemaDrift } from "@/lib/services/schema-drift";
 import { dispatchWebhook } from "@/lib/services/webhook-dispatch";
-import { sendNotificationEmail, isEmailDispatchConfigured } from "@/lib/services/email-dispatch";
+import { sendNotificationEmail, getEmailDispatchStatus, describeEmailNotConfigured } from "@/lib/services/email-dispatch";
 import { getNotificationSettings } from "@/lib/services/notification-settings";
 import {
   runExpiryAlertCheck,
@@ -105,11 +105,10 @@ export async function dispatchNotificationEvent(actor: string, event: Notificati
     let status: NotificationDeliveryStatus;
     let error: string | null = null;
 
-    if (!isEmailDispatchConfigured() || settings.emailRecipients.length === 0) {
+    const notConfigured = describeEmailNotConfigured();
+    if (notConfigured || settings.emailRecipients.length === 0) {
       status = "SKIPPED";
-      error = !isEmailDispatchConfigured()
-        ? "Email dispatch not configured (RESEND_API_KEY / DPP_NOTIFICATION_EMAIL_FROM unset)"
-        : "No notification email recipients configured";
+      error = notConfigured ?? "No notification email recipients configured";
     } else {
       const html = `<p><strong>${escapeHtml(event.title)}</strong></p><p>${escapeHtml(event.message)}</p><p style="color:#64748b;font-size:12px">Batch: ${escapeHtml(event.batchId)}</p>`;
       const result = await sendNotificationEmail(
@@ -396,6 +395,9 @@ export interface NotificationCenterSummary {
   expiryAlerts: Awaited<ReturnType<typeof computePortfolioExpiryAlerts>>;
   pendingAnomalyCount: number;
   emailConfigured: boolean;
+  /** Names (never values) of the email env vars that are unset — lets the
+   * admin UI say exactly what to configure instead of a generic warning. */
+  emailMissingEnvVars: string[];
   activeWebhookCount: number;
   recentFailureCount: number; // FAILED deliveries in the log rows returned below
   recentLog: NotificationLogRow[];
@@ -425,10 +427,12 @@ export async function computeNotificationCenterSummary(): Promise<NotificationCe
     ])
   );
 
+  const emailStatus = getEmailDispatchStatus();
   return {
     expiryAlerts,
     pendingAnomalyCount,
-    emailConfigured: isEmailDispatchConfigured(),
+    emailConfigured: emailStatus.configured,
+    emailMissingEnvVars: emailStatus.missingEnvVars,
     activeWebhookCount,
     recentFailureCount: recentLog.filter((r) => r.status === "FAILED").length,
     recentLog,

@@ -31,8 +31,36 @@ export interface EmailDispatchResult {
   error: string | null;
 }
 
+/** The env vars email delivery needs. Names only — values are never
+ * surfaced to the UI or logs. */
+export const EMAIL_DISPATCH_ENV_VARS = ["RESEND_API_KEY", "DPP_NOTIFICATION_EMAIL_FROM"] as const;
+
+export interface EmailDispatchStatus {
+  configured: boolean;
+  /** Names of the required env vars that are unset or blank. */
+  missingEnvVars: string[];
+}
+
+/** Single source of truth for "can this deployment send email?". A value
+ * that is present but whitespace-only (a common copy-paste slip in the
+ * Vercel dashboard) counts as missing, so the UI never reports email as
+ * ready when every send would fail. */
+export function getEmailDispatchStatus(): EmailDispatchStatus {
+  const missingEnvVars = EMAIL_DISPATCH_ENV_VARS.filter((name) => !process.env[name]?.trim());
+  return { configured: missingEnvVars.length === 0, missingEnvVars };
+}
+
 export function isEmailDispatchConfigured(): boolean {
-  return Boolean(process.env.RESEND_API_KEY && process.env.DPP_NOTIFICATION_EMAIL_FROM);
+  return getEmailDispatchStatus().configured;
+}
+
+/** Human-readable reason recorded on a SKIPPED email NotificationLog row,
+ * or null when email is configured. */
+export function describeEmailNotConfigured(): string | null {
+  const status = getEmailDispatchStatus();
+  return status.configured
+    ? null
+    : `Email delivery not configured (missing: ${status.missingEnvVars.join(", ")}) — notification kept in-app only`;
 }
 
 export async function sendNotificationEmail(
@@ -41,12 +69,12 @@ export async function sendNotificationEmail(
   bodyText: string,
   bodyHtml: string
 ): Promise<EmailDispatchResult> {
-  const apiKey = process.env.RESEND_API_KEY;
-  const from = process.env.DPP_NOTIFICATION_EMAIL_FROM;
-
-  if (!apiKey || !from) {
-    return { ok: false, skipped: true, error: "Email dispatch not configured (RESEND_API_KEY / DPP_NOTIFICATION_EMAIL_FROM unset)" };
+  const notConfigured = describeEmailNotConfigured();
+  if (notConfigured) {
+    return { ok: false, skipped: true, error: notConfigured };
   }
+  const apiKey = process.env.RESEND_API_KEY!.trim();
+  const from = process.env.DPP_NOTIFICATION_EMAIL_FROM!.trim();
   if (recipients.length === 0) {
     return { ok: false, skipped: true, error: "No notification email recipients configured" };
   }
