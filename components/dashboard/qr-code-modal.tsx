@@ -53,6 +53,7 @@ import { QRCodeSVG } from "qrcode.react";
 // Scroll-trap fix (2026-09-29) — see lib/hooks/use-body-scroll-lock.ts.
 import { useBodyScrollLock } from "@/lib/hooks/use-body-scroll-lock";
 
+import { useLanguage } from "@/lib/hooks/use-language";
 interface QrCodeModalProps {
   open: boolean;
   onClose: () => void;
@@ -92,6 +93,7 @@ function triggerBlobDownload(blob: Blob, filename: string) {
 }
 
 export function QrCodeModal({ open, onClose, batchId, label, qrUrl, details, viewedFromAdmin }: QrCodeModalProps) {
+  const { t } = useLanguage();
   const qrBoxRef = useRef<HTMLDivElement>(null);
   useBodyScrollLock(open);
 
@@ -155,7 +157,7 @@ export function QrCodeModal({ open, onClose, batchId, label, qrUrl, details, vie
     <div
       role="dialog"
       aria-modal="true"
-      aria-label={`QR code — ${batchId}`}
+      aria-label={t("ui.qr.qrCode", { v0: batchId })}
       className="fixed inset-x-0 bottom-0 z-40 flex items-center justify-center p-4 bg-black/80 backdrop-blur-xl"
       style={{ top: viewedFromAdmin ? "var(--admin-content-offset)" : "var(--site-nav-height)" }}
     >
@@ -164,7 +166,7 @@ export function QrCodeModal({ open, onClose, batchId, label, qrUrl, details, vie
           <button
             onClick={onClose}
             className="text-slate-400 hover:text-white p-1.5 rounded-xl bg-slate-800"
-            aria-label="Close"
+            aria-label={t("common.close")}
           >
             <X className="w-4 h-4" />
           </button>
@@ -177,7 +179,7 @@ export function QrCodeModal({ open, onClose, batchId, label, qrUrl, details, vie
                 <QRCodeSVG value={qrUrl} size={180} bgColor="#FFFFFF" fgColor="#0f172a" level="M" />
               ) : (
                 <div className="w-[180px] h-[180px] flex items-center justify-center text-slate-400 text-[10px] font-mono text-center px-4">
-                  No QR link recorded for this batch yet
+                  {t("ui.qr.noQrLinkRecordedForThis")}
                 </div>
               )}
             </div>
@@ -232,7 +234,7 @@ export function QrCodeModal({ open, onClose, batchId, label, qrUrl, details, vie
             rel="noreferrer"
             className="flex items-center justify-center gap-1.5 w-full py-2.5 mb-2 bg-slate-800 hover:bg-slate-700 text-slate-200 font-mono font-bold text-xs rounded-xl transition"
           >
-            <FileBadge className="w-3.5 h-3.5" /> Download Certificate PDF
+            <FileBadge className="w-3.5 h-3.5" /> {t("generator.button.downloadCertPdf")}
           </a>
 
           <a
@@ -246,7 +248,7 @@ export function QrCodeModal({ open, onClose, batchId, label, qrUrl, details, vie
                 : "bg-slate-800/50 text-slate-600 cursor-not-allowed pointer-events-none"
             }`}
           >
-            Open Public Verification Page <ExternalLink className="w-3 h-3" />
+            {t("ui.qr.openPublicVerificationPage")} <ExternalLink className="w-3 h-3" />
           </a>
         </div>
       </div>

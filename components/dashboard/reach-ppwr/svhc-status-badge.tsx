@@ -1,3 +1,5 @@
+"use client";
+
 /**
  * components/dashboard/reach-ppwr/svhc-status-badge.tsx
  * -----------------------------------------------------------------------
@@ -17,21 +19,23 @@
 
 import { ShieldAlert, ShieldCheck, AlertTriangle } from "lucide-react";
 import type { SvhcStatusValue } from "@/lib/hooks/use-passports";
+import { useLanguage } from "@/lib/hooks/use-language";
 
 const STATUS_META: Record<SvhcStatusValue, { cls: string; Icon: typeof ShieldCheck; label: string }> = {
-  NOT_ASSESSED: { cls: "bg-slate-500/10 text-slate-400 border-slate-500/30", Icon: ShieldAlert, label: "Not Assessed" },
-  NONE_DECLARED: { cls: "bg-emerald-500/10 text-emerald-400 border-emerald-500/30", Icon: ShieldCheck, label: "None Declared" },
-  SVHC_PRESENT: { cls: "bg-amber-500/10 text-amber-400 border-amber-500/30", Icon: AlertTriangle, label: "SVHC Present" },
+  NOT_ASSESSED: { cls: "bg-slate-500/10 text-slate-400 border-slate-500/30", Icon: ShieldAlert, label: "ui.reach.notAssessed" },
+  NONE_DECLARED: { cls: "bg-emerald-500/10 text-emerald-400 border-emerald-500/30", Icon: ShieldCheck, label: "ui.reach.noneDeclared" },
+  SVHC_PRESENT: { cls: "bg-amber-500/10 text-amber-400 border-amber-500/30", Icon: AlertTriangle, label: "ui.reach.svhcPresent" },
 };
 
 export function SvhcStatusBadge({ status, size = "sm" }: { status: SvhcStatusValue; size?: "sm" | "xs" }) {
+  const { t } = useLanguage();
   const { cls, Icon, label } = STATUS_META[status];
   const sizeCls = size === "xs" ? "text-[9px] px-1.5 py-0.5" : "text-[10px] px-2 py-0.5";
 
   return (
     <span className={`inline-flex items-center gap-1 ${sizeCls} ${cls} border rounded-full font-semibold whitespace-nowrap`}>
       <Icon className="w-3 h-3 shrink-0" />
-      {label}
+      {t(label)}
     </span>
   );
 }

@@ -39,6 +39,7 @@ import { Bot, X, Send, Loader2, Sparkles, ArrowUpRight } from "lucide-react";
 import { askAssistantAction, askPublicAssistantAction } from "@/lib/actions/ask-assistant";
 import type { AssistantLink } from "@/lib/services/ai-assistant";
 
+import { useLanguage } from "@/lib/hooks/use-language";
 interface ChatMessage {
   id: string;
   role: "user" | "assistant";
@@ -106,16 +107,14 @@ const THEME_STYLES = {
 
 const COPY = {
   admin: {
-    subtitle: "Answers from live platform data",
-    placeholder: "Ask about a batch, supplier, or compliance term...",
-    welcome:
-      "Hi — I'm the Polymer DPP Assistant. I answer from this platform's own live data and a built-in compliance glossary (not a general-purpose AI), so ask me about a batch, certificate expirations, supplier performance, a compliance term, or where to find something.",
+    subtitle: "ui.ai.answersFromLivePlatformData",
+    placeholder: "ui.ai.askAboutABatchSupplierOr",
+    welcome: "ui.ai.hiIMThePolymerDpp",
   },
   public: {
-    subtitle: "Ask about this product",
-    placeholder: "Ask about this product or a compliance term...",
-    welcome:
-      "Hi — I'm the Polymer DPP Assistant. I can tell you about this product's batch (status, material, recycled content, certifications) or explain a compliance term like ISCC PLUS or PCR. I answer from this platform's own data and a built-in glossary, not a general-purpose AI.",
+    subtitle: "ui.ai.askAboutThisProduct",
+    placeholder: "ui.ai.askAboutThisProductOrA",
+    welcome: "ui.ai.hiIMThePolymerDpp2",
   },
 } as const;
 
@@ -138,11 +137,12 @@ interface AiAssistantWidgetProps {
 }
 
 export function AiAssistantWidget({ theme = "dark", scope = "admin", contextBatchId }: AiAssistantWidgetProps) {
+  const { t } = useLanguage();
   const styles = THEME_STYLES[theme];
   const copy = COPY[scope];
 
   const [open, setOpen] = useState(false);
-  const [messages, setMessages] = useState<ChatMessage[]>([{ id: "welcome", role: "assistant", content: copy.welcome }]);
+  const [messages, setMessages] = useState<ChatMessage[]>([{ id: "welcome", role: "assistant", content: t(copy.welcome) }]);
   const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);
 
@@ -216,18 +216,18 @@ export function AiAssistantWidget({ theme = "dark", scope = "admin", contextBatc
   return (
     <div className={styles.root}>
       {open && (
-        <div role="dialog" aria-label="AI Assistant chat" className={styles.panel}>
+        <div role="dialog" aria-label={t("ui.ai.aiAssistantChat")} className={styles.panel}>
           <div className={styles.header}>
             <div className="flex items-center gap-2 min-w-0">
               <div className={styles.iconBox}>
                 <Sparkles className={styles.icon} />
               </div>
               <div className="min-w-0">
-                <p className={styles.title}>AI Assistant</p>
-                <p className={styles.subtitle}>{copy.subtitle}</p>
+                <p className={styles.title}>{t("ui.ai.aiAssistant")}</p>
+                <p className={styles.subtitle}>{t(copy.subtitle)}</p>
               </div>
             </div>
-            <button type="button" onClick={() => setOpen(false)} aria-label="Close AI Assistant" className={styles.closeBtn}>
+            <button type="button" onClick={() => setOpen(false)} aria-label={t("ui.ai.closeAiAssistant")} className={styles.closeBtn}>
               <X className="w-4 h-4" />
             </button>
           </div>
@@ -258,7 +258,7 @@ export function AiAssistantWidget({ theme = "dark", scope = "admin", contextBatc
               <div className="flex justify-start">
                 <div className={styles.thinkingBubble}>
                   <Loader2 className="w-3 h-3 animate-spin" />
-                  <span className="text-[11px]">Thinking...</span>
+                  <span className="text-[11px]">{t("ui.ai.thinking")}</span>
                 </div>
               </div>
             )}
@@ -269,11 +269,11 @@ export function AiAssistantWidget({ theme = "dark", scope = "admin", contextBatc
               ref={inputRef}
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              placeholder={copy.placeholder}
+              placeholder={t(copy.placeholder)}
               maxLength={500}
               className={styles.input}
             />
-            <button type="submit" disabled={sending || !input.trim()} aria-label="Send question" className={styles.sendBtn}>
+            <button type="submit" disabled={sending || !input.trim()} aria-label={t("ui.ai.sendQuestion")} className={styles.sendBtn}>
               {sending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
             </button>
           </form>
@@ -284,7 +284,7 @@ export function AiAssistantWidget({ theme = "dark", scope = "admin", contextBatc
         type="button"
         onClick={() => setOpen((v) => !v)}
         aria-expanded={open}
-        aria-label={open ? "Close AI Assistant" : "Open AI Assistant"}
+        aria-label={open ? t("ui.ai.closeAiAssistant") : t("ui.ai.openAiAssistant")}
         className={styles.toggleBtn}
       >
         {open ? <X className="w-5 h-5" /> : <Bot className="w-5 h-5" />}

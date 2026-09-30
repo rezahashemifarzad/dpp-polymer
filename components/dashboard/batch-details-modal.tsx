@@ -63,15 +63,16 @@ import { useFormSuggestions } from "@/lib/hooks/use-form-suggestions";
 // Scroll-trap fix (2026-09-29) — see lib/hooks/use-body-scroll-lock.ts.
 import { useBodyScrollLock } from "@/lib/hooks/use-body-scroll-lock";
 
+import { useLanguage } from "@/lib/hooks/use-language";
 const TRANSPORT_MODES: Array<"TRUCK" | "RAIL" | "SEA" | "AIR"> = ["TRUCK", "RAIL", "SEA", "AIR"];
 
 const COC_TIERS: Array<{ value: ChainOfCustodyTierValue; label: string }> = [
-  { value: "RAW_MATERIAL_SUPPLIER", label: "Raw Material Supplier" },
-  { value: "RECYCLER", label: "Recycler" },
-  { value: "COMPOUNDER", label: "Compounder" },
-  { value: "PROCESSOR", label: "Processor" },
-  { value: "DISTRIBUTOR", label: "Distributor" },
-  { value: "OTHER", label: "Other" },
+  { value: "RAW_MATERIAL_SUPPLIER", label: "ui.common.rawMaterialSupplier" },
+  { value: "RECYCLER", label: "ui.common.recycler" },
+  { value: "COMPOUNDER", label: "ui.common.compounder" },
+  { value: "PROCESSOR", label: "ui.common.processor" },
+  { value: "DISTRIBUTOR", label: "ui.common.distributor" },
+  { value: "OTHER", label: "ui.batch.other" },
 ];
 
 const COC_CERT_SCHEMES = [
@@ -170,6 +171,7 @@ export function BatchDetailsModal({
   onDeclarePpwr,
   viewedFromAdmin,
 }: BatchDetailsModalProps) {
+  const { t } = useLanguage();
   const { push } = useToast();
 
   const [parentBatchId, setParentBatchId] = useState("");
@@ -229,8 +231,8 @@ export function BatchDetailsModal({
       });
       push({
         variant: "success",
-        title: "Parent batch linked",
-        description: `${parentBatchId} added to ${passport.batchId}'s genealogy.`,
+        title: t("ui.batch.parentBatchLinked"),
+        description: t("ui.batch.addedToSGenealogy", { v0: parentBatchId, v1: passport.batchId }),
       });
       setParentBatchId("");
       setQuantityUsedKg("");
@@ -238,7 +240,7 @@ export function BatchDetailsModal({
     } catch (err) {
       push({
         variant: "error",
-        title: "Could not link parent batch",
+        title: t("ui.batch.couldNotLinkParentBatch"),
         description: err instanceof Error ? err.message : "Unknown error",
       });
     } finally {
@@ -257,13 +259,13 @@ export function BatchDetailsModal({
       });
       push({
         variant: "success",
-        title: "Carbon footprint calculated",
-        description: `Illustrative Scope 1/2/3 estimate saved for ${passport.batchId}.`,
+        title: t("ui.batch.carbonFootprintCalculated"),
+        description: t("ui.batch.illustrativeScope123Estimate2", { v0: passport.batchId }),
       });
     } catch (err) {
       push({
         variant: "error",
-        title: "Could not calculate carbon footprint",
+        title: t("ui.batch.couldNotCalculateCarbonFootprint"),
         description: err instanceof Error ? err.message : "Unknown error",
       });
     } finally {
@@ -288,8 +290,8 @@ export function BatchDetailsModal({
       });
       push({
         variant: "success",
-        title: "Chain-of-custody tier added",
-        description: `${cocParticipantName} added to ${passport.batchId}'s supply chain — pending auditor review.`,
+        title: t("ui.batch.chainOfCustodyTierAdded"),
+        description: t("ui.batch.addedToSSupplyChainPending", { v0: cocParticipantName, v1: passport.batchId }),
       });
       setCocParticipantName("");
       setCocParticipantCountry("");
@@ -301,7 +303,7 @@ export function BatchDetailsModal({
     } catch (err) {
       push({
         variant: "error",
-        title: "Could not add chain-of-custody record",
+        title: t("ui.batch.couldNotAddChainOfCustody"),
         description: err instanceof Error ? err.message : "Unknown error",
       });
     } finally {
@@ -333,7 +335,7 @@ export function BatchDetailsModal({
     <div
       role="dialog"
       aria-modal="true"
-      aria-label={`Manage Batch — ${passport.batchId}`}
+      aria-label={t("ui.batch.manageBatch2", { v0: passport.batchId })}
       className="fixed inset-x-0 bottom-0 z-40 flex items-center justify-center p-4 bg-black/80 backdrop-blur-xl"
       style={{ top: viewedFromAdmin ? "var(--admin-content-offset)" : "var(--site-nav-height)" }}
     >
@@ -349,21 +351,21 @@ export function BatchDetailsModal({
               className="flex items-center gap-1.5 text-xs font-semibold text-emerald-400 hover:text-emerald-300 bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/20 px-3 py-1.5 rounded-lg transition-colors mb-4 -mt-1"
             >
               <ArrowLeft className="w-3.5 h-3.5" />
-              Back to Admin Console
+              {t("ui.batch.backToAdminConsole")}
             </button>
           )}
 
           <button
             onClick={onClose}
             className="absolute right-4 top-4 text-slate-400 hover:text-white p-1.5 rounded-xl bg-slate-800"
-            aria-label="Close"
+            aria-label={t("common.close")}
           >
             <X className="w-4 h-4" />
           </button>
 
-          <h3 className="text-lg font-bold text-white mb-1">Manage Batch — {passport.batchId}</h3>
+          <h3 className="text-lg font-bold text-white mb-1">{t("ui.batch.manageBatch")} {passport.batchId}</h3>
           <p className="text-xs text-slate-400 font-mono">
-            Supply-chain genealogy and an illustrative Scope 1/2/3 carbon footprint estimate for this batch.
+            {t("ui.batch.supplyChainGenealogyAndAnIllustrative")}
           </p>
         </div>
 
@@ -383,7 +385,7 @@ export function BatchDetailsModal({
         <div className="border border-slate-800 rounded-2xl p-4 mb-4">
           <div className="flex items-center gap-2 mb-3">
             <FileBadge className="w-4 h-4 text-emerald-400" />
-            <h4 className="text-sm font-semibold text-slate-100">Certificate &amp; QR</h4>
+            <h4 className="text-sm font-semibold text-slate-100">{t("ui.batch.certificateQr")}</h4>
           </div>
           <div className="flex flex-col sm:flex-row items-center sm:items-start gap-4">
             <div className="p-3 bg-white rounded-xl w-fit shrink-0">
@@ -391,14 +393,13 @@ export function BatchDetailsModal({
                 <QRCodeSVG value={passport.qrCodePayloadUrl} size={88} bgColor="#FFFFFF" fgColor="#0f172a" level="M" />
               ) : (
                 <div className="w-[88px] h-[88px] flex items-center justify-center text-slate-400 text-[9px] font-mono text-center px-2">
-                  No QR link recorded
+                  {t("ui.common.noQrLinkRecorded")}
                 </div>
               )}
             </div>
             <div className="flex-1 min-w-0 w-full space-y-2">
               <p className="text-[11px] text-slate-500 font-mono leading-relaxed">
-                Download this batch&apos;s official compliance certificate (with embedded verification QR), or open
-                the Generator Suite for print-ready label sheets and industrial layouts.
+                {t("ui.batch.downloadThisBatchSOfficialCompliance")}
               </p>
               <div className="flex flex-col sm:flex-row gap-2">
                 <a
@@ -407,13 +408,13 @@ export function BatchDetailsModal({
                   rel="noreferrer"
                   className="flex items-center justify-center gap-1.5 px-3 py-2 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold rounded-xl transition text-[11px] font-mono"
                 >
-                  <FileBadge className="w-3.5 h-3.5" /> Download Certificate PDF
+                  <FileBadge className="w-3.5 h-3.5" /> {t("generator.button.downloadCertPdf")}
                 </a>
                 <NextLink
                   href={`/admin/generator?batchId=${encodeURIComponent(passport.batchId)}`}
                   className="flex items-center justify-center gap-1.5 px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold rounded-xl transition text-[11px] font-mono"
                 >
-                  <LayoutGrid className="w-3.5 h-3.5" /> Open Generator Suite
+                  <LayoutGrid className="w-3.5 h-3.5" /> {t("ui.batch.openGeneratorSuite")}
                 </NextLink>
               </div>
             </div>
@@ -429,7 +430,7 @@ export function BatchDetailsModal({
         <div className="border border-slate-800 rounded-2xl p-4 mb-4">
           <div className="flex items-center gap-2 mb-3">
             <BadgeCheck className="w-4 h-4 text-emerald-400" />
-            <h4 className="text-sm font-semibold text-slate-100">Certifications</h4>
+            <h4 className="text-sm font-semibold text-slate-100">{t("ui.batch.certifications")}</h4>
           </div>
           {passport.certifications.length > 0 ? (
             <ul className="space-y-1.5 font-mono text-xs">
@@ -443,7 +444,7 @@ export function BatchDetailsModal({
                       {cert.scheme} <span className="text-slate-500 font-normal">· {cert.certificateId}</span>
                     </div>
                     <div className="text-slate-500 text-[10px] mt-0.5">
-                      {cert.issuingBody} · valid until {new Date(cert.validUntil).toLocaleDateString()}
+                      {cert.issuingBody} {t("ui.batch.validUntil")} {new Date(cert.validUntil).toLocaleDateString()}
                     </div>
                   </div>
                   <ExpiryAlertBadge tier={getExpiryAlertTier(cert.validUntil)} />
@@ -451,7 +452,7 @@ export function BatchDetailsModal({
               ))}
             </ul>
           ) : (
-            <p className="text-xs text-slate-500 font-mono">No certifications attached to this batch yet.</p>
+            <p className="text-xs text-slate-500 font-mono">{t("ui.batch.noCertificationsAttachedToThisBatch")}</p>
           )}
         </div>
 
@@ -462,7 +463,7 @@ export function BatchDetailsModal({
         <div className="border border-slate-800 rounded-2xl p-4 mb-4">
           <div className="flex items-center gap-2 mb-3">
             <GitBranch className="w-4 h-4 text-emerald-400" />
-            <h4 className="text-sm font-semibold text-slate-100">Parent Batches (Supply-Chain Genealogy)</h4>
+            <h4 className="text-sm font-semibold text-slate-100">{t("ui.batch.parentBatchesSupplyChainGenealogy")}</h4>
           </div>
 
           {passport.parentLinks.length > 0 ? (
@@ -475,25 +476,25 @@ export function BatchDetailsModal({
                   <span className="text-emerald-400">{link.parentPassport.batchId}</span>
                   <span className="text-slate-500">
                     {link.parentPassport.polymerType}
-                    {link.quantityUsedKg ? ` · ${link.quantityUsedKg} kg used` : ""}
+                    {link.quantityUsedKg ? t("ui.batch.kgUsed", { v0: link.quantityUsedKg }) : ""}
                   </span>
                 </li>
               ))}
             </ul>
           ) : (
-            <p className="text-xs text-slate-500 font-mono mb-3">No parent batches linked yet.</p>
+            <p className="text-xs text-slate-500 font-mono mb-3">{t("ui.batch.noParentBatchesLinkedYet")}</p>
           )}
 
           <form onSubmit={handleLinkParent} className="space-y-3 font-mono text-xs">
             <div className="grid grid-cols-2 gap-3">
-              <Field label="Parent Batch">
+              <Field label={t("ui.batch.parentBatch")}>
                 <select
                   required
                   value={parentBatchId}
                   onChange={(e) => setParentBatchId(e.target.value)}
                   className={inputCls}
                 >
-                  <option value="">— select a batch —</option>
+                  <option value="">{t("ui.batch.selectABatch")}</option>
                   {eligibleParents.map((p) => (
                     <option key={p.id} value={p.batchId}>
                       {p.batchId} ({p.polymerType})
@@ -501,7 +502,7 @@ export function BatchDetailsModal({
                   ))}
                 </select>
               </Field>
-              <Field label="Quantity Used (kg, optional)">
+              <Field label={t("ui.batch.quantityUsedKgOptional")}>
                 <input
                   type="number"
                   step="0.001"
@@ -512,7 +513,7 @@ export function BatchDetailsModal({
                 />
               </Field>
               <div className="col-span-2">
-                <Field label="Notes (optional)">
+                <Field label={t("ui.batch.notesOptional")}>
                   <input value={notes} onChange={(e) => setNotes(e.target.value)} className={inputCls} />
                 </Field>
               </div>
@@ -520,7 +521,7 @@ export function BatchDetailsModal({
             {eligibleParents.length === 0 && (
               <div className="flex items-center gap-1.5 text-amber-400 text-[10px]">
                 <AlertTriangle className="w-3 h-3" />
-                No other issued batches are available to link as a parent yet.
+                {t("ui.batch.noOtherIssuedBatchesAreAvailable")}
               </div>
             )}
             <button
@@ -529,7 +530,7 @@ export function BatchDetailsModal({
               className="w-full py-2.5 bg-emerald-500 hover:bg-emerald-400 disabled:opacity-50 disabled:cursor-not-allowed text-slate-950 font-bold rounded-xl transition flex items-center justify-center gap-2"
             >
               {linking && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
-              {linking ? "Linking..." : "Link Parent Batch"}
+              {linking ? t("ui.batch.linking") : t("ui.batch.linkParentBatch")}
             </button>
           </form>
         </div>
@@ -538,39 +539,37 @@ export function BatchDetailsModal({
         <div className="border border-slate-800 rounded-2xl p-4">
           <div className="flex items-center gap-2 mb-3">
             <Leaf className="w-4 h-4 text-emerald-400" />
-            <h4 className="text-sm font-semibold text-slate-100">Carbon Footprint Calculator</h4>
+            <h4 className="text-sm font-semibold text-slate-100">{t("ui.batch.carbonFootprintCalculator")}</h4>
           </div>
           <p className="text-[10px] text-slate-500 font-mono mb-3 flex items-start gap-1.5">
             <ArrowUpRight className="w-3 h-3 mt-0.5 shrink-0" />
-            Illustrative Scope 1/2/3 estimate from generic emission factors — separate from, and never
-            overwrites, this batch&apos;s verified LCA figure ({passport.carbonFootprintKgCO2ePerKg} kg
-            CO2e/kg).
+            {t("ui.batch.illustrativeScope123Estimate")}{passport.carbonFootprintKgCO2ePerKg} {t("ui.batch.kgCo2eKg")}
           </p>
 
           {passport.carbonFootprintCalculation && (
             <div className="mb-3 bg-slate-950 border border-slate-800 rounded-xl p-3 font-mono text-xs grid grid-cols-2 gap-y-1">
-              <span className="text-slate-500">Scope 1</span>
+              <span className="text-slate-500">{t("ui.batch.scope1")}</span>
               <span className="text-slate-200 text-right">
-                {passport.carbonFootprintCalculation.scope1KgCO2e} kg CO2e
+                {passport.carbonFootprintCalculation.scope1KgCO2e} {t("ui.common.kgCo2e")}
               </span>
-              <span className="text-slate-500">Scope 2</span>
+              <span className="text-slate-500">{t("ui.batch.scope2")}</span>
               <span className="text-slate-200 text-right">
-                {passport.carbonFootprintCalculation.scope2KgCO2e} kg CO2e
+                {passport.carbonFootprintCalculation.scope2KgCO2e} {t("ui.common.kgCo2e")}
               </span>
-              <span className="text-slate-500">Scope 3</span>
+              <span className="text-slate-500">{t("ui.batch.scope3")}</span>
               <span className="text-slate-200 text-right">
-                {passport.carbonFootprintCalculation.scope3KgCO2e} kg CO2e
+                {passport.carbonFootprintCalculation.scope3KgCO2e} {t("ui.common.kgCo2e")}
               </span>
-              <span className="text-emerald-400 font-bold">Total</span>
+              <span className="text-emerald-400 font-bold">{t("ui.common.total")}</span>
               <span className="text-emerald-400 font-bold text-right">
-                {passport.carbonFootprintCalculation.totalKgCO2e} kg CO2e
+                {passport.carbonFootprintCalculation.totalKgCO2e} {t("ui.common.kgCo2e")}
               </span>
             </div>
           )}
 
           <form onSubmit={handleCalculateCarbon} className="space-y-3 font-mono text-xs">
             <div className="grid grid-cols-3 gap-3">
-              <Field label="Weight (kg)">
+              <Field label={t("ui.batch.weightKg")}>
                 <input
                   required
                   type="number"
@@ -581,7 +580,7 @@ export function BatchDetailsModal({
                   className={inputCls}
                 />
               </Field>
-              <Field label="Transport Distance (km)">
+              <Field label={t("ui.batch.transportDistanceKm")}>
                 <input
                   type="number"
                   step="0.01"
@@ -591,7 +590,7 @@ export function BatchDetailsModal({
                   className={inputCls}
                 />
               </Field>
-              <Field label="Transport Mode">
+              <Field label={t("ui.batch.transportMode")}>
                 <select
                   value={transportMode}
                   onChange={(e) => setTransportMode(e.target.value as "TRUCK" | "RAIL" | "SEA" | "AIR")}
@@ -612,10 +611,10 @@ export function BatchDetailsModal({
             >
               {calculating && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
               {calculating
-                ? "Calculating..."
+                ? t("ui.batch.calculating")
                 : passport.carbonFootprintCalculation
-                  ? "Recalculate"
-                  : "Calculate Footprint"}
+                  ? t("ui.batch.recalculate")
+                  : t("ui.batch.calculateFootprint")}
             </button>
           </form>
         </div>
@@ -629,11 +628,10 @@ export function BatchDetailsModal({
         <div className="border border-slate-800 rounded-2xl p-4 mt-4">
           <div className="flex items-center gap-2 mb-3">
             <Link2 className="w-4 h-4 text-emerald-400" />
-            <h4 className="text-sm font-semibold text-slate-100">Multi-Tier Chain of Custody</h4>
+            <h4 className="text-sm font-semibold text-slate-100">{t("ui.batch.multiTierChainOfCustody")}</h4>
           </div>
           <p className="text-[10px] text-slate-500 font-mono mb-3">
-            Upstream suppliers, recyclers, and compounders for this batch. New tiers start PENDING_REVIEW —
-            only the Auditor Portal can verify, flag, or reject them.
+            {t("ui.batch.upstreamSuppliersRecyclersAndCompoundersFor")}
           </p>
 
           <div className="mb-3">
@@ -646,7 +644,7 @@ export function BatchDetailsModal({
 
           <form onSubmit={handleAddChainOfCustody} className="space-y-3 font-mono text-xs">
             <div className="grid grid-cols-2 gap-3">
-              <Field label="Tier / Role">
+              <Field label={t("ui.batch.tierRole")}>
                 <select
                   value={cocTier}
                   onChange={(e) => setCocTier(e.target.value as ChainOfCustodyTierValue)}
@@ -654,12 +652,12 @@ export function BatchDetailsModal({
                 >
                   {COC_TIERS.map((tier) => (
                     <option key={tier.value} value={tier.value}>
-                      {tier.label}
+                      {t(tier.label)}
                     </option>
                   ))}
                 </select>
               </Field>
-              <Field label="Participant Name">
+              <Field label={t("ui.batch.participantName")}>
                 <input
                   required
                   list="coc-participant-name-suggestions"
@@ -674,14 +672,14 @@ export function BatchDetailsModal({
                   ))}
                 </datalist>
               </Field>
-              <Field label="Participant Country (optional)">
+              <Field label={t("ui.batch.participantCountryOptional")}>
                 <input
                   value={cocParticipantCountry}
                   onChange={(e) => setCocParticipantCountry(e.target.value)}
                   className={inputCls}
                 />
               </Field>
-              <Field label="Their Batch ID">
+              <Field label={t("ui.batch.theirBatchId")}>
                 <input
                   required
                   value={cocExternalBatchId}
@@ -689,9 +687,9 @@ export function BatchDetailsModal({
                   className={inputCls}
                 />
               </Field>
-              <Field label="Certification Scheme (optional)">
+              <Field label={t("ui.batch.certificationSchemeOptional")}>
                 <select value={cocCertScheme} onChange={(e) => setCocCertScheme(e.target.value)} className={inputCls}>
-                  <option value="">— none —</option>
+                  <option value="">{t("ui.common.none")}</option>
                   {COC_CERT_SCHEMES.map((s) => (
                     <option key={s} value={s}>
                       {s}
@@ -699,10 +697,10 @@ export function BatchDetailsModal({
                   ))}
                 </select>
               </Field>
-              <Field label="Certificate ID (optional)">
+              <Field label={t("ui.batch.certificateIdOptional")}>
                 <input value={cocCertId} onChange={(e) => setCocCertId(e.target.value)} className={inputCls} />
               </Field>
-              <Field label="Mass Balance Allocation % (optional)">
+              <Field label={t("ui.batch.massBalanceAllocationOptional")}>
                 <input
                   type="number"
                   step="0.01"
@@ -714,7 +712,7 @@ export function BatchDetailsModal({
                 />
               </Field>
               <div className="col-span-2">
-                <Field label="Notes (optional)">
+                <Field label={t("ui.batch.notesOptional")}>
                   <input value={cocNotes} onChange={(e) => setCocNotes(e.target.value)} className={inputCls} />
                 </Field>
               </div>
@@ -725,7 +723,7 @@ export function BatchDetailsModal({
               className="w-full py-2.5 bg-emerald-500 hover:bg-emerald-400 disabled:opacity-50 disabled:cursor-not-allowed text-slate-950 font-bold rounded-xl transition flex items-center justify-center gap-2"
             >
               {addingCoc && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
-              {addingCoc ? "Adding..." : "Add Chain-of-Custody Tier"}
+              {addingCoc ? t("ui.common.adding") : t("ui.batch.addChainOfCustodyTier")}
             </button>
           </form>
         </div>

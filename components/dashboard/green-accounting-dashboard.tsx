@@ -233,16 +233,16 @@ function TaxParameterPanel({ taxParameters }: { taxParameters: TaxParameterSumma
       <div className="flex items-center justify-between mb-4 gap-2 flex-wrap">
         <div>
           <h3 className="text-sm font-bold text-white flex items-center gap-1.5">
-            <Gauge className="w-4 h-4 text-lime-400" /> Tax Parameters
+            <Gauge className="w-4 h-4 text-lime-400" /> {t("ui.green.taxParameters")}
           </h3>
-          <p className="text-[11px] text-slate-400 font-mono">Configurable, versioned rate per tonne by jurisdiction</p>
+          <p className="text-[11px] text-slate-400 font-mono">{t("ui.green.configurableVersionedRatePerTonneBy")}</p>
         </div>
         <button
           onClick={() => setOpen((v) => !v)}
           className="flex items-center gap-1.5 text-xs bg-lime-500 hover:bg-lime-400 text-slate-950 font-bold px-3 py-2 rounded-lg transition-all"
         >
           <Plus className="w-3.5 h-3.5" />
-          New Rate
+          {t("ui.green.newRate")}
         </button>
       </div>
 
@@ -250,7 +250,7 @@ function TaxParameterPanel({ taxParameters }: { taxParameters: TaxParameterSumma
         <div className="mb-4 p-4 bg-slate-950 border border-slate-800 rounded-xl space-y-3">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             <label className="text-[10px] text-slate-500 font-mono uppercase">
-              Jurisdiction
+              {t("greenAccounting.table.jurisdiction")}
               <input
                 value={form.jurisdiction ?? ""}
                 onChange={(e) => setForm((f) => ({ ...f, jurisdiction: e.target.value }))}
@@ -258,7 +258,7 @@ function TaxParameterPanel({ taxParameters }: { taxParameters: TaxParameterSumma
               />
             </label>
             <label className="text-[10px] text-slate-500 font-mono uppercase">
-              Currency
+              {t("suppliers.table.currency")}
               <input
                 value={form.currency ?? ""}
                 onChange={(e) => setForm((f) => ({ ...f, currency: e.target.value }))}
@@ -266,7 +266,7 @@ function TaxParameterPanel({ taxParameters }: { taxParameters: TaxParameterSumma
               />
             </label>
             <label className="text-[10px] text-slate-500 font-mono uppercase col-span-2">
-              Rate (per tonne)
+              {t("ui.green.ratePerTonne")}
               <input
                 type="number"
                 min={0}
@@ -277,7 +277,7 @@ function TaxParameterPanel({ taxParameters }: { taxParameters: TaxParameterSumma
               />
             </label>
             <label className="text-[10px] text-slate-500 font-mono uppercase col-span-2 md:col-span-4">
-              Label
+              {t("greenAccounting.table.label")}
               <input
                 value={form.label ?? ""}
                 onChange={(e) => setForm((f) => ({ ...f, label: e.target.value }))}
@@ -285,7 +285,7 @@ function TaxParameterPanel({ taxParameters }: { taxParameters: TaxParameterSumma
               />
             </label>
             <label className="text-[10px] text-slate-500 font-mono uppercase col-span-2 md:col-span-4">
-              Source / Notes (optional)
+              {t("ui.green.sourceNotesOptional")}
               <input
                 value={form.source ?? ""}
                 onChange={(e) => setForm((f) => ({ ...f, source: e.target.value }))}
@@ -304,7 +304,7 @@ function TaxParameterPanel({ taxParameters }: { taxParameters: TaxParameterSumma
             className="flex items-center gap-1.5 text-xs bg-emerald-500 hover:bg-emerald-400 disabled:opacity-50 disabled:cursor-not-allowed text-slate-950 font-bold px-3 py-2 rounded-lg transition-all"
           >
             {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Coins className="w-3.5 h-3.5" />}
-            Save Rate
+            {t("ui.green.saveRate")}
           </button>
         </div>
       )}
@@ -324,7 +324,7 @@ function TaxParameterPanel({ taxParameters }: { taxParameters: TaxParameterSumma
             {taxParameters.length === 0 ? (
               <tr>
                 <td colSpan={5} className="py-4 text-center text-slate-500">
-                  No configured rates yet — the built-in default (€800/tonne, EU) is used until one is added.
+                  {t("ui.green.noConfiguredRatesYetTheBuilt")}
                 </td>
               </tr>
             ) : (
@@ -338,9 +338,9 @@ function TaxParameterPanel({ taxParameters }: { taxParameters: TaxParameterSumma
                   <td className="py-2 pr-4 text-slate-400 whitespace-nowrap">{new Date(p.effectiveFrom).toLocaleDateString()}</td>
                   <td className="py-2">
                     {p.active ? (
-                      <span className="text-emerald-400">Active</span>
+                      <span className="text-emerald-400">{t("greenAccounting.table.active")}</span>
                     ) : (
-                      <span className="text-slate-600">Retired</span>
+                      <span className="text-slate-600">{t("ui.green.retired")}</span>
                     )}
                   </td>
                 </tr>
@@ -360,6 +360,7 @@ function BatchRow({
   batch: PortfolioGreenAccountingSummary["batches"][number];
   onLocked: () => void;
 }) {
+  const { t } = useLanguage();
   const [locking, setLocking] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -394,10 +395,10 @@ function BatchRow({
       <td className="py-2 pr-4 text-right text-white font-bold whitespace-nowrap">{eurFmt(batch.netLiabilityEur)}</td>
       <td className="py-2 text-right">
         {!batch.hasWeightData ? (
-          <span className="text-[10px] text-slate-600">no weight data</span>
+          <span className="text-[10px] text-slate-600">{t("ui.green.noWeightData")}</span>
         ) : batch.hasLockedValuation ? (
           <span className="inline-flex items-center gap-1 text-[10px] text-lime-400">
-            <Lock className="w-3 h-3" /> Locked
+            <Lock className="w-3 h-3" /> {t("ui.green.locked")}
           </span>
         ) : (
           <button
@@ -406,7 +407,7 @@ function BatchRow({
             className="inline-flex items-center gap-1 text-[10px] bg-slate-800 hover:bg-slate-700 disabled:opacity-50 text-slate-300 px-2 py-1 rounded-md transition-all"
           >
             {locking ? <Loader2 className="w-3 h-3 animate-spin" /> : <Lock className="w-3 h-3" />}
-            Lock
+            {t("ui.green.lock")}
           </button>
         )}
         {error && <div className="text-[9px] text-rose-400 mt-1">{error}</div>}
@@ -416,15 +417,14 @@ function BatchRow({
 }
 
 function TrendEmptyState({ quartersAvailable, minQuartersRequired }: { quartersAvailable: number; minQuartersRequired: number }) {
+  const { t } = useLanguage();
   return (
     <div className="bg-slate-900/60 border border-slate-800 rounded-3xl p-6 backdrop-blur-xl">
       <h3 className="text-sm font-bold text-white flex items-center gap-1.5 mb-1">
-        <Activity className="w-4 h-4 text-lime-400" /> Tax Liability Trend &amp; Forecast
+        <Activity className="w-4 h-4 text-lime-400" /> {t("ui.green.taxLiabilityTrendForecast")}
       </h3>
       <div className="h-40 flex items-center justify-center text-xs text-slate-500 font-mono text-center px-6">
-        Not enough production history yet to forecast a trend — {quartersAvailable} of {minQuartersRequired} minimum
-        quarters with recorded batch weight available. This fills in automatically as more weighed batches are
-        produced across additional quarters.
+        {t("ui.green.notEnoughProductionHistoryYetTo")} {quartersAvailable} {t("ui.common.of")} {minQuartersRequired} {t("ui.green.minimumQuartersWithRecordedBatchWeight")}
       </div>
     </div>
   );
@@ -494,14 +494,14 @@ function TrendForecastSection({ trendForecast }: { trendForecast: GreenTaxTrendF
           label={t("greenAccounting.forecast.next12Months")}
           value={trendForecast.next12MonthsForecast ? eurFmt(trendForecast.next12MonthsForecast.netLiabilityEur) : "—"}
           accent="text-rose-400"
-          sub={<>Rolling 4-quarter projection</>}
+          sub={<>{t("ui.green.rolling4QuarterProjection")}</>}
         />
         <KpiCard
           icon={Coins}
           label={t("greenAccounting.forecast.trailingActual")}
           value={trendForecast.trailingActual ? eurFmt(trendForecast.trailingActual.netLiabilityEur) : "—"}
           accent="text-slate-300"
-          sub={trendForecast.trailingActual ? <>Last {trendForecast.trailingActual.quarterCount} actual quarters</> : undefined}
+          sub={trendForecast.trailingActual ? <>{t("ui.green.last")} {trendForecast.trailingActual.quarterCount} {t("ui.green.actualQuarters")}</> : undefined}
         />
         <KpiCard
           icon={
@@ -524,7 +524,7 @@ function TrendForecastSection({ trendForecast }: { trendForecast: GreenTaxTrendF
                 ? "text-emerald-400"
                 : "text-rose-400"
           }
-          sub={<>vs. trailing {trendForecast.trailingActual?.quarterCount ?? 0} actual quarters</>}
+          sub={<>{t("ui.green.vsTrailing")} {trendForecast.trailingActual?.quarterCount ?? 0} {t("ui.green.actualQuarters")}</>}
         />
       </div>
 
@@ -533,11 +533,11 @@ function TrendForecastSection({ trendForecast }: { trendForecast: GreenTaxTrendF
         <div className="bg-slate-900/60 border border-slate-800 rounded-3xl p-6 backdrop-blur-xl">
           <div className="mb-4">
             <h3 className="text-sm font-bold text-white flex items-center gap-1.5">
-              <Activity className="w-4 h-4 text-rose-400" /> Net Liability Trend &amp; Forecast
+              <Activity className="w-4 h-4 text-rose-400" /> {t("ui.green.netLiabilityTrendForecast")}
             </h3>
             <p className="text-[11px] text-slate-400 font-mono">
-              Actual by production quarter (solid) · projected next {trendForecast.next12MonthsForecast ? 4 : 0}{" "}
-              quarters (dashed)
+              {t("ui.green.actualByProductionQuarterSolidProjected")} {trendForecast.next12MonthsForecast ? 4 : 0}{" "}
+              {t("ui.green.quartersDashed")}
             </p>
           </div>
           <div className="h-56 w-full">
@@ -548,7 +548,7 @@ function TrendForecastSection({ trendForecast }: { trendForecast: GreenTaxTrendF
                 <YAxis stroke="#64748b" fontSize={11} tickFormatter={(v) => `€${numberFmt(v, 0)}`} />
                 <Tooltip
                   contentStyle={{ backgroundColor: "#090d16", borderColor: "#1e293b", borderRadius: "12px", fontSize: "12px" }}
-                  formatter={(value, name) => [eurFmt(Number(value)), name === "actual" ? "Actual" : "Forecast"]}
+                  formatter={(value, name) => [eurFmt(Number(value)), name === "actual" ? t("ui.common.actual") : t("ui.green.forecast")]}
                 />
                 {forecastStartQuarter && (
                   <ReferenceLine
@@ -577,11 +577,11 @@ function TrendForecastSection({ trendForecast }: { trendForecast: GreenTaxTrendF
         <div className="bg-slate-900/60 border border-slate-800 rounded-3xl p-6 backdrop-blur-xl">
           <div className="mb-4">
             <h3 className="text-sm font-bold text-white flex items-center gap-1.5">
-              <Recycle className="w-4 h-4 text-emerald-400" /> PCR Tax Savings Trend &amp; Forecast
+              <Recycle className="w-4 h-4 text-emerald-400" /> {t("ui.green.pcrTaxSavingsTrendForecast")}
             </h3>
             <p className="text-[11px] text-slate-400 font-mono">
-              Actual by production quarter (solid) · projected next {trendForecast.next12MonthsForecast ? 4 : 0}{" "}
-              quarters (dashed)
+              {t("ui.green.actualByProductionQuarterSolidProjected")} {trendForecast.next12MonthsForecast ? 4 : 0}{" "}
+              {t("ui.green.quartersDashed")}
             </p>
           </div>
           <div className="h-56 w-full">
@@ -592,7 +592,7 @@ function TrendForecastSection({ trendForecast }: { trendForecast: GreenTaxTrendF
                 <YAxis stroke="#64748b" fontSize={11} tickFormatter={(v) => `€${numberFmt(v, 0)}`} />
                 <Tooltip
                   contentStyle={{ backgroundColor: "#090d16", borderColor: "#1e293b", borderRadius: "12px", fontSize: "12px" }}
-                  formatter={(value, name) => [eurFmt(Number(value)), name === "actual" ? "Actual" : "Forecast"]}
+                  formatter={(value, name) => [eurFmt(Number(value)), name === "actual" ? t("ui.common.actual") : t("ui.green.forecast")]}
                 />
                 {forecastStartQuarter && (
                   <ReferenceLine
@@ -625,7 +625,7 @@ function TrendForecastSection({ trendForecast }: { trendForecast: GreenTaxTrendF
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="bg-slate-900/60 border border-slate-800 rounded-3xl p-6 backdrop-blur-xl overflow-x-auto">
           <h3 className="text-sm font-bold text-white flex items-center gap-1.5 mb-4">
-            <CalendarRange className="w-4 h-4 text-purple-400" /> Quarterly Trend (data table)
+            <CalendarRange className="w-4 h-4 text-purple-400" /> {t("ui.green.quarterlyTrendDataTable")}
           </h3>
           <table className="w-full text-left font-mono text-xs min-w-[420px]">
             <thead>
@@ -641,7 +641,7 @@ function TrendForecastSection({ trendForecast }: { trendForecast: GreenTaxTrendF
                 <tr key={q.quarter}>
                   <td className="py-2 text-slate-300">
                     {q.quarter}
-                    {q.isForecast && <span className="ml-1.5 text-[9px] text-slate-500">(forecast)</span>}
+                    {q.isForecast && <span className="ml-1.5 text-[9px] text-slate-500">{t("ui.green.forecast2")}</span>}
                   </td>
                   <td className="py-2 text-right text-amber-400">{eurFmt(q.grossLiabilityEur)}</td>
                   <td className="py-2 text-right text-emerald-400">{eurFmt(q.pcrTaxSavingsEur)}</td>
@@ -656,7 +656,7 @@ function TrendForecastSection({ trendForecast }: { trendForecast: GreenTaxTrendF
 
         <div className="bg-slate-900/60 border border-slate-800 rounded-3xl p-6 backdrop-blur-xl overflow-x-auto">
           <h3 className="text-sm font-bold text-white flex items-center gap-1.5 mb-4">
-            <Gauge className="w-4 h-4 text-purple-400" /> Yearly Rollup (data table)
+            <Gauge className="w-4 h-4 text-purple-400" /> {t("ui.green.yearlyRollupDataTable")}
           </h3>
           <table className="w-full text-left font-mono text-xs min-w-[420px]">
             <thead>
@@ -673,7 +673,7 @@ function TrendForecastSection({ trendForecast }: { trendForecast: GreenTaxTrendF
                 <tr key={y.label}>
                   <td className="py-2 text-slate-300">
                     {y.label}
-                    {y.isForecast && <span className="ml-1.5 text-[9px] text-slate-500">(forecast)</span>}
+                    {y.isForecast && <span className="ml-1.5 text-[9px] text-slate-500">{t("ui.green.forecast2")}</span>}
                   </td>
                   <td className="py-2 text-right text-slate-400">{y.quarterCount}</td>
                   <td className="py-2 text-right text-amber-400">{eurFmt(y.grossLiabilityEur)}</td>
@@ -792,7 +792,7 @@ export function GreenAccountingDashboard({
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <span className="text-[10px] text-slate-500 font-mono hidden md:inline">
-              Generated {new Date(summary.generatedAt).toLocaleString()}
+              {t("ui.common.generated")} {new Date(summary.generatedAt).toLocaleString()}
             </span>
             <button
               onClick={handleRefresh}
@@ -819,7 +819,7 @@ export function GreenAccountingDashboard({
               onClick={handleExportXlsx}
               disabled={xlsxExporting}
               className="flex items-center gap-1.5 text-xs bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold px-3 py-2 rounded-lg transition-all whitespace-nowrap"
-              title="Export the Green Accounting + Green Valuation History workbook"
+              title={t("ui.green.exportTheGreenAccountingGreenValuation")}
             >
               {xlsxExporting ? (
                 <Loader2 className="w-3.5 h-3.5 animate-spin" />
@@ -832,7 +832,7 @@ export function GreenAccountingDashboard({
               onClick={handleExportPdf}
               disabled={pdfExporting}
               className="flex items-center gap-1.5 text-xs bg-slate-100 hover:bg-white disabled:opacity-50 disabled:cursor-not-allowed text-slate-900 font-bold px-3 py-2 rounded-lg transition-all whitespace-nowrap"
-              title="Generate the Green Tax & Plastic Packaging Compliance Report PDF"
+              title={t("ui.green.generateTheGreenTaxPlasticPackaging")}
             >
               {pdfExporting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <FileText className="w-3.5 h-3.5" />}
               {pdfExporting ? t("common.generating") : t("greenAccounting.button.exportPdf")}
@@ -865,27 +865,27 @@ export function GreenAccountingDashboard({
             label={t("greenAccounting.kpi.grossLiability")}
             value={eurFmt(summary.totalGrossLiabilityEur)}
             accent="text-amber-400"
-            sub={<>If 0% of active mass were recycled — {numberFmt(summary.totalMassKg / 1000, 2)} t total</>}
+            sub={<>{t("ui.green.if0OfActiveMassWere")} {numberFmt(summary.totalMassKg / 1000, 2)} {t("ui.green.tTotal")}</>}
           />
           <KpiCard
             icon={Recycle}
             label={t("greenAccounting.kpi.pcrTaxSavings")}
             value={eurFmt(summary.totalPcrTaxSavingsEur)}
             accent="text-emerald-400"
-            sub={<>{numberFmt(summary.totalPcrMassKg / 1000, 2)} t PCR mass offsetting liability</>}
+            sub={<>{numberFmt(summary.totalPcrMassKg / 1000, 2)} {t("ui.green.tPcrMassOffsettingLiability")}</>}
           />
           <KpiCard
             icon={Coins}
             label={t("greenAccounting.kpi.netLiability")}
             value={eurFmt(summary.totalNetLiabilityEur)}
             accent="text-rose-400"
-            sub={<>On {numberFmt(summary.totalTaxableMassKg / 1000, 2)} t non-recycled taxable mass</>}
+            sub={<>{t("ui.green.on")} {numberFmt(summary.totalTaxableMassKg / 1000, 2)} {t("ui.green.tNonRecycledTaxableMass")}</>}
           />
           <KpiCard
             icon={Gauge}
             label={t("greenAccounting.kpi.activeRate")}
             value={`${summary.ratePerTonneEur}`}
-            unit={`EUR/t · ${summary.jurisdiction}`}
+            unit={t("ui.green.eurT", { v0: summary.jurisdiction })}
             accent="text-lime-400"
             sub={<>{summary.taxParameterLabel}</>}
           />
@@ -896,11 +896,10 @@ export function GreenAccountingDashboard({
         {/* Per-batch breakdown */}
         <div className="bg-slate-900/60 border border-slate-800 rounded-3xl p-6 backdrop-blur-xl overflow-x-auto">
           <h3 className="text-sm font-bold text-white flex items-center gap-1.5 mb-1">
-            <Layers className="w-4 h-4 text-lime-400" /> Per-Batch Breakdown
+            <Layers className="w-4 h-4 text-lime-400" /> {t("ui.green.perBatchBreakdown")}
           </h3>
           <p className="text-[11px] text-slate-400 font-mono mb-4">
-            {summary.batchesWithWeightData} of {summary.activeBatches} active batches have recorded weight data
-            ({summary.batchesMissingWeightData} excluded)
+            {summary.batchesWithWeightData} {t("ui.common.of")} {summary.activeBatches} {t("ui.green.activeBatchesHaveRecordedWeightData")}{summary.batchesMissingWeightData} {t("ui.green.excluded")}
           </p>
           <table className="w-full text-left font-mono text-xs min-w-[760px]">
             <thead>
@@ -919,7 +918,7 @@ export function GreenAccountingDashboard({
               {summary.batches.length === 0 ? (
                 <tr>
                   <td colSpan={8} className="py-4 text-center text-slate-500">
-                    No active batches yet.
+                    {t("ui.green.noActiveBatchesYet")}
                   </td>
                 </tr>
               ) : (
@@ -938,14 +937,10 @@ export function GreenAccountingDashboard({
           <Info className="w-4 h-4 text-slate-500 shrink-0 mt-0.5" />
           <div className="space-y-1.5">
             <p>
-              <span className="text-slate-300 font-semibold">Mass-based figures</span> are computed only over
-              batches with a recorded weight (see the Carbon Footprint calculator in each batch&apos;s detail panel) —
-              batches missing weight data are excluded, never silently zeroed.
+              <span className="text-slate-300 font-semibold">{t("ui.green.massBasedFigures")}</span> {t("ui.green.areComputedOnlyOverBatchesWith")}
             </p>
             <p>
-              <span className="text-slate-300 font-semibold">Locking a valuation</span> saves the batch&apos;s current
-              live figures as an audit-trailed snapshot (BatchGreenValuation), so a later change to the rate or the
-              batch&apos;s recorded weight never silently redates a filed figure.
+              <span className="text-slate-300 font-semibold">{t("ui.green.lockingAValuation")}</span> {t("ui.green.savesTheBatchSCurrentLive")}
             </p>
             <p>
               <span className="text-slate-300 font-semibold">{summary.disclaimer}</span>

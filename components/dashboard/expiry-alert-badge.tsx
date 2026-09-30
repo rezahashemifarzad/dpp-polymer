@@ -1,3 +1,5 @@
+"use client";
+
 /**
  * components/dashboard/expiry-alert-badge.tsx
  * -----------------------------------------------------------------------
@@ -25,6 +27,7 @@
  */
 
 import { AlertTriangle, AlertOctagon, Clock } from "lucide-react";
+import { useLanguage } from "@/lib/hooks/use-language";
 
 export type ExpiryBadgeTier = "EXPIRED" | "EXPIRING_URGENT" | "EXPIRING_SOON" | null;
 
@@ -32,9 +35,9 @@ const TIER_META: Record<
   Exclude<ExpiryBadgeTier, null>,
   { cls: string; Icon: typeof AlertTriangle; label: string }
 > = {
-  EXPIRED: { cls: "bg-rose-500/10 text-rose-400 border-rose-500/30", Icon: AlertOctagon, label: "Expired" },
-  EXPIRING_URGENT: { cls: "bg-orange-500/10 text-orange-400 border-orange-500/30", Icon: AlertTriangle, label: "Urgent" },
-  EXPIRING_SOON: { cls: "bg-amber-500/10 text-amber-400 border-amber-500/30", Icon: Clock, label: "Expiring Soon" },
+  EXPIRED: { cls: "bg-rose-500/10 text-rose-400 border-rose-500/30", Icon: AlertOctagon, label: "notifications.chip.expired" },
+  EXPIRING_URGENT: { cls: "bg-orange-500/10 text-orange-400 border-orange-500/30", Icon: AlertTriangle, label: "notifications.chip.urgent" },
+  EXPIRING_SOON: { cls: "bg-amber-500/10 text-amber-400 border-amber-500/30", Icon: Clock, label: "ui.common.expiringSoon" },
 };
 
 export function ExpiryAlertBadge({
@@ -49,6 +52,7 @@ export function ExpiryAlertBadge({
   title?: string;
   size?: "sm" | "xs";
 }) {
+  const { t } = useLanguage();
   if (!tier) return <span className="text-slate-600">—</span>;
   const { cls, Icon, label } = TIER_META[tier];
   const sizeCls = size === "xs" ? "text-[9px] px-1.5 py-0.5" : "text-[10px] px-2 py-0.5";
@@ -59,7 +63,7 @@ export function ExpiryAlertBadge({
       title={title}
     >
       <Icon className="w-3 h-3 shrink-0" />
-      {label}
+      {t(label)}
       {typeof count === "number" ? ` (${count})` : ""}
     </span>
   );
@@ -68,11 +72,21 @@ export function ExpiryAlertBadge({
 /** Small helper shared by the badge's callers for a human-readable "days
  * remaining" string, so the banner/list rows and any future caller phrase
  * it identically. */
-export function formatDaysRemaining(daysRemaining: number): string {
-  if (daysRemaining < 0) {
-    const daysAgo = Math.abs(daysRemaining);
-    return `Expired ${daysAgo} day${daysAgo === 1 ? "" : "s"} ago`;
+export function formatDaysRemaining(
+  daysRemaining: number,
+  t: (key: string, vars?: Record<string, string | number>) => string = (key, vars) => {
+    // English fallback for callers outside the LanguageProvider.
+    const en: Record<string, string> = {
+      "ui.expiry.expiredDaysAgo": "Expired {n} day(s) ago",
+      "ui.expiry.expiresToday": "Expires today",
+      "ui.expiry.daysRemaining": "{n} day(s) remaining",
+    };
+    return (en[key] ?? key).replace("{n}", String(vars?.n ?? ""));
   }
-  if (daysRemaining === 0) return "Expires today";
-  return `${daysRemaining} day${daysRemaining === 1 ? "" : "s"} remaining`;
+): string {
+  if (daysRemaining < 0) {
+    return t("ui.expiry.expiredDaysAgo", { n: Math.abs(daysRemaining) });
+  }
+  if (daysRemaining === 0) return t("ui.expiry.expiresToday");
+  return t("ui.expiry.daysRemaining", { n: daysRemaining });
 }

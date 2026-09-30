@@ -93,6 +93,7 @@ interface ClientRow {
 // supplier-review-panel.tsx's InviteModal "created" state.
 // ----------------------------------------------------------------------------
 function CopyableSecretBox({ value }: { value: string }) {
+  const { t } = useLanguage();
   const [copied, setCopied] = useState(false);
   const handleCopy = async () => {
     try {
@@ -114,20 +115,21 @@ function CopyableSecretBox({ value }: { value: string }) {
         className="w-full flex items-center justify-center gap-2 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl text-xs mb-3"
       >
         {copied ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
-        {copied ? "Copied" : "Copy"}
+        {copied ? t("ui.common.copied") : t("ui.acc.copy")}
       </button>
     </>
   );
 }
 
 function ModalShell({ children, onClose }: { children: React.ReactNode; onClose: () => void }) {
+  const { t } = useLanguage();
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-xl overflow-y-auto">
       <div className="bg-slate-900 border border-slate-800 w-full max-w-lg rounded-3xl p-6 relative shadow-2xl my-8">
         <button
           onClick={onClose}
           className="absolute right-4 top-4 text-slate-400 hover:text-white p-1.5 rounded-xl bg-slate-800"
-          aria-label="Close"
+          aria-label={t("common.close")}
         >
           <X className="w-4 h-4" />
         </button>
@@ -153,6 +155,7 @@ function RotateKeyModal({
   onRotated: () => void;
   rotate: () => Promise<{ ok: boolean; data?: { rawApiKey: string }; error?: string }>;
 }) {
+  const { t } = useLanguage();
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [rawApiKey, setRawApiKey] = useState<string | null>(null);
@@ -180,26 +183,24 @@ function RotateKeyModal({
         <>
           <h3 className="text-lg font-bold text-white mb-1 flex items-center gap-2">
             <CheckCircle2 className="w-5 h-5 text-emerald-400" />
-            New API key issued
+            {t("ui.acc.newApiKeyIssued")}
           </h3>
           <p className="text-xs text-slate-400 mb-4 font-mono">
-            The previous key for {name} no longer works. Shown ONCE — it cannot be recovered after you close this
-            dialog; rotate again to issue a new one.
+            {t("ui.acc.thePreviousKeyFor")} {name} {t("ui.acc.noLongerWorksShownOnceIt")}
           </p>
           <CopyableSecretBox value={rawApiKey} />
           <button
             onClick={onClose}
             className="w-full py-2.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold rounded-xl text-xs"
           >
-            Done
+            {t("ui.common.done")}
           </button>
         </>
       ) : (
         <>
-          <h3 className="text-lg font-bold text-white mb-1">Rotate API Key</h3>
+          <h3 className="text-lg font-bold text-white mb-1">{t("ui.acc.rotateApiKey")}</h3>
           <p className="text-xs text-slate-400 mb-4 font-mono">
-            Issue a new personal API key for {name}. The current key will stop working immediately — anywhere it's
-            in use will need the new one.
+            {t("ui.acc.issueANewPersonalApiKey")} {name}{t("ui.acc.theCurrentKeyWillStopWorking")}
           </p>
           {error && (
             <div className="mb-3 p-3 bg-red-500/10 border border-red-500/30 rounded-xl text-xs font-mono text-red-300">
@@ -213,10 +214,10 @@ function RotateKeyModal({
               className="flex-1 py-2.5 bg-amber-500 hover:bg-amber-400 disabled:opacity-50 text-slate-950 font-bold rounded-xl transition flex items-center justify-center gap-2 text-xs"
             >
               {submitting && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
-              {submitting ? "Rotating..." : "Rotate Key"}
+              {submitting ? t("ui.acc.rotating") : t("ui.acc.rotateKey")}
             </button>
             <button onClick={onClose} className="px-4 py-2.5 bg-slate-800 text-slate-300 rounded-xl hover:bg-slate-700 text-xs">
-              Cancel
+              {t("ui.common.cancel")}
             </button>
           </div>
         </>
@@ -242,6 +243,7 @@ function PasswordModal({
   onSet: () => void;
   setPassword: (password: string) => Promise<{ ok: boolean; error?: string }>;
 }) {
+  const { t } = useLanguage();
   const [password, setPasswordValue] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -270,10 +272,9 @@ function PasswordModal({
 
   return (
     <ModalShell onClose={onClose}>
-      <h3 className="text-lg font-bold text-white mb-1">{hasPassword ? "Reset" : "Set"} Password</h3>
+      <h3 className="text-lg font-bold text-white mb-1">{hasPassword ? t("ui.acc.reset") : t("ui.acc.set")} {t("common.password")}</h3>
       <p className="text-xs text-slate-400 mb-4 font-mono">
-        {hasPassword ? "Replaces" : "Sets"} the /login password for {name}. Share it with them directly — it is not
-        emailed automatically.
+        {hasPassword ? t("ui.acc.replaces") : t("ui.acc.sets")} {t("ui.acc.theLoginPasswordFor")} {name}{t("ui.acc.shareItWithThemDirectlyIt")}
       </p>
       {error && (
         <div className="mb-3 p-3 bg-red-500/10 border border-red-500/30 rounded-xl text-xs font-mono text-red-300">
@@ -282,7 +283,7 @@ function PasswordModal({
       )}
       <form onSubmit={handleSubmit} className="space-y-3 font-mono text-xs">
         <label className="block">
-          <span className="text-slate-400 block mb-1">New Password (min. 8 characters)</span>
+          <span className="text-slate-400 block mb-1">{t("ui.acc.newPasswordMin8Characters")}</span>
           <input
             type="text"
             required
@@ -300,10 +301,10 @@ function PasswordModal({
             className="flex-1 py-2.5 bg-emerald-500 hover:bg-emerald-400 disabled:opacity-50 text-slate-950 font-bold rounded-xl transition flex items-center justify-center gap-2"
           >
             {submitting && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
-            {submitting ? "Saving..." : hasPassword ? "Reset Password" : "Set Password"}
+            {submitting ? t("ui.common.saving") : hasPassword ? t("ui.acc.resetPassword") : t("ui.acc.setPassword")}
           </button>
           <button type="button" onClick={onClose} className="px-4 py-2.5 bg-slate-800 text-slate-300 rounded-xl hover:bg-slate-700 text-xs">
-            Cancel
+            {t("ui.common.cancel")}
           </button>
         </div>
       </form>
@@ -316,25 +317,27 @@ function PasswordModal({
 // accessibility convention as SvhcStatusBadge and ExpiryAlertBadge).
 // ----------------------------------------------------------------------------
 function StatusChip({ active }: { active: boolean }) {
+  const { t } = useLanguage();
   return active ? (
     <span className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 rounded-full font-semibold whitespace-nowrap">
-      <CheckCircle2 className="w-3 h-3" /> Active
+      <CheckCircle2 className="w-3 h-3" /> {t("greenAccounting.table.active")}
     </span>
   ) : (
     <span className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 bg-slate-500/10 text-slate-400 border border-slate-500/30 rounded-full font-semibold whitespace-nowrap">
-      <Ban className="w-3 h-3" /> Deactivated
+      <Ban className="w-3 h-3" /> {t("ui.acc.deactivated")}
     </span>
   );
 }
 
 function PasswordChip({ hasPassword }: { hasPassword: boolean }) {
+  const { t } = useLanguage();
   return hasPassword ? (
     <span className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 bg-cyan-500/10 text-cyan-400 border border-cyan-500/30 rounded-full font-semibold whitespace-nowrap">
-      <Lock className="w-3 h-3" /> Set
+      <Lock className="w-3 h-3" /> {t("ui.acc.set")}
     </span>
   ) : (
     <span className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 bg-slate-500/10 text-slate-500 border border-slate-500/30 rounded-full font-semibold whitespace-nowrap">
-      Not Set
+      {t("ui.acc.notSet")}
     </span>
   );
 }
@@ -343,6 +346,7 @@ function PasswordChip({ hasPassword }: { hasPassword: boolean }) {
 // Create-Auditor modal
 // ----------------------------------------------------------------------------
 function CreateAuditorModal({ onClose, onCreated }: { onClose: () => void; onCreated: () => void }) {
+  const { t } = useLanguage();
   const [name, setName] = useState("");
   const [organization, setOrganization] = useState("");
   const [email, setEmail] = useState("");
@@ -380,26 +384,24 @@ function CreateAuditorModal({ onClose, onCreated }: { onClose: () => void; onCre
         <>
           <h3 className="text-lg font-bold text-white mb-1 flex items-center gap-2">
             <CheckCircle2 className="w-5 h-5 text-emerald-400" />
-            Auditor created
+            {t("ui.acc.auditorCreated")}
           </h3>
           <p className="text-xs text-slate-400 mb-4 font-mono">
-            Personal API key for {created.name}. Shown ONCE — give it to them to paste into the Auditor Portal
-            (/auditor) sign-in screen; it cannot be recovered after you close this dialog.
+            {t("ui.acc.personalApiKeyFor")} {created.name}{t("ui.acc.shownOnceGiveItToThem")}
           </p>
           <CopyableSecretBox value={created.rawApiKey} />
           <button
             onClick={onClose}
             className="w-full py-2.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold rounded-xl text-xs"
           >
-            Done
+            {t("ui.common.done")}
           </button>
         </>
       ) : (
         <>
-          <h3 className="text-lg font-bold text-white mb-1">New Auditor</h3>
+          <h3 className="text-lg font-bold text-white mb-1">{t("ui.acc.newAuditor")}</h3>
           <p className="text-xs text-slate-400 mb-4 font-mono">
-            Creates an Auditor row with a personal API key (for /auditor sign-off) and, optionally, a password (for
-            /login's read-only /portal/auditor view).
+            {t("ui.acc.createsAnAuditorRowWithA")}
           </p>
           {error && (
             <div className="mb-3 p-3 bg-red-500/10 border border-red-500/30 rounded-xl text-xs font-mono text-red-300">
@@ -408,19 +410,19 @@ function CreateAuditorModal({ onClose, onCreated }: { onClose: () => void; onCre
           )}
           <form onSubmit={handleCreate} className="space-y-3 font-mono text-xs">
             <label className="block">
-              <span className="text-slate-400 block mb-1">Name</span>
+              <span className="text-slate-400 block mb-1">{t("common.name")}</span>
               <input required value={name} onChange={(e) => setName(e.target.value)} className={inputCls} />
             </label>
             <label className="block">
-              <span className="text-slate-400 block mb-1">Organization</span>
+              <span className="text-slate-400 block mb-1">{t("accounts.table.organization")}</span>
               <input required value={organization} onChange={(e) => setOrganization(e.target.value)} className={inputCls} />
             </label>
             <label className="block">
-              <span className="text-slate-400 block mb-1">Email (optional, required for a password)</span>
+              <span className="text-slate-400 block mb-1">{t("ui.acc.emailOptionalRequiredForAPassword")}</span>
               <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} className={inputCls} />
             </label>
             <label className="block">
-              <span className="text-slate-400 block mb-1">Password (optional — for /login sign-in)</span>
+              <span className="text-slate-400 block mb-1">{t("ui.acc.passwordOptionalForLoginSignIn")}</span>
               <input
                 type="text"
                 value={password}
@@ -436,7 +438,7 @@ function CreateAuditorModal({ onClose, onCreated }: { onClose: () => void; onCre
               className="w-full py-2.5 bg-emerald-500 hover:bg-emerald-400 disabled:opacity-50 text-slate-950 font-bold rounded-xl transition flex items-center justify-center gap-2"
             >
               {submitting && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
-              {submitting ? "Creating..." : "Create Auditor"}
+              {submitting ? t("ui.common.creating") : t("ui.acc.createAuditor")}
             </button>
           </form>
         </>
@@ -449,6 +451,7 @@ function CreateAuditorModal({ onClose, onCreated }: { onClose: () => void; onCre
 // Create-Client modal
 // ----------------------------------------------------------------------------
 function CreateClientModal({ onClose, onCreated }: { onClose: () => void; onCreated: () => void }) {
+  const { t } = useLanguage();
   const [companyName, setCompanyName] = useState("");
   const [country, setCountry] = useState("");
   const [contactEmail, setContactEmail] = useState("");
@@ -486,27 +489,24 @@ function CreateClientModal({ onClose, onCreated }: { onClose: () => void; onCrea
         <>
           <h3 className="text-lg font-bold text-white mb-1 flex items-center gap-2">
             <CheckCircle2 className="w-5 h-5 text-emerald-400" />
-            Buyer account created
+            {t("ui.acc.buyerAccountCreated")}
           </h3>
           <p className="text-xs text-slate-400 mb-4 font-mono">
-            Company API key for {created.companyName}. Shown ONCE — give it to them for the Client Portal
-            (/client-portal) sign-in screen or their ERP's x-dpp-client-key header; it cannot be recovered after you
-            close this dialog.
+            {t("ui.acc.companyApiKeyFor")} {created.companyName}{t("ui.acc.shownOnceGiveItToThem2")}
           </p>
           <CopyableSecretBox value={created.rawApiKey} />
           <button
             onClick={onClose}
             className="w-full py-2.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold rounded-xl text-xs"
           >
-            Done
+            {t("ui.common.done")}
           </button>
         </>
       ) : (
         <>
-          <h3 className="text-lg font-bold text-white mb-1">New Buyer</h3>
+          <h3 className="text-lg font-bold text-white mb-1">{t("ui.acc.newBuyer")}</h3>
           <p className="text-xs text-slate-400 mb-4 font-mono">
-            Creates a Client (buyer company) row with an API key (for /client-portal and the Buyer API) and,
-            optionally, a password (for /login's read-only /portal/customer view).
+            {t("ui.acc.createsAClientBuyerCompanyRow")}
           </p>
           {error && (
             <div className="mb-3 p-3 bg-red-500/10 border border-red-500/30 rounded-xl text-xs font-mono text-red-300">
@@ -515,19 +515,19 @@ function CreateClientModal({ onClose, onCreated }: { onClose: () => void; onCrea
           )}
           <form onSubmit={handleCreate} className="space-y-3 font-mono text-xs">
             <label className="block">
-              <span className="text-slate-400 block mb-1">Company Name</span>
+              <span className="text-slate-400 block mb-1">{t("ui.common.companyName")}</span>
               <input required value={companyName} onChange={(e) => setCompanyName(e.target.value)} className={inputCls} />
             </label>
             <label className="block">
-              <span className="text-slate-400 block mb-1">Country (optional)</span>
+              <span className="text-slate-400 block mb-1">{t("ui.acc.countryOptional")}</span>
               <input value={country} onChange={(e) => setCountry(e.target.value)} className={inputCls} />
             </label>
             <label className="block">
-              <span className="text-slate-400 block mb-1">Contact Email (optional, required for a password)</span>
+              <span className="text-slate-400 block mb-1">{t("ui.acc.contactEmailOptionalRequiredForA")}</span>
               <input type="email" value={contactEmail} onChange={(e) => setContactEmail(e.target.value)} className={inputCls} />
             </label>
             <label className="block">
-              <span className="text-slate-400 block mb-1">Password (optional — for /login sign-in)</span>
+              <span className="text-slate-400 block mb-1">{t("ui.acc.passwordOptionalForLoginSignIn")}</span>
               <input
                 type="text"
                 value={password}
@@ -543,7 +543,7 @@ function CreateClientModal({ onClose, onCreated }: { onClose: () => void; onCrea
               className="w-full py-2.5 bg-emerald-500 hover:bg-emerald-400 disabled:opacity-50 text-slate-950 font-bold rounded-xl transition flex items-center justify-center gap-2"
             >
               {submitting && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
-              {submitting ? "Creating..." : "Create Buyer Account"}
+              {submitting ? t("ui.common.creating") : t("ui.acc.createBuyerAccount")}
             </button>
           </form>
         </>
@@ -592,11 +592,11 @@ function AuditorAccountsPanel() {
       push({
         variant: "success",
         title: row.active ? "Auditor deactivated" : "Auditor activated",
-        description: `${row.name}'s account is now ${row.active ? "deactivated" : "active"}.`,
+        description: t("ui.acc.sAccountIsNow", { v0: row.name, v1: row.active ? t("ui.acc.deactivated2") : t("ui.acc.active") }),
       });
       await load();
     } catch (err) {
-      push({ variant: "error", title: "Couldn't update status", description: err instanceof Error ? err.message : "Unknown error" });
+      push({ variant: "error", title: t("ui.acc.couldnTUpdateStatus"), description: err instanceof Error ? err.message : "Unknown error" });
     } finally {
       setTogglingId(null);
     }
@@ -610,7 +610,7 @@ function AuditorAccountsPanel() {
           <div className="min-w-0">
             <h3 className="text-sm font-bold text-white">{t("accounts.section.auditorAccounts")}</h3>
             <p className="text-[11px] text-slate-400 font-mono">
-              {loading ? "Loading..." : `${rows?.length ?? 0} auditor account(s)`}
+              {loading ? t("ui.common.loading") : t("ui.acc.auditorAccountS", { v0: rows?.length ?? 0 })}
             </p>
           </div>
         </div>
@@ -627,7 +627,7 @@ function AuditorAccountsPanel() {
             className="flex items-center gap-1.5 text-[11px] bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 text-amber-400 px-2.5 py-1.5 rounded-lg transition-all"
           >
             <UserPlus className="w-3 h-3" />
-            New Auditor
+            {t("ui.acc.newAuditor")}
           </button>
         </div>
       </div>
@@ -639,7 +639,7 @@ function AuditorAccountsPanel() {
       )}
 
       {!loading && !error && (rows?.length ?? 0) === 0 && (
-        <p className="mt-4 text-xs text-slate-500 font-mono">No auditor accounts yet.</p>
+        <p className="mt-4 text-xs text-slate-500 font-mono">{t("ui.acc.noAuditorAccountsYet")}</p>
       )}
 
       {rows && rows.length > 0 && (
@@ -672,14 +672,14 @@ function AuditorAccountsPanel() {
                       <button
                         onClick={() => setRotateTarget(row)}
                         className="inline-flex items-center gap-1 text-[10px] bg-slate-800 hover:bg-slate-700 text-slate-300 px-2 py-1 rounded-md transition-all"
-                        title="Rotate API key"
+                        title={t("ui.acc.rotateApiKey2")}
                       >
                         <KeyRound className="w-3 h-3" />
                       </button>
                       <button
                         onClick={() => setPasswordTarget(row)}
                         className="inline-flex items-center gap-1 text-[10px] bg-slate-800 hover:bg-slate-700 text-slate-300 px-2 py-1 rounded-md transition-all"
-                        title={row.hasPassword ? "Reset password" : "Set password"}
+                        title={row.hasPassword ? t("ui.acc.resetPassword2") : t("ui.acc.setPassword2")}
                       >
                         <Lock className="w-3 h-3" />
                       </button>
@@ -699,7 +699,7 @@ function AuditorAccountsPanel() {
                         ) : (
                           <CheckCircle2 className="w-3 h-3" />
                         )}
-                        {row.active ? "Deactivate" : "Activate"}
+                        {row.active ? t("ui.acc.deactivate") : t("ui.acc.activate")}
                       </button>
                     </div>
                   </td>
@@ -773,11 +773,11 @@ function ClientAccountsPanel() {
       push({
         variant: "success",
         title: row.active ? "Buyer deactivated" : "Buyer activated",
-        description: `${row.companyName}'s account is now ${row.active ? "deactivated" : "active"}.`,
+        description: t("ui.acc.sAccountIsNow", { v0: row.companyName, v1: row.active ? t("ui.acc.deactivated2") : t("ui.acc.active") }),
       });
       await load();
     } catch (err) {
-      push({ variant: "error", title: "Couldn't update status", description: err instanceof Error ? err.message : "Unknown error" });
+      push({ variant: "error", title: t("ui.acc.couldnTUpdateStatus"), description: err instanceof Error ? err.message : "Unknown error" });
     } finally {
       setTogglingId(null);
     }
@@ -792,8 +792,8 @@ function ClientAccountsPanel() {
             <h3 className="text-sm font-bold text-white">{t("accounts.section.buyerAccounts")}</h3>
             <p className="text-[11px] text-slate-400 font-mono">
               {loading
-                ? "Loading..."
-                : `${rows?.length ?? 0} buyer account(s) · ${rows?.filter((r) => r.active).length ?? 0} active`}
+                ? t("ui.common.loading")
+                : t("ui.acc.buyerAccountSActive", { v0: rows?.length ?? 0, v1: rows?.filter((r) => r.active).length ?? 0 })}
             </p>
           </div>
         </div>
@@ -810,7 +810,7 @@ function ClientAccountsPanel() {
             className="flex items-center gap-1.5 text-[11px] bg-cyan-500/10 hover:bg-cyan-500/20 border border-cyan-500/30 text-cyan-400 px-2.5 py-1.5 rounded-lg transition-all"
           >
             <UserPlus className="w-3 h-3" />
-            New Buyer
+            {t("ui.acc.newBuyer")}
           </button>
         </div>
       </div>
@@ -822,7 +822,7 @@ function ClientAccountsPanel() {
       )}
 
       {!loading && !error && (rows?.length ?? 0) === 0 && (
-        <p className="mt-4 text-xs text-slate-500 font-mono">No buyer accounts yet.</p>
+        <p className="mt-4 text-xs text-slate-500 font-mono">{t("ui.acc.noBuyerAccountsYet")}</p>
       )}
 
       {rows && rows.length > 0 && (
@@ -855,14 +855,14 @@ function ClientAccountsPanel() {
                       <button
                         onClick={() => setRotateTarget(row)}
                         className="inline-flex items-center gap-1 text-[10px] bg-slate-800 hover:bg-slate-700 text-slate-300 px-2 py-1 rounded-md transition-all"
-                        title="Rotate API key"
+                        title={t("ui.acc.rotateApiKey2")}
                       >
                         <KeyRound className="w-3 h-3" />
                       </button>
                       <button
                         onClick={() => setPasswordTarget(row)}
                         className="inline-flex items-center gap-1 text-[10px] bg-slate-800 hover:bg-slate-700 text-slate-300 px-2 py-1 rounded-md transition-all"
-                        title={row.hasPassword ? "Reset password" : "Set password"}
+                        title={row.hasPassword ? t("ui.acc.resetPassword2") : t("ui.acc.setPassword2")}
                       >
                         <Lock className="w-3 h-3" />
                       </button>
@@ -882,7 +882,7 @@ function ClientAccountsPanel() {
                         ) : (
                           <CheckCircle2 className="w-3 h-3" />
                         )}
-                        {row.active ? "Deactivate" : "Activate"}
+                        {row.active ? t("ui.acc.deactivate") : t("ui.acc.activate")}
                       </button>
                     </div>
                   </td>

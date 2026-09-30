@@ -51,7 +51,8 @@ interface LanguageContextValue {
   setLang: (lang: AppLanguage) => void;
   // Looks up `key` in lib/i18n/app-dictionary.ts for the current `lang`,
   // falling back to English then to the raw key itself.
-  t: (key: string) => string;
+  /** Translate `key`; `{name}` placeholders are filled from `vars`. */
+  t: (key: string, vars?: Record<string, string | number | null | undefined>) => string;
 }
 
 const LanguageContext = createContext<LanguageContextValue | null>(null);
@@ -85,7 +86,10 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
-  const t = useCallback((key: string) => translateApp(lang, key), [lang]);
+  const t = useCallback(
+    (key: string, vars?: Record<string, string | number | null | undefined>) => translateApp(lang, key, vars),
+    [lang]
+  );
 
   const value = useMemo(() => ({ lang, setLang, t }), [lang, setLang, t]);
 

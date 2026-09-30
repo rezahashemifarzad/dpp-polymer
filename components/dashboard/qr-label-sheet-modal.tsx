@@ -29,6 +29,7 @@
 import { useMemo, useState } from "react";
 import { X, Search, Printer, CheckSquare, Square, Loader2, Download, AlertTriangle } from "lucide-react";
 
+import { useLanguage } from "@/lib/hooks/use-language";
 export interface QrLabelCandidate {
   id: string;
   batchId: string;
@@ -47,6 +48,7 @@ interface QrLabelSheetModalProps {
 const MAX_LABELS_PER_SHEET = 200;
 
 export function QrLabelSheetModal({ open, onClose, passports }: QrLabelSheetModalProps) {
+  const { t } = useLanguage();
   const [search, setSearch] = useState("");
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [preparing, setPreparing] = useState(false);
@@ -106,7 +108,7 @@ export function QrLabelSheetModal({ open, onClose, passports }: QrLabelSheetModa
       );
       if (!res.ok) {
         const json = await res.json().catch(() => null);
-        throw new Error(json?.error || `Request failed with status ${res.status}`);
+        throw new Error(json?.error || t("ui.audit.requestFailedWithStatus", { v0: res.status }));
       }
       const blob = await res.blob();
       const url = URL.createObjectURL(blob);
@@ -137,7 +139,7 @@ export function QrLabelSheetModal({ open, onClose, passports }: QrLabelSheetModa
         <button
           onClick={onClose}
           className="absolute right-4 top-4 text-slate-400 hover:text-white p-1.5 rounded-xl bg-slate-800"
-          aria-label="Close"
+          aria-label={t("common.close")}
         >
           <X className="w-4 h-4" />
         </button>
@@ -145,10 +147,10 @@ export function QrLabelSheetModal({ open, onClose, passports }: QrLabelSheetModa
         <div className="mb-4 pr-8">
           <h3 className="text-lg font-bold text-white flex items-center gap-2">
             <Printer className="w-5 h-5 text-emerald-400 shrink-0" />
-            <span>Factory Batch Labels</span>
+            <span>{t("ui.qr.factoryBatchLabels")}</span>
           </h3>
           <p className="text-xs text-slate-400 font-mono mt-1">
-            Select batches below to generate a print-ready A4 QR label sheet ({MAX_LABELS_PER_SHEET} max per sheet).
+            {t("ui.qr.selectBatchesBelowToGenerateA")}{MAX_LABELS_PER_SHEET} {t("ui.qr.maxPerSheet")}
           </p>
         </div>
 
@@ -157,7 +159,7 @@ export function QrLabelSheetModal({ open, onClose, passports }: QrLabelSheetModa
             <Search className="w-4 h-4 text-slate-500 absolute left-3 top-1/2 -translate-y-1/2" />
             <input
               type="text"
-              placeholder="Search batch ID, grade, polymer, or GTIN..."
+              placeholder={t("ui.common.searchBatchIdGradePolymerOr")}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="w-full bg-slate-950 border border-slate-800 text-xs font-mono text-slate-200 rounded-xl pl-9 pr-4 py-2.5 focus:outline-none focus:border-emerald-500"
@@ -169,14 +171,14 @@ export function QrLabelSheetModal({ open, onClose, passports }: QrLabelSheetModa
               onClick={selectAllFiltered}
               className="px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-[11px] font-semibold whitespace-nowrap"
             >
-              Select All
+              {t("ui.common.selectAll")}
             </button>
             <button
               type="button"
               onClick={clearSelection}
               className="px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-[11px] font-semibold whitespace-nowrap"
             >
-              Clear
+              {t("ui.common.clear")}
             </button>
           </div>
         </div>
@@ -185,8 +187,8 @@ export function QrLabelSheetModal({ open, onClose, passports }: QrLabelSheetModa
           {filtered.length === 0 ? (
             <div className="p-6 text-center text-xs text-slate-500 font-mono">
               {eligible.length === 0
-                ? "No batches with a recorded QR link yet."
-                : "No batches match your search."}
+                ? t("ui.qr.noBatchesWithARecordedQr")
+                : t("ui.common.noBatchesMatchYourSearch")}
             </div>
           ) : (
             filtered.map((p) => {
@@ -226,14 +228,14 @@ export function QrLabelSheetModal({ open, onClose, passports }: QrLabelSheetModa
         )}
 
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-          <span className="text-xs text-slate-400 font-mono">{selected.size} selected</span>
+          <span className="text-xs text-slate-400 font-mono">{selected.size} {t("ui.qr.selected")}</span>
           <button
             onClick={handleDownload}
             disabled={selected.size === 0 || preparing}
             className="flex items-center justify-center gap-2 px-5 py-2.5 bg-emerald-500 hover:bg-emerald-400 disabled:opacity-40 disabled:cursor-not-allowed text-slate-950 font-bold rounded-xl transition text-xs whitespace-nowrap"
           >
             {preparing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Download className="w-3.5 h-3.5" />}
-            {preparing ? "Preparing..." : `Download PDF Sheet (${selected.size})`}
+            {preparing ? t("common.preparing") : t("ui.qr.downloadPdfSheet", { v0: selected.size })}
           </button>
         </div>
       </div>

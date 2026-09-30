@@ -34,6 +34,7 @@
  */
 
 import type { AppLanguage } from "@/lib/hooks/use-language";
+import { DASHBOARD_EN, DASHBOARD_DE, DASHBOARD_FR } from "@/lib/i18n/dashboard-dictionary";
 
 export type AppDictionary = Record<string, string>;
 
@@ -536,13 +537,27 @@ const FR: AppDictionary = {
   "accounts.table.contactEmail": "E-mail de contact",
 };
 
-const APP_DICTIONARIES: Record<AppLanguage, AppDictionary> = { EN, DE, FR };
+const APP_DICTIONARIES: Record<AppLanguage, AppDictionary> = {
+  EN: { ...EN, ...DASHBOARD_EN },
+  DE: { ...DE, ...DASHBOARD_DE },
+  FR: { ...FR, ...DASHBOARD_FR },
+};
 
 /**
  * Looks up `key` in `lang`'s dictionary, falling back to English, then to
  * the raw key itself — same "degrade to readable text, never blank or
  * crash" rule lib/i18n/dictionaries.ts's own createTranslator uses.
  */
-export function translateApp(lang: AppLanguage, key: string): string {
-  return APP_DICTIONARIES[lang]?.[key] ?? APP_DICTIONARIES.EN[key] ?? key;
+export function translateApp(
+  lang: AppLanguage,
+  key: string,
+  vars?: Record<string, string | number | null | undefined>
+): string {
+  const text = APP_DICTIONARIES[lang]?.[key] ?? APP_DICTIONARIES.EN[key] ?? key;
+  if (!vars) return text;
+  // Fill {name} placeholders; an unknown placeholder is left visible rather
+  // than silently dropped, so a missing variable is easy to spot.
+  return text.replace(/\{(\w+)\}/g, (match, name: string) =>
+    Object.prototype.hasOwnProperty.call(vars, name) ? String(vars[name] ?? "") : match
+  );
 }

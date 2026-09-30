@@ -91,7 +91,8 @@ function MultiSelectChips({
   onToggle: (v: string) => void;
   formatLabel?: (v: string) => string;
 }) {
-  if (options.length === 0) return <span className="text-[10px] text-slate-600 font-mono">No options available.</span>;
+  const { t } = useLanguage();
+  if (options.length === 0) return <span className="text-[10px] text-slate-600 font-mono">{t("ui.search.noOptionsAvailable")}</span>;
   return (
     <div className="flex flex-wrap gap-1.5">
       {options.map((opt) => {
@@ -143,10 +144,10 @@ function EntitySection({ type, items, count }: { type: SearchEntityType; items: 
           <Icon className={`w-4 h-4 ${meta.colorClass}`} />
           {label}
         </h3>
-        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${meta.chipClass}`}>{count} match(es)</span>
+        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${meta.chipClass}`}>{count} {t("ui.search.matchEs")}</span>
       </div>
       {items.length === 0 ? (
-        <div className="text-center py-6 text-xs text-slate-600 font-mono">No {label.toLowerCase()} match.</div>
+        <div className="text-center py-6 text-xs text-slate-600 font-mono">{t("ui.search.no")} {label.toLowerCase()} {t("ui.search.match")}</div>
       ) : (
         <div className="divide-y divide-slate-800/60">
           {items.map((item) => (
@@ -156,7 +157,7 @@ function EntitySection({ type, items, count }: { type: SearchEntityType; items: 
       )}
       {count > items.length && (
         <p className="text-[10px] text-slate-600 font-mono mt-3 pt-3 border-t border-slate-800/60">
-          Showing {items.length} of {count} — narrow your search or filters to see more.
+          {t("ui.search.showing")} {items.length} {t("ui.common.of")} {count} {t("ui.search.narrowYourSearchOrFiltersTo")}
         </p>
       )}
     </div>
@@ -328,7 +329,7 @@ export function GlobalSearchDashboard({
               <p className="text-[11px] text-slate-400 font-mono">{t("search.subtitle")}</p>
             </div>
           </div>
-          <span className="text-[10px] text-slate-500 font-mono hidden md:inline">{result.totalCount} total match(es)</span>
+          <span className="text-[10px] text-slate-500 font-mono hidden md:inline">{result.totalCount} {t("ui.search.totalMatchEs")}</span>
         </div>
       </header>
 
@@ -382,7 +383,7 @@ export function GlobalSearchDashboard({
           })}
           {hasActiveFilters && (
             <button onClick={clearAllFilters} className="text-[11px] text-slate-500 hover:text-white underline underline-offset-2 ml-1">
-              Clear all filters
+              {t("ui.search.clearAllFilters")}
             </button>
           )}
         </div>
@@ -392,7 +393,7 @@ export function GlobalSearchDashboard({
           <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-5 space-y-4">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-w-md">
               <div>
-                <label className="text-[10px] text-slate-500 uppercase tracking-wider block mb-1">Date From</label>
+                <label className="text-[10px] text-slate-500 uppercase tracking-wider block mb-1">{t("ui.search.dateFrom")}</label>
                 <input
                   type="date"
                   value={dateFrom}
@@ -401,7 +402,7 @@ export function GlobalSearchDashboard({
                 />
               </div>
               <div>
-                <label className="text-[10px] text-slate-500 uppercase tracking-wider block mb-1">Date To</label>
+                <label className="text-[10px] text-slate-500 uppercase tracking-wider block mb-1">{t("ui.search.dateTo")}</label>
                 <input
                   type="date"
                   value={dateTo}
@@ -412,25 +413,25 @@ export function GlobalSearchDashboard({
             </div>
 
             <div>
-              <label className="text-[10px] text-slate-500 uppercase tracking-wider block mb-1.5">Polymer Type (batches)</label>
+              <label className="text-[10px] text-slate-500 uppercase tracking-wider block mb-1.5">{t("ui.search.polymerTypeBatches")}</label>
               <MultiSelectChips options={result.filterOptions.polymerTypes} active={polymerTypes} onToggle={(v) => toggleSet(polymerTypes, setPolymerTypes, v)} />
             </div>
             <div>
-              <label className="text-[10px] text-slate-500 uppercase tracking-wider block mb-1.5">Batch Status</label>
+              <label className="text-[10px] text-slate-500 uppercase tracking-wider block mb-1.5">{t("ui.search.batchStatus")}</label>
               <MultiSelectChips options={result.filterOptions.dppStatuses} active={dppStatuses} onToggle={(v) => toggleSet(dppStatuses, setDppStatuses, v)} />
             </div>
             <div>
-              <label className="text-[10px] text-slate-500 uppercase tracking-wider block mb-1.5">Certificate Verification Status</label>
+              <label className="text-[10px] text-slate-500 uppercase tracking-wider block mb-1.5">{t("ui.search.certificateVerificationStatus")}</label>
               <MultiSelectChips options={result.filterOptions.certVerificationStatuses} active={certStatuses} onToggle={(v) => toggleSet(certStatuses, setCertStatuses, v)} />
             </div>
             <div>
               <label className="text-[10px] text-slate-500 uppercase tracking-wider block mb-1.5">
-                Manufacturer / Supplier Tier
+                {t("ui.search.manufacturerSupplierTier")}
               </label>
               <MultiSelectChips options={result.filterOptions.supplierTiers} active={supplierTiers} onToggle={(v) => toggleSet(supplierTiers, setSupplierTiers, v)} />
             </div>
             <div>
-              <label className="text-[10px] text-slate-500 uppercase tracking-wider block mb-1.5">Audit Action</label>
+              <label className="text-[10px] text-slate-500 uppercase tracking-wider block mb-1.5">{t("ui.search.auditAction")}</label>
               <MultiSelectChips options={result.filterOptions.auditActions} active={auditActions} onToggle={(v) => toggleSet(auditActions, setAuditActions, v)} />
             </div>
           </div>
@@ -441,7 +442,7 @@ export function GlobalSearchDashboard({
           <div className="text-center py-10 text-sm text-rose-400 font-mono">{error}</div>
         ) : result.totalCount === 0 && !loading ? (
           <div className="text-center py-16 text-sm text-slate-500 font-mono">
-            No matches. Try a different search term or clear your filters.
+            {t("ui.search.noMatchesTryADifferentSearch")}
           </div>
         ) : (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">

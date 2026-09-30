@@ -43,6 +43,7 @@ import {
   Loader2, FileText,
 } from "lucide-react";
 
+import { useLanguage } from "@/lib/hooks/use-language";
 export type ChainOfCustodyTierValue =
   | "RAW_MATERIAL_SUPPLIER"
   | "RECYCLER"
@@ -70,12 +71,12 @@ export interface ChainOfCustodyTimelineRecord {
 }
 
 const TIER_META: Record<ChainOfCustodyTierValue, { label: string; icon: typeof Sprout }> = {
-  RAW_MATERIAL_SUPPLIER: { label: "Raw Material Supplier", icon: Sprout },
-  RECYCLER: { label: "Recycler", icon: Recycle },
-  COMPOUNDER: { label: "Compounder", icon: Factory },
-  PROCESSOR: { label: "Processor", icon: Settings2 },
-  DISTRIBUTOR: { label: "Distributor", icon: Truck },
-  OTHER: { label: "Other Participant", icon: CircleDot },
+  RAW_MATERIAL_SUPPLIER: { label: "ui.common.rawMaterialSupplier", icon: Sprout },
+  RECYCLER: { label: "ui.common.recycler", icon: Recycle },
+  COMPOUNDER: { label: "ui.common.compounder", icon: Factory },
+  PROCESSOR: { label: "ui.common.processor", icon: Settings2 },
+  DISTRIBUTOR: { label: "ui.common.distributor", icon: Truck },
+  OTHER: { label: "ui.coc.otherParticipant", icon: CircleDot },
 };
 
 const STATUS_META: Record<
@@ -83,25 +84,25 @@ const STATUS_META: Record<
   { label: string; icon: typeof Clock; badgeCls: string; dotCls: string }
 > = {
   PENDING_REVIEW: {
-    label: "Pending Review",
+    label: "ui.common.pendingReview",
     icon: Clock,
     badgeCls: "bg-amber-500/10 text-amber-400 border-amber-500/30",
     dotCls: "bg-amber-400",
   },
   VERIFIED: {
-    label: "Verified",
+    label: "ui.common.verified",
     icon: CheckCircle2,
     badgeCls: "bg-emerald-500/10 text-emerald-400 border-emerald-500/30",
     dotCls: "bg-emerald-400",
   },
   FLAGGED: {
-    label: "Flagged",
+    label: "ui.coc.flagged",
     icon: AlertTriangle,
     badgeCls: "bg-orange-500/10 text-orange-400 border-orange-500/30",
     dotCls: "bg-orange-400",
   },
   REJECTED: {
-    label: "Rejected",
+    label: "ui.common.rejected",
     icon: XCircle,
     badgeCls: "bg-rose-500/10 text-rose-400 border-rose-500/30",
     dotCls: "bg-rose-400",
@@ -109,13 +110,14 @@ const STATUS_META: Record<
 };
 
 function StatusBadge({ status }: { status: ChainOfCustodyStatusValue }) {
+  const { t } = useLanguage();
   const meta = STATUS_META[status];
   const Icon = meta.icon;
   return (
     <span
       className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-medium font-mono ${meta.badgeCls}`}
     >
-      <Icon className="w-3 h-3" /> {meta.label}
+      <Icon className="w-3 h-3" /> {t(meta.label)}
     </span>
   );
 }
@@ -130,6 +132,7 @@ interface ReviewRowProps {
 }
 
 function ReviewRow({ record, onReview }: ReviewRowProps) {
+  const { t } = useLanguage();
   const [notes, setNotes] = useState("");
   const [pending, setPending] = useState<"VERIFIED" | "FLAGGED" | "REJECTED" | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -155,7 +158,7 @@ function ReviewRow({ record, onReview }: ReviewRowProps) {
       <textarea
         value={notes}
         onChange={(e) => setNotes(e.target.value)}
-        placeholder="Review notes (required for Flag / Reject)"
+        placeholder={t("ui.coc.reviewNotesRequiredForFlagReject")}
         rows={2}
         className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2 text-xs font-mono text-white placeholder:text-slate-600 focus:outline-none focus:border-amber-500/50 resize-none"
       />
@@ -171,7 +174,7 @@ function ReviewRow({ record, onReview }: ReviewRowProps) {
           className="flex-1 min-w-[90px] flex items-center justify-center gap-1.5 py-2 rounded-lg bg-emerald-500 hover:bg-emerald-400 disabled:opacity-50 disabled:cursor-not-allowed text-slate-950 text-xs font-bold transition"
         >
           {pending === "VERIFIED" ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <CheckCircle2 className="w-3.5 h-3.5" />}
-          Verify
+          {t("ui.coc.verify")}
         </button>
         <button
           onClick={() => act("FLAGGED")}
@@ -179,7 +182,7 @@ function ReviewRow({ record, onReview }: ReviewRowProps) {
           className="flex-1 min-w-[90px] flex items-center justify-center gap-1.5 py-2 rounded-lg bg-orange-500/90 hover:bg-orange-400 disabled:opacity-50 disabled:cursor-not-allowed text-slate-950 text-xs font-bold transition"
         >
           {pending === "FLAGGED" ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <AlertTriangle className="w-3.5 h-3.5" />}
-          Flag
+          {t("ui.coc.flag")}
         </button>
         <button
           onClick={() => act("REJECTED")}
@@ -187,7 +190,7 @@ function ReviewRow({ record, onReview }: ReviewRowProps) {
           className="flex-1 min-w-[90px] flex items-center justify-center gap-1.5 py-2 rounded-lg bg-rose-600 hover:bg-rose-500 disabled:opacity-50 disabled:cursor-not-allowed text-white text-xs font-bold transition"
         >
           {pending === "REJECTED" ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <XCircle className="w-3.5 h-3.5" />}
-          Reject
+          {t("ui.common.reject")}
         </button>
       </div>
     </div>
@@ -211,6 +214,7 @@ export function ChainOfCustodyTimeline({
   onReview,
   emptyLabel = "No chain-of-custody records yet.",
 }: ChainOfCustodyTimelineProps) {
+  const { t } = useLanguage();
   if (records.length === 0) {
     return (
       <div className="flex items-center gap-2 text-xs text-slate-500 font-mono py-2">
@@ -246,14 +250,14 @@ export function ChainOfCustodyTimeline({
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-1.5 text-[10px] text-slate-500 font-mono">
-                    <span>Tier {record.sequence}</span>
+                    <span>{t("suppliers.table.tier")} {record.sequence}</span>
                     <span>·</span>
-                    <span>{tierMeta.label}</span>
+                    <span>{t(tierMeta.label)}</span>
                   </div>
                   <div className="text-sm font-semibold text-slate-100 truncate">{record.participantName}</div>
                   <div className="text-[11px] text-slate-500 font-mono">
                     {record.participantCountry ? `${record.participantCountry} · ` : ""}
-                    Batch {record.externalBatchId}
+                    {t("greenAccounting.table.batch")} {record.externalBatchId}
                   </div>
                 </div>
                 <span className="shrink-0">
@@ -267,7 +271,7 @@ export function ChainOfCustodyTimeline({
                   {record.certificationScheme ? <span>{record.certificationScheme}</span> : null}
                   {record.certificateId ? <span>· {record.certificateId}</span> : null}
                   {record.massBalanceAllocationPercent != null ? (
-                    <span>· {record.massBalanceAllocationPercent}% mass balance</span>
+                    <span>· {record.massBalanceAllocationPercent}{t("ui.coc.massBalance")}</span>
                   ) : null}
                 </div>
               )}
@@ -276,7 +280,7 @@ export function ChainOfCustodyTimeline({
 
               {record.status !== "PENDING_REVIEW" && (record.reviewedBy || record.reviewNotes) && (
                 <div className="mt-2 pt-2 border-t border-slate-800 text-[10px] text-slate-500 font-mono">
-                  {record.reviewedBy && <div>Reviewed by {record.reviewedBy}</div>}
+                  {record.reviewedBy && <div>{t("ui.coc.reviewedBy")} {record.reviewedBy}</div>}
                   {record.reviewNotes && <div className="text-slate-400 mt-0.5">{record.reviewNotes}</div>}
                 </div>
               )}

@@ -41,6 +41,7 @@ import { isValidGtin14, generateValidGtin } from "@/lib/gtin";
 import { useFormSuggestions } from "@/lib/hooks/use-form-suggestions";
 import { ManufacturerAutocompleteField } from "@/components/dashboard/manufacturer-autocomplete-field";
 
+import { useLanguage } from "@/lib/hooks/use-language";
 const POLYMER_TYPES = ["PET", "HDPE", "PVC", "LDPE", "PP", "PS", "PLA", "PHA", "PA", "PC", "ABS", "OTHER"];
 const RECYCLED_SOURCES = ["POST_CONSUMER", "POST_INDUSTRIAL", "VIRGIN", "BIO_BASED"];
 const CERT_SCHEMES = [
@@ -112,11 +113,12 @@ function Field({
   required?: boolean;
   children: React.ReactNode;
 }) {
+  const { t } = useLanguage();
   return (
     <label className="block">
       <span className="text-slate-400 block mb-1">
         {label}
-        {required && <span className="text-amber-400"> *required</span>}
+        {required && <span className="text-amber-400"> {t("ui.create.required")}</span>}
       </span>
       {children}
       {error && error.length > 0 && <span className="text-red-400 text-[10px] block mt-1">{error[0]}</span>}
@@ -125,6 +127,7 @@ function Field({
 }
 
 export function CreatePassportModal({ open, onClose, onCreated, onCreate }: CreatePassportModalProps) {
+  const { t } = useLanguage();
   const { push } = useToast();
   const [form, setForm] = useState(emptyForm);
   const [submitting, setSubmitting] = useState(false);
@@ -182,8 +185,8 @@ export function CreatePassportModal({ open, onClose, onCreated, onCreate }: Crea
       const created = await onCreate(payload);
       push({
         variant: "success",
-        title: "Passport issued",
-        description: `Batch ${created.batchId} created as PENDING_VERIFICATION.`,
+        title: t("ui.common.passportIssued"),
+        description: t("ui.create.batchCreatedAsPendingVerification", { v0: created.batchId }),
       });
       setForm(emptyForm);
       onCreated();
@@ -196,12 +199,12 @@ export function CreatePassportModal({ open, onClose, onCreated, onCreate }: Crea
           .join(", ");
         push({
           variant: "error",
-          title: "Validation failed",
-          description: failing ? `Check: ${failing}` : "Check the highlighted fields and try again.",
+          title: t("ui.create.validationFailed"),
+          description: failing ? t("ui.create.check", { v0: failing }) : "Check the highlighted fields and try again.",
         });
       } else {
         const message = err instanceof Error ? err.message : "Failed to create passport";
-        push({ variant: "error", title: "Could not create passport", description: message });
+        push({ variant: "error", title: t("ui.create.couldNotCreatePassport"), description: message });
       }
     } finally {
       setSubmitting(false);
@@ -221,14 +224,14 @@ export function CreatePassportModal({ open, onClose, onCreated, onCreate }: Crea
           <button
             onClick={onClose}
             className="absolute right-4 top-4 text-slate-400 hover:text-white p-1.5 rounded-xl bg-slate-800"
-            aria-label="Close"
+            aria-label={t("common.close")}
           >
             <X className="w-4 h-4" />
           </button>
 
-          <h3 className="text-lg font-bold text-white mb-1">Issue New Polymer Passport</h3>
+          <h3 className="text-lg font-bold text-white mb-1">{t("ui.create.issueNewPolymerPassport")}</h3>
           <p className="text-xs text-slate-400 font-mono">
-            Persists to Neon via POST /api/passports. New records start as PENDING_VERIFICATION.
+            {t("ui.create.persistsToNeonViaPostApi")}
           </p>
         </div>
 
@@ -237,7 +240,7 @@ export function CreatePassportModal({ open, onClose, onCreated, onCreate }: Crea
           <div className="mb-4 p-3 bg-red-500/10 border border-red-500/30 rounded-xl text-xs font-mono">
             <div className="flex items-center gap-2 text-red-300 font-bold mb-2">
               <AlertTriangle className="w-3.5 h-3.5" />
-              {errorEntries.length} field{errorEntries.length > 1 ? "s" : ""} rejected by the server
+              {errorEntries.length} {t("ui.create.field")}{errorEntries.length > 1 ? "s" : ""} {t("ui.create.rejectedByTheServer")}
             </div>
             <ul className="space-y-1 text-red-300/90 pl-1">
               {errorEntries.map(([key, messages]) => (
@@ -251,7 +254,7 @@ export function CreatePassportModal({ open, onClose, onCreated, onCreate }: Crea
 
         <form onSubmit={handleSubmit} className="space-y-4 font-mono text-xs">
           <div className="grid grid-cols-2 gap-3">
-            <Field label="Polymer Type">
+            <Field label={t("ui.create.polymerType")}>
               <select value={form.polymerType} onChange={update("polymerType")} className={inputCls}>
                 {POLYMER_TYPES.map((p) => (
                   <option key={p} value={p}>
@@ -260,14 +263,14 @@ export function CreatePassportModal({ open, onClose, onCreated, onCreate }: Crea
                 ))}
               </select>
             </Field>
-            <Field label="Grade Name" error={fieldErrors.grade}>
+            <Field label={t("ui.create.gradeName")} error={fieldErrors.grade}>
               <input
                 required
                 list="grade-suggestions"
                 value={form.grade}
                 onChange={update("grade")}
                 className={inputCls}
-                placeholder="Injection Molding Grade IM-450"
+                placeholder={t("ui.create.injectionMoldingGradeIm450")}
                 autoComplete="off"
               />
               <datalist id="grade-suggestions">
@@ -276,7 +279,7 @@ export function CreatePassportModal({ open, onClose, onCreated, onCreate }: Crea
                 ))}
               </datalist>
             </Field>
-            <Field label="Melt Flow Index (g/10min)" error={fieldErrors.meltFlowIndex}>
+            <Field label={t("ui.create.meltFlowIndexG10min")} error={fieldErrors.meltFlowIndex}>
               <input
                 required
                 type="number"
@@ -287,7 +290,7 @@ export function CreatePassportModal({ open, onClose, onCreated, onCreate }: Crea
                 className={inputCls}
               />
             </Field>
-            <Field label="Density (g/cm³)" error={fieldErrors.density}>
+            <Field label={t("ui.create.densityGCm")} error={fieldErrors.density}>
               <input
                 required
                 type="number"
@@ -300,7 +303,7 @@ export function CreatePassportModal({ open, onClose, onCreated, onCreate }: Crea
             </Field>
 
             <div className="col-span-2">
-              <Field label="GTIN (14 digits, GS1 check-digit validated)" error={fieldErrors.gtin}>
+              <Field label={t("ui.create.gtin14DigitsGs1CheckDigit")} error={fieldErrors.gtin}>
                 <div className="flex gap-2">
                   <div className="relative flex-1">
                     <input
@@ -324,54 +327,53 @@ export function CreatePassportModal({ open, onClose, onCreated, onCreate }: Crea
                   <button
                     type="button"
                     onClick={handleGenerateGtin}
-                    title="Generate a check-digit-valid GTIN from the digits typed so far (or a random one)"
+                    title={t("ui.create.generateACheckDigitValidGtin")}
                     className="px-3 py-2.5 bg-slate-800 hover:bg-slate-700 text-emerald-400 rounded-xl flex items-center gap-1.5 whitespace-nowrap"
                   >
-                    <Wand2 className="w-3.5 h-3.5" /> Generate valid GTIN
+                    <Wand2 className="w-3.5 h-3.5" /> {t("ui.create.generateValidGtin")}
                   </button>
                 </div>
                 {gtinShowsInvalid && (
                   <span className="text-amber-400 text-[10px] block mt-1">
-                    14 digits entered, but this fails the GS1 mod-10 check digit — click &quot;Generate valid GTIN&quot; for a working example.
+                    {t("ui.create.14DigitsEnteredButThisFails")}
                   </span>
                 )}
               </Field>
             </div>
 
-            <Field label="Batch ID" error={fieldErrors.batchId}>
+            <Field label={t("audit.table.batchId")} error={fieldErrors.batchId}>
               <input
                 required
                 value={form.batchId}
                 onChange={update("batchId")}
                 className={inputCls}
-                placeholder="BATCH-2026-EU-014"
+                placeholder={t("ui.create.batch2026Eu014")}
               />
             </Field>
-            <Field label="Manufacturer" error={fieldErrors.manufacturerId}>
+            <Field label={t("greenAccounting.table.manufacturer")} error={fieldErrors.manufacturerId}>
               <ManufacturerAutocompleteField
                 required
                 value={form.manufacturerId}
                 onChange={(v) => setForm((prev) => ({ ...prev, manufacturerId: v }))}
                 suggestions={suggestions.manufacturers}
                 className={inputCls}
-                placeholder="Search by name, or paste a Manufacturer UUID"
+                placeholder={t("ui.create.searchByNameOrPasteA")}
               />
             </Field>
             <div className="col-span-2 -mt-2">
               <p className="text-[10px] text-slate-500">
-                Start typing a manufacturer&apos;s name to pick from existing records. No manufacturer yet? Run{" "}
-                <code className="text-slate-400">npx prisma db seed</code> (adds prisma/seed.ts) to create a demo
-                one.
+                {t("ui.create.startTypingAManufacturerSName")}{" "}
+                <code className="text-slate-400">npx prisma db seed</code> {t("ui.create.addsPrismaSeedTsToCreate")}
               </p>
             </div>
 
             <Field
-              label="Recycled Content Source"
+              label={t("ui.create.recycledContentSource")}
               error={fieldErrors.recycledContentSource}
               required={recycledMetaRequired}
             >
               <select value={form.recycledContentSource} onChange={update("recycledContentSource")} className={inputCls}>
-                <option value="">— none —</option>
+                <option value="">{t("ui.common.none")}</option>
                 {RECYCLED_SOURCES.map((s) => (
                   <option key={s} value={s}>
                     {s}
@@ -379,7 +381,7 @@ export function CreatePassportModal({ open, onClose, onCreated, onCreate }: Crea
                 ))}
               </select>
             </Field>
-            <Field label="Recycled Content (%)" error={fieldErrors.recycledContentPercent}>
+            <Field label={t("ui.create.recycledContent")} error={fieldErrors.recycledContentPercent}>
               <input
                 type="number"
                 step="0.01"
@@ -391,7 +393,7 @@ export function CreatePassportModal({ open, onClose, onCreated, onCreate }: Crea
               />
             </Field>
             <Field
-              label="Recycled Content Cert. Scheme"
+              label={t("ui.create.recycledContentCertScheme")}
               error={fieldErrors.recycledContentCertScheme}
               required={recycledMetaRequired}
             >
@@ -400,7 +402,7 @@ export function CreatePassportModal({ open, onClose, onCreated, onCreate }: Crea
                 onChange={update("recycledContentCertScheme")}
                 className={inputCls}
               >
-                <option value="">— none —</option>
+                <option value="">{t("ui.common.none")}</option>
                 {CERT_SCHEMES.map((s) => (
                   <option key={s} value={s}>
                     {s}
@@ -408,7 +410,7 @@ export function CreatePassportModal({ open, onClose, onCreated, onCreate }: Crea
                 ))}
               </select>
             </Field>
-            <Field label="Bio-Based Content (%)" error={fieldErrors.bioBasedPercent}>
+            <Field label={t("ui.create.bioBasedContent")} error={fieldErrors.bioBasedPercent}>
               <input
                 type="number"
                 step="0.01"
@@ -419,7 +421,7 @@ export function CreatePassportModal({ open, onClose, onCreated, onCreate }: Crea
                 className={inputCls}
               />
             </Field>
-            <Field label="Carbon Footprint (kg CO2e/kg)" error={fieldErrors.carbonFootprintKgCO2ePerKg}>
+            <Field label={t("ui.create.carbonFootprintKgCo2eKg")} error={fieldErrors.carbonFootprintKgCO2ePerKg}>
               <input
                 type="number"
                 step="0.001"
@@ -432,12 +434,12 @@ export function CreatePassportModal({ open, onClose, onCreated, onCreate }: Crea
           </div>
 
           <div className="border-t border-slate-800 pt-4">
-            <p className="text-slate-300 font-bold mb-2">Certification (at least one required)</p>
+            <p className="text-slate-300 font-bold mb-2">{t("ui.create.certificationAtLeastOneRequired")}</p>
             {fieldErrors.certifications && (
               <p className="text-red-400 text-[10px] mb-2">{fieldErrors.certifications[0]}</p>
             )}
             <div className="grid grid-cols-2 gap-3">
-              <Field label="Scheme">
+              <Field label={t("ui.create.scheme")}>
                 <select value={form.certScheme} onChange={update("certScheme")} className={inputCls}>
                   {CERT_SCHEMES.map((s) => (
                     <option key={s} value={s}>
@@ -446,17 +448,17 @@ export function CreatePassportModal({ open, onClose, onCreated, onCreate }: Crea
                   ))}
                 </select>
               </Field>
-              <Field label="Certificate ID">
+              <Field label={t("ui.create.certificateId")}>
                 <input required value={form.certificateId} onChange={update("certificateId")} className={inputCls} />
               </Field>
-              <Field label="Issuing Body">
+              <Field label={t("ui.create.issuingBody")}>
                 <input required value={form.issuingBody} onChange={update("issuingBody")} className={inputCls} />
               </Field>
               <div className="grid grid-cols-2 gap-2">
-                <Field label="Valid From">
+                <Field label={t("ui.create.validFrom")}>
                   <input required type="date" value={form.validFrom} onChange={update("validFrom")} className={inputCls} />
                 </Field>
-                <Field label="Valid Until">
+                <Field label={t("ui.create.validUntil")}>
                   <input
                     required
                     type="date"
@@ -476,14 +478,14 @@ export function CreatePassportModal({ open, onClose, onCreated, onCreate }: Crea
               className="flex-1 py-2.5 bg-emerald-500 hover:bg-emerald-400 disabled:opacity-60 disabled:cursor-not-allowed text-slate-950 font-bold rounded-xl transition flex items-center justify-center gap-2"
             >
               {submitting && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
-              {submitting ? "Issuing..." : "Issue Passport"}
+              {submitting ? t("ui.common.issuing") : t("ui.create.issuePassport")}
             </button>
             <button
               type="button"
               onClick={onClose}
               className="px-4 py-2.5 bg-slate-800 text-slate-300 rounded-xl hover:bg-slate-700"
             >
-              Cancel
+              {t("ui.common.cancel")}
             </button>
           </div>
         </form>

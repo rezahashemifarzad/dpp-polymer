@@ -39,6 +39,7 @@ import { ShieldAlert, ShieldQuestion, ShieldCheck, AlertTriangle, RefreshCw, Che
 import { useToast } from "@/lib/hooks/use-toast";
 import type { ApiPassport } from "@/lib/hooks/use-passports";
 
+import { useLanguage } from "@/lib/hooks/use-language";
 interface SvhcAlertRow {
   id: string;
   batchId: string;
@@ -92,6 +93,7 @@ function AlertRow({
   onManage: (batchId: string) => void;
   managing: boolean;
 }) {
+  const { t } = useLanguage();
   return (
     <tr className="hover:bg-slate-800/40 transition-colors">
       <td className="py-2 pr-3 font-mono text-emerald-400 whitespace-nowrap">{row.batchId}</td>
@@ -108,7 +110,7 @@ function AlertRow({
           }`}
         >
           {tier === "notAssessed" ? <ShieldQuestion className="w-3 h-3" /> : <AlertTriangle className="w-3 h-3" />}
-          {tier === "notAssessed" ? "Not Assessed" : "SVHC Present"}
+          {tier === "notAssessed" ? t("ui.reach.notAssessed") : t("ui.reach.svhcPresent")}
         </span>
       </td>
       <td className="py-2 text-right whitespace-nowrap">
@@ -118,7 +120,7 @@ function AlertRow({
           className="inline-flex items-center gap-1 text-[10px] bg-slate-800 hover:bg-slate-700 disabled:opacity-50 text-slate-300 px-2 py-1 rounded-md transition-all"
         >
           {managing ? <Loader2 className="w-3 h-3 animate-spin" /> : null}
-          Manage
+          {t("ui.common.manage")}
         </button>
       </td>
     </tr>
@@ -126,6 +128,7 @@ function AlertRow({
 }
 
 export function SvhcComplianceBanner({ onManageBatch }: { onManageBatch: (passport: ApiPassport) => void }) {
+  const { t } = useLanguage();
   const { push } = useToast();
   const [summary, setSummary] = useState<PortfolioSvhcComplianceSummary | null>(null);
   const [loading, setLoading] = useState(true);
@@ -140,7 +143,7 @@ export function SvhcComplianceBanner({ onManageBatch }: { onManageBatch: (passpo
       const res = await fetch("/api/passports/svhc-alerts", { cache: "no-store" });
       const json = await res.json();
       if (!res.ok || !json.success) {
-        throw new Error(json.error || `Request failed with status ${res.status}`);
+        throw new Error(json.error || t("ui.audit.requestFailedWithStatus", { v0: res.status }));
       }
       setSummary(json.data as PortfolioSvhcComplianceSummary);
     } catch (err) {
@@ -160,13 +163,13 @@ export function SvhcComplianceBanner({ onManageBatch }: { onManageBatch: (passpo
       const res = await fetch(`/api/passports/${encodeURIComponent(batchId)}`, { cache: "no-store" });
       const json = await res.json();
       if (!res.ok || !json.success) {
-        throw new Error(json.error || `Request failed with status ${res.status}`);
+        throw new Error(json.error || t("ui.audit.requestFailedWithStatus", { v0: res.status }));
       }
       onManageBatch(json.data as ApiPassport);
     } catch (err) {
       push({
         variant: "error",
-        title: "Couldn't open batch",
+        title: t("ui.reach.couldnTOpenBatch"),
         description: err instanceof Error ? err.message : "Unknown error",
       });
     } finally {
@@ -191,13 +194,13 @@ export function SvhcComplianceBanner({ onManageBatch }: { onManageBatch: (passpo
       <div className="bg-red-500/5 border border-red-500/20 rounded-2xl p-5 flex items-start gap-3">
         <AlertTriangle className="w-4 h-4 text-red-400 shrink-0 mt-0.5" />
         <div className="min-w-0">
-          <p className="text-sm font-semibold text-red-400">Couldn&apos;t load SVHC compliance alerts</p>
+          <p className="text-sm font-semibold text-red-400">{t("ui.reach.couldnTLoadSvhcComplianceAlerts")}</p>
           <p className="text-xs text-slate-400 font-mono mt-1">{error}</p>
           <button
             onClick={load}
             className="mt-2 flex items-center gap-1.5 text-[11px] bg-slate-800 hover:bg-slate-700 text-slate-300 px-2.5 py-1.5 rounded-lg transition-all"
           >
-            <RefreshCw className="w-3 h-3" /> Retry
+            <RefreshCw className="w-3 h-3" /> {t("ui.common.retry")}
           </button>
         </div>
       </div>
@@ -231,11 +234,11 @@ export function SvhcComplianceBanner({ onManageBatch }: { onManageBatch: (passpo
             <ShieldAlert className="w-5 h-5 text-amber-400 shrink-0" />
           )}
           <div className="min-w-0">
-            <h3 className="text-sm font-bold text-white">REACH SVHC Compliance</h3>
+            <h3 className="text-sm font-bold text-white">{t("ui.reach.reachSvhcCompliance")}</h3>
             <p className="text-[11px] text-slate-400 font-mono">
               {summary.notAssessedCount === 0
-                ? "Every active batch has a REACH Article 33 declaration on file."
-                : `${summary.notAssessedCount} batch(es) with no REACH Article 33 declaration on file.`}
+                ? t("ui.reach.everyActiveBatchHasAReach")
+                : t("ui.reach.batchEsWithNoReachArticle", { v0: summary.notAssessedCount })}
             </p>
           </div>
         </div>
@@ -245,7 +248,7 @@ export function SvhcComplianceBanner({ onManageBatch }: { onManageBatch: (passpo
             className="flex items-center gap-1.5 text-[11px] bg-slate-800 hover:bg-slate-700 text-slate-300 px-2.5 py-1.5 rounded-lg transition-all shrink-0"
           >
             {expanded ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
-            {expanded ? "Hide Details" : "View Details"}
+            {expanded ? t("ui.common.hideDetails") : t("ui.common.viewDetails")}
           </button>
         )}
       </div>
@@ -253,13 +256,13 @@ export function SvhcComplianceBanner({ onManageBatch }: { onManageBatch: (passpo
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-4">
         <SummaryChip
           Icon={ShieldQuestion}
-          label="Not Assessed"
+          label={t("ui.reach.notAssessed")}
           count={summary.notAssessedCount}
           cls="bg-slate-500/10 border-slate-500/30 text-slate-400"
         />
         <SummaryChip
           Icon={AlertTriangle}
-          label="SVHC Present"
+          label={t("ui.reach.svhcPresent")}
           count={summary.svhcPresentCount}
           cls="bg-amber-500/10 border-amber-500/30 text-amber-400"
         />
@@ -270,11 +273,11 @@ export function SvhcComplianceBanner({ onManageBatch }: { onManageBatch: (passpo
           <table className="w-full text-left font-mono text-xs min-w-[560px]">
             <thead>
               <tr className="text-slate-500 uppercase text-[10px] border-b border-slate-800">
-                <th className="py-2 pr-3">Batch</th>
-                <th className="py-2 pr-3">Manufacturer</th>
-                <th className="py-2 pr-3">Material</th>
-                <th className="py-2 pr-3">Status</th>
-                <th className="py-2 text-right">Action</th>
+                <th className="py-2 pr-3">{t("greenAccounting.table.batch")}</th>
+                <th className="py-2 pr-3">{t("greenAccounting.table.manufacturer")}</th>
+                <th className="py-2 pr-3">{t("ui.reach.material")}</th>
+                <th className="py-2 pr-3">{t("common.status")}</th>
+                <th className="py-2 text-right">{t("audit.table.action")}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-800/60">
@@ -291,7 +294,7 @@ export function SvhcComplianceBanner({ onManageBatch }: { onManageBatch: (passpo
           </table>
           {anyTruncated && (
             <p className="text-[10px] text-slate-500 font-mono mt-2">
-              Showing up to 50 rows per tier — declare status on the ones shown to see more.
+              {t("ui.reach.showingUpTo50RowsPer")}
             </p>
           )}
         </div>

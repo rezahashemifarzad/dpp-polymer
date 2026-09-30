@@ -305,7 +305,7 @@ export function EsgAnalyticsDashboard({
       const res = await fetch("/api/passports/green-tax-report.pdf");
       if (!res.ok) {
         const json = await res.json().catch(() => null);
-        throw new Error(json?.error || `Request failed with status ${res.status}`);
+        throw new Error(json?.error || t("ui.audit.requestFailedWithStatus", { v0: res.status }));
       }
       const blob = await res.blob();
       const url = URL.createObjectURL(blob);
@@ -330,7 +330,7 @@ export function EsgAnalyticsDashboard({
       const res = await fetch("/api/passports/green-tax-export.xlsx");
       if (!res.ok) {
         const json = await res.json().catch(() => null);
-        throw new Error(json?.error || `Request failed with status ${res.status}`);
+        throw new Error(json?.error || t("ui.audit.requestFailedWithStatus", { v0: res.status }));
       }
       const blob = await res.blob();
       const url = URL.createObjectURL(blob);
@@ -385,7 +385,7 @@ export function EsgAnalyticsDashboard({
       const res = await fetch("/api/passports/compliance-report.pdf");
       if (!res.ok) {
         const json = await res.json().catch(() => null);
-        throw new Error(json?.error || `Request failed with status ${res.status}`);
+        throw new Error(json?.error || t("ui.audit.requestFailedWithStatus", { v0: res.status }));
       }
       const blob = await res.blob();
       const url = URL.createObjectURL(blob);
@@ -410,7 +410,7 @@ export function EsgAnalyticsDashboard({
       const res = await fetch("/api/passports/esg-analytics-export.xlsx");
       if (!res.ok) {
         const json = await res.json().catch(() => null);
-        throw new Error(json?.error || `Request failed with status ${res.status}`);
+        throw new Error(json?.error || t("ui.audit.requestFailedWithStatus", { v0: res.status }));
       }
       const blob = await res.blob();
       const url = URL.createObjectURL(blob);
@@ -471,7 +471,7 @@ export function EsgAnalyticsDashboard({
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <span className="text-[10px] text-slate-500 font-mono hidden md:inline">
-              Generated {new Date(summary.generatedAt).toLocaleString()}
+              {t("ui.common.generated")} {new Date(summary.generatedAt).toLocaleString()}
             </span>
             <button
               onClick={handleRefresh}
@@ -498,7 +498,7 @@ export function EsgAnalyticsDashboard({
               onClick={handleExportEsgXlsx}
               disabled={esgXlsxExporting}
               className="flex items-center gap-1.5 text-xs bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold px-3 py-2 rounded-lg transition-all whitespace-nowrap"
-              title="Export manufacturer, grade, PPWR target, and readiness-index data sheets as an Excel workbook"
+              title={t("ui.esg.exportManufacturerGradePpwrTargetAnd")}
             >
               {esgXlsxExporting ? (
                 <Loader2 className="w-3.5 h-3.5 animate-spin" />
@@ -511,7 +511,7 @@ export function EsgAnalyticsDashboard({
               onClick={handleExportPdf}
               disabled={pdfExporting}
               className="flex items-center gap-1.5 text-xs bg-slate-100 hover:bg-white disabled:opacity-50 disabled:cursor-not-allowed text-slate-900 font-bold px-3 py-2 rounded-lg transition-all whitespace-nowrap"
-              title="Generate the EU ESPR 2026 portfolio compliance report"
+              title={t("ui.esg.generateTheEuEspr2026Portfolio")}
             >
               {pdfExporting ? (
                 <Loader2 className="w-3.5 h-3.5 animate-spin" />
@@ -551,8 +551,7 @@ export function EsgAnalyticsDashboard({
             accent="text-emerald-400"
             sub={
               <>
-                {numberFmt(summary.pcrMass.pcrMassKg / 1000, 2)} tonnes · {summary.pcrMass.pcrAdoptionRatePercent}%
-                adoption of weighed mass
+                {numberFmt(summary.pcrMass.pcrMassKg / 1000, 2)} {t("ui.esg.tonnes")} {summary.pcrMass.pcrAdoptionRatePercent}{t("ui.esg.adoptionOfWeighedMass")}
               </>
             }
           />
@@ -560,13 +559,13 @@ export function EsgAnalyticsDashboard({
             icon={Leaf}
             label={t("esg.kpi.carbonFootprint")}
             value={summary.carbon.totalVerifiedKgCO2e !== null ? numberFmt(summary.carbon.totalVerifiedKgCO2e) : "—"}
-            unit={summary.carbon.totalVerifiedKgCO2e !== null ? "kg CO2e" : undefined}
+            unit={summary.carbon.totalVerifiedKgCO2e !== null ? t("ui.common.kgCo2e") : undefined}
             accent="text-teal-400"
             sub={
               <>
-                Illustrative estimate:{" "}
+                {t("ui.esg.illustrativeEstimate")}{" "}
                 {summary.carbon.totalIllustrativeEstimateKgCO2e !== null
-                  ? `${numberFmt(summary.carbon.totalIllustrativeEstimateKgCO2e)} kg CO2e`
+                  ? t("ui.esg.kgCo2e", { v0: numberFmt(summary.carbon.totalIllustrativeEstimateKgCO2e) })
                   : "n/a"}
               </>
             }
@@ -576,7 +575,7 @@ export function EsgAnalyticsDashboard({
             label={t("esg.kpi.taxRelief")}
             value={`€${numberFmt(summary.taxRelief.estimatedReliefEur, 0)}`}
             accent="text-amber-400"
-            sub={<>€{summary.taxRelief.ratePerTonneEur}/tonne on {numberFmt(summary.taxRelief.pcrMassTonnes, 2)} t PCR — illustrative only</>}
+            sub={<>€{summary.taxRelief.ratePerTonneEur}/tonne on {numberFmt(summary.taxRelief.pcrMassTonnes, 2)} {t("ui.esg.tPcrIllustrativeOnly")}</>}
           />
           <KpiCard
             icon={BadgeCheck}
@@ -585,7 +584,7 @@ export function EsgAnalyticsDashboard({
             accent="text-blue-400"
             sub={
               <>
-                {summary.compliance.verified} verified / {summary.compliance.totalCertifications} total
+                {summary.compliance.verified} {t("ui.esg.verified")} {summary.compliance.totalCertifications} {t("ui.esg.total")}
               </>
             }
           />
@@ -609,9 +608,9 @@ export function EsgAnalyticsDashboard({
             <div className="flex items-center justify-between mb-4">
               <div>
                 <h3 className="text-sm font-bold text-white flex items-center gap-1.5">
-                  <Gauge className="w-4 h-4 text-emerald-400" /> PCR Adoption Trend
+                  <Gauge className="w-4 h-4 text-emerald-400" /> {t("ui.esg.pcrAdoptionTrend")}
                 </h3>
-                <p className="text-[11px] text-slate-400 font-mono">Avg. recycled content % by production month</p>
+                <p className="text-[11px] text-slate-400 font-mono">{t("ui.esg.avgRecycledContentByProductionMonth")}</p>
               </div>
             </div>
             {pcrTrendData.length === 0 ? (
@@ -652,9 +651,9 @@ export function EsgAnalyticsDashboard({
             <div className="flex items-center justify-between mb-4">
               <div>
                 <h3 className="text-sm font-bold text-white flex items-center gap-1.5">
-                  <Leaf className="w-4 h-4 text-teal-400" /> Verified Carbon Intensity Trend
+                  <Leaf className="w-4 h-4 text-teal-400" /> {t("ui.esg.verifiedCarbonIntensityTrend")}
                 </h3>
-                <p className="text-[11px] text-slate-400 font-mono">Avg. kg CO2e/kg by production month</p>
+                <p className="text-[11px] text-slate-400 font-mono">{t("ui.esg.avgKgCo2eKgByProduction")}</p>
               </div>
             </div>
             {carbonTrendData.length === 0 ? (
@@ -674,7 +673,7 @@ export function EsgAnalyticsDashboard({
                     <YAxis stroke="#64748b" fontSize={11} />
                     <Tooltip
                       contentStyle={{ backgroundColor: "#090d16", borderColor: "#1e293b", borderRadius: "12px", fontSize: "12px" }}
-                      formatter={(value: number) => [`${value} kg CO2e/kg`, "Avg Intensity"]}
+                      formatter={(value: number) => [t("ui.esg.kgCo2eKg", { v0: value }), "Avg Intensity"]}
                     />
                     <Area
                       type="monotone"
@@ -696,15 +695,15 @@ export function EsgAnalyticsDashboard({
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div className="bg-slate-900/60 border border-slate-800 rounded-3xl p-6 backdrop-blur-xl">
             <h3 className="text-sm font-bold text-white flex items-center gap-1.5 mb-1">
-              <BadgeCheck className="w-4 h-4 text-blue-400" /> Certification Verification Status
+              <BadgeCheck className="w-4 h-4 text-blue-400" /> {t("ui.esg.certificationVerificationStatus")}
             </h3>
             <p className="text-[11px] text-slate-400 font-mono mb-4">
-              {summary.compliance.totalCertifications} certifications across {summary.activeBatches} active batches
+              {summary.compliance.totalCertifications} {t("ui.esg.certificationsAcross")} {summary.activeBatches} {t("ui.esg.activeBatches")}
             </p>
             <StackedStatusBar
               segments={[
                 {
-                  label: "Verified",
+                  label: t("ui.common.verified"),
                   count: summary.compliance.verified,
                   percent: summary.compliance.verifiedPercent,
                   barColorClass: "bg-emerald-500",
@@ -712,7 +711,7 @@ export function EsgAnalyticsDashboard({
                   icon: CheckCircle2,
                 },
                 {
-                  label: "Pending Review",
+                  label: t("ui.common.pendingReview"),
                   count: summary.compliance.pendingReview,
                   percent: summary.compliance.pendingReviewPercent,
                   barColorClass: "bg-amber-500",
@@ -720,7 +719,7 @@ export function EsgAnalyticsDashboard({
                   icon: Clock,
                 },
                 {
-                  label: "Rejected",
+                  label: t("ui.common.rejected"),
                   count: summary.compliance.rejected,
                   percent: summary.compliance.rejectedPercent,
                   barColorClass: "bg-red-500",
@@ -733,15 +732,15 @@ export function EsgAnalyticsDashboard({
 
           <div className="bg-slate-900/60 border border-slate-800 rounded-3xl p-6 backdrop-blur-xl">
             <h3 className="text-sm font-bold text-white flex items-center gap-1.5 mb-1">
-              <Clock className="w-4 h-4 text-blue-400" /> Verified Certificate Expiry
+              <Clock className="w-4 h-4 text-blue-400" /> {t("ui.esg.verifiedCertificateExpiry")}
             </h3>
             <p className="text-[11px] text-slate-400 font-mono mb-4">
-              Computed live from validUntil — never a stored status (see certification-status.ts)
+              {t("ui.esg.computedLiveFromValiduntilNeverA")}
             </p>
             <StackedStatusBar
               segments={[
                 {
-                  label: "Currently Valid",
+                  label: t("ui.esg.currentlyValid"),
                   count: summary.compliance.verifiedCurrentlyValid,
                   percent: pct(summary.compliance.verifiedCurrentlyValid, summary.compliance.verified),
                   barColorClass: "bg-emerald-500",
@@ -749,7 +748,7 @@ export function EsgAnalyticsDashboard({
                   icon: CheckCircle2,
                 },
                 {
-                  label: "Expiring Soon",
+                  label: t("ui.common.expiringSoon"),
                   count: summary.compliance.verifiedExpiringSoon,
                   percent: pct(summary.compliance.verifiedExpiringSoon, summary.compliance.verified),
                   barColorClass: "bg-amber-500",
@@ -757,7 +756,7 @@ export function EsgAnalyticsDashboard({
                   icon: Clock,
                 },
                 {
-                  label: "Expired",
+                  label: t("notifications.chip.expired"),
                   count: summary.compliance.verifiedExpired,
                   percent: pct(summary.compliance.verifiedExpired, summary.compliance.verified),
                   barColorClass: "bg-red-500",
@@ -773,7 +772,7 @@ export function EsgAnalyticsDashboard({
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div className="bg-slate-900/60 border border-slate-800 rounded-3xl p-6 backdrop-blur-xl">
             <h3 className="text-sm font-bold text-white flex items-center gap-1.5 mb-4">
-              <Layers className="w-4 h-4 text-purple-400" /> Batches by Status
+              <Layers className="w-4 h-4 text-purple-400" /> {t("ui.esg.batchesByStatus")}
             </h3>
             <table className="w-full text-left font-mono text-xs">
               <thead>
@@ -790,7 +789,7 @@ export function EsgAnalyticsDashboard({
                   </tr>
                 ))}
                 <tr className="border-t border-slate-800">
-                  <td className="py-2 text-slate-500">Total</td>
+                  <td className="py-2 text-slate-500">{t("ui.common.total")}</td>
                   <td className="py-2 text-right text-emerald-400 font-bold">{summary.totalBatches}</td>
                 </tr>
               </tbody>
@@ -799,7 +798,7 @@ export function EsgAnalyticsDashboard({
 
           <div className="bg-slate-900/60 border border-slate-800 rounded-3xl p-6 backdrop-blur-xl overflow-x-auto">
             <h3 className="text-sm font-bold text-white flex items-center gap-1.5 mb-4">
-              <Gauge className="w-4 h-4 text-purple-400" /> Monthly Trend (data table)
+              <Gauge className="w-4 h-4 text-purple-400" /> {t("ui.esg.monthlyTrendDataTable")}
             </h3>
             {summary.monthlyTrend.length === 0 ? (
               <EmptyChartState />
@@ -846,18 +845,18 @@ export function EsgAnalyticsDashboard({
             <div className="flex items-center justify-between mb-4 gap-2 flex-wrap">
               <div>
                 <h3 className="text-sm font-bold text-white flex items-center gap-1.5">
-                  <Coins className="w-4 h-4 text-lime-400" /> Green Accounting &amp; Plastic Tax
+                  <Coins className="w-4 h-4 text-lime-400" /> {t("greenAccounting.title")}
                 </h3>
                 <p className="text-[11px] text-slate-400 font-mono">
-                  {greenAccounting.ratePerTonneEur} EUR/t · {greenAccounting.jurisdiction} ·{" "}
-                  {greenAccounting.batchesWithWeightData} of {greenAccounting.activeBatches} active batches valued
+                  {greenAccounting.ratePerTonneEur} {t("ui.esg.eurT")} {greenAccounting.jurisdiction} ·{" "}
+                  {greenAccounting.batchesWithWeightData} {t("ui.common.of")} {greenAccounting.activeBatches} {t("ui.esg.activeBatchesValued")}
                 </p>
               </div>
               <Link
                 href="/admin/green-accounting"
                 className="flex items-center gap-1.5 text-xs bg-lime-500/10 hover:bg-lime-500/20 border border-lime-500/30 text-lime-400 px-3 py-2 rounded-lg transition-all whitespace-nowrap"
               >
-                View Full Green Accounting
+                {t("ui.esg.viewFullGreenAccounting")}
                 <ArrowUpRight className="w-3.5 h-3.5" />
               </Link>
             </div>
@@ -940,19 +939,14 @@ export function EsgAnalyticsDashboard({
           <Info className="w-4 h-4 text-slate-500 shrink-0 mt-0.5" />
           <div className="space-y-1.5">
             <p>
-              <span className="text-slate-300 font-semibold">Mass-based metrics</span> (PCR mass, tax relief, verified
-              carbon totals) are computed only over batches with a recorded weight —{" "}
-              {summary.pcrMass.batchesWithWeightData} of {summary.pcrMass.batchesConsidered} active batches
-              qualify ({summary.pcrMass.batchesMissingWeightData} excluded, no weight on record).
+              <span className="text-slate-300 font-semibold">{t("ui.esg.massBasedMetrics")}</span> {t("ui.esg.pcrMassTaxReliefVerifiedCarbon")}{" "}
+              {summary.pcrMass.batchesWithWeightData} {t("ui.common.of")} {summary.pcrMass.batchesConsidered} {t("ui.esg.activeBatchesQualify")}{summary.pcrMass.batchesMissingWeightData} {t("ui.esg.excludedNoWeightOnRecord")}
             </p>
             <p>
-              <span className="text-slate-300 font-semibold">Illustrative carbon estimate</span> uses placeholder
-              emission factors, not a licensed database — always shown separately from the manufacturer&apos;s own
-              verified LCA figure, never blended into one number.
+              <span className="text-slate-300 font-semibold">{t("ui.esg.illustrativeCarbonEstimate")}</span> {t("ui.esg.usesPlaceholderEmissionFactorsNotA")}
             </p>
             <p>
-              <span className="text-slate-300 font-semibold">Tax relief figure</span> is illustrative only, not tax
-              or legal advice. {summary.taxRelief.disclaimer}
+              <span className="text-slate-300 font-semibold">{t("ui.esg.taxReliefFigure")}</span> {t("ui.esg.isIllustrativeOnlyNotTaxOr")} {summary.taxRelief.disclaimer}
             </p>
           </div>
         </div>
@@ -962,9 +956,10 @@ export function EsgAnalyticsDashboard({
 }
 
 function EmptyChartState() {
+  const { t } = useLanguage();
   return (
     <div className="h-56 flex items-center justify-center text-xs text-slate-500 font-mono text-center px-6">
-      No production-dated batches yet — this fills in as passports are issued.
+      {t("ui.esg.noProductionDatedBatchesYetThis")}
     </div>
   );
 }
@@ -1032,6 +1027,7 @@ function ReadinessIndexSection({
   readinessIndex: EsgAnalyticsSummary["readinessIndex"];
   totalBatches: number;
 }) {
+  const { t } = useLanguage();
   const meta = RATING_META[readinessIndex.rating];
   const RatingIcon = meta.icon;
 
@@ -1039,7 +1035,7 @@ function ReadinessIndexSection({
     <div className="bg-slate-900/60 border border-slate-800 rounded-3xl p-6 backdrop-blur-xl">
       <div className="flex items-center justify-between mb-4 gap-2 flex-wrap">
         <h3 className="text-sm font-bold text-white flex items-center gap-1.5">
-          <Award className="w-4 h-4 text-amber-400" /> Sustainability Readiness Index
+          <Award className="w-4 h-4 text-amber-400" /> {t("ui.esg.sustainabilityReadinessIndex")}
         </h3>
         <span className={`inline-flex items-center gap-1.5 text-[11px] px-2.5 py-1 border rounded-full font-semibold ${meta.badgeClass}`}>
           <RatingIcon className="w-3 h-3" />
@@ -1058,7 +1054,7 @@ function ReadinessIndexSection({
                 <div className="flex items-center justify-between gap-2 text-[11px] mb-1">
                   <span className="text-slate-300 font-semibold">{c.label}</span>
                   <span className="text-slate-500 font-mono shrink-0">
-                    {c.score}/100 · {Math.round(c.weight * 100)}% weight
+                    {c.score}/100 · {Math.round(c.weight * 100)}{t("ui.common.weight")}
                   </span>
                 </div>
                 <div className="w-full h-2 rounded-full bg-slate-950 overflow-hidden">
@@ -1085,54 +1081,55 @@ function RegulatoryComplianceSection({
 }: {
   regulatoryCompliance: EsgAnalyticsSummary["regulatoryCompliance"];
 }) {
+  const { t } = useLanguage();
   return (
     <div className="bg-slate-900/60 border border-slate-800 rounded-3xl p-6 backdrop-blur-xl">
       <h3 className="text-sm font-bold text-white flex items-center gap-1.5 mb-1">
-        <Target className="w-4 h-4 text-cyan-400" /> PPWR Regulatory Target Compliance
+        <Target className="w-4 h-4 text-cyan-400" /> {t("ui.esg.ppwrRegulatoryTargetCompliance")}
       </h3>
       <p className="text-[11px] text-slate-400 font-mono mb-4">
-        Mass-weighted PCR adoption vs. the EU Packaging &amp; Packaging Waste Regulation baseline target
+        {t("ui.esg.massWeightedPcrAdoptionVsThe")}
       </p>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        {regulatoryCompliance.targets.map((t) => {
-          const barPercent = Math.min(100, t.actualPercent);
-          const targetMarkerPercent = Math.min(100, t.targetPercent);
+        {regulatoryCompliance.targets.map((tgt) => {
+          const barPercent = Math.min(100, tgt.actualPercent);
+          const targetMarkerPercent = Math.min(100, tgt.targetPercent);
           return (
-            <div key={t.year} className="bg-slate-950 border border-slate-800 rounded-xl p-4">
+            <div key={tgt.year} className="bg-slate-950 border border-slate-800 rounded-xl p-4">
               <div className="flex items-center justify-between mb-2">
-                <span className="text-xs font-bold text-white">{t.year} Target</span>
+                <span className="text-xs font-bold text-white">{tgt.year} {t("ui.esg.target")}</span>
                 <span
                   className={`inline-flex items-center gap-1 text-[10px] px-2 py-0.5 border rounded-full font-semibold ${
-                    t.onTrack
+                    tgt.onTrack
                       ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/30"
                       : "bg-amber-500/10 text-amber-400 border-amber-500/30"
                   }`}
                 >
-                  {t.onTrack ? <CheckCircle2 className="w-3 h-3" /> : <AlertTriangle className="w-3 h-3" />}
-                  {t.onTrack ? "On Track" : "Below Target"}
+                  {tgt.onTrack ? <CheckCircle2 className="w-3 h-3" /> : <AlertTriangle className="w-3 h-3" />}
+                  {tgt.onTrack ? t("ui.esg.onTrack") : t("ui.esg.belowTarget")}
                 </span>
               </div>
               <div className="relative w-full h-3 rounded-full bg-slate-900 overflow-hidden mb-2">
                 <div
-                  className={`h-full rounded-full ${t.onTrack ? "bg-emerald-500" : "bg-amber-500"}`}
+                  className={`h-full rounded-full ${tgt.onTrack ? "bg-emerald-500" : "bg-amber-500"}`}
                   style={{ width: `${barPercent}%` }}
                 />
                 <div
                   className="absolute top-0 bottom-0 w-0.5 bg-slate-100"
                   style={{ left: `${targetMarkerPercent}%` }}
-                  title={`${t.targetPercent}% target`}
+                  title={t("ui.esg.target2", { v0: tgt.targetPercent })}
                 />
               </div>
               <div className="flex items-center justify-between text-[11px] font-mono">
                 <span className="text-slate-400">
-                  Actual <span className="text-white font-bold">{t.actualPercent}%</span>
+                  {t("ui.common.actual")} <span className="text-white font-bold">{tgt.actualPercent}%</span>
                 </span>
                 <span className="text-slate-400">
-                  Target <span className="text-slate-200 font-bold">{t.targetPercent}%</span>
+                  {t("ui.esg.target")} <span className="text-slate-200 font-bold">{tgt.targetPercent}%</span>
                 </span>
-                <span className={t.gapPercentagePoints >= 0 ? "text-emerald-400" : "text-amber-400"}>
-                  {t.gapPercentagePoints >= 0 ? "+" : ""}
-                  {t.gapPercentagePoints}pp
+                <span className={tgt.gapPercentagePoints >= 0 ? "text-emerald-400" : "text-amber-400"}>
+                  {tgt.gapPercentagePoints >= 0 ? "+" : ""}
+                  {tgt.gapPercentagePoints}{t("ui.esg.pp")}
                 </span>
               </div>
             </div>
@@ -1155,9 +1152,9 @@ function ManufacturerDistributionCard({
   return (
     <div className="bg-slate-900/60 border border-slate-800 rounded-3xl p-6 backdrop-blur-xl">
       <h3 className="text-sm font-bold text-white flex items-center gap-1.5 mb-1">
-        <Factory className="w-4 h-4 text-indigo-400" /> Manufacturer Distribution
+        <Factory className="w-4 h-4 text-indigo-400" /> {t("ui.esg.manufacturerDistribution")}
       </h3>
-      <p className="text-[11px] text-slate-400 font-mono mb-4">{manufacturers.length} manufacturer bucket(s) across active batches</p>
+      <p className="text-[11px] text-slate-400 font-mono mb-4">{manufacturers.length} {t("ui.esg.manufacturerBucketSAcrossActiveBatches")}</p>
       {manufacturers.length === 0 ? (
         <EmptyChartState />
       ) : (
@@ -1200,9 +1197,9 @@ function GradeDistributionCard({ grades }: { grades: EsgAnalyticsSummary["gradeD
   return (
     <div className="bg-slate-900/60 border border-slate-800 rounded-3xl p-6 backdrop-blur-xl">
       <h3 className="text-sm font-bold text-white flex items-center gap-1.5 mb-1">
-        <Boxes className="w-4 h-4 text-fuchsia-400" /> Material Grade Distribution
+        <Boxes className="w-4 h-4 text-fuchsia-400" /> {t("ui.esg.materialGradeDistribution")}
       </h3>
-      <p className="text-[11px] text-slate-400 font-mono mb-4">{grades.length} distinct polymer/grade combination(s)</p>
+      <p className="text-[11px] text-slate-400 font-mono mb-4">{grades.length} {t("ui.esg.distinctPolymerGradeCombinationS")}</p>
       {grades.length === 0 ? (
         <EmptyChartState />
       ) : (

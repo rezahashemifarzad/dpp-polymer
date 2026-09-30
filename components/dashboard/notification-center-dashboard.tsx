@@ -147,16 +147,16 @@ interface NotificationCenterDashboardProps {
 }
 
 const ALL_EVENT_TYPES: { value: NotificationEventType; label: string }[] = [
-  { value: "CERT_EXPIRY_SOON", label: "Cert expiring soon" },
-  { value: "CERT_EXPIRY_URGENT", label: "Cert expiring urgently" },
-  { value: "CERT_EXPIRED", label: "Cert expired" },
-  { value: "COC_ANOMALY_FLAGGED", label: "Chain-of-custody flagged" },
+  { value: "CERT_EXPIRY_SOON", label: "ui.notif.certExpiringSoon" },
+  { value: "CERT_EXPIRY_URGENT", label: "ui.notif.certExpiringUrgently" },
+  { value: "CERT_EXPIRED", label: "ui.notif.certExpired" },
+  { value: "COC_ANOMALY_FLAGGED", label: "ui.notif.chainOfCustodyFlagged" },
 ];
 
 const ALL_TIERS: { value: ExpiryTier; label: string }[] = [
-  { value: "EXPIRING_SOON", label: "Expiring Soon" },
-  { value: "EXPIRING_URGENT", label: "Expiring Urgent" },
-  { value: "EXPIRED", label: "Expired" },
+  { value: "EXPIRING_SOON", label: "ui.common.expiringSoon" },
+  { value: "EXPIRING_URGENT", label: "ui.notif.expiringUrgent" },
+  { value: "EXPIRED", label: "notifications.chip.expired" },
 ];
 
 function SummaryChip({ Icon, label, count, cls }: { Icon: typeof Bell; label: string; count: number | string; cls: string }) {
@@ -199,19 +199,20 @@ function ChannelBadge({ channel }: { channel: NotificationChannel }) {
 // the note stays one line for admins who don't manage the deployment.
 // ----------------------------------------------------------------------------
 function EmailSetupNotice({ missingEnvVars }: { missingEnvVars: string[] }) {
+  const { t } = useLanguage();
   return (
     <details className="group mt-3 text-[11px] font-mono bg-slate-800/40 border border-slate-700/60 rounded-lg px-3 py-2 text-slate-400">
       <summary className="flex items-start gap-1.5 cursor-pointer list-none select-none">
         <Info className="w-3.5 h-3.5 mt-0.5 shrink-0 text-sky-400" />
         <span className="flex-1">
-          Email delivery isn&apos;t set up yet. Alerts are still shown here, logged, and sent to active webhooks.
-          <span className="ml-1 text-sky-400 group-open:hidden">How to enable email</span>
+          {t("ui.notif.emailDeliveryIsnTSetUp")}
+          <span className="ml-1 text-sky-400 group-open:hidden">{t("ui.notif.howToEnableEmail")}</span>
         </span>
         <ChevronDown className="w-3.5 h-3.5 mt-0.5 shrink-0 transition-transform group-open:rotate-180" />
       </summary>
       <ol className="mt-2 ml-5 list-decimal space-y-1 text-slate-400">
         <li>
-          In Vercel, open Project → Settings → Environment Variables (Production) and add:{" "}
+          {t("ui.notif.inVercelOpenProjectSettingsEnvironment")}{" "}
           {missingEnvVars.map((name, i) => (
             <span key={name}>
               <code className="text-slate-200">{name}</code>
@@ -221,10 +222,10 @@ function EmailSetupNotice({ missingEnvVars }: { missingEnvVars: string[] }) {
           .
         </li>
         <li>
-          <code className="text-slate-200">RESEND_API_KEY</code> comes from resend.com/api-keys;{" "}
-          <code className="text-slate-200">DPP_NOTIFICATION_EMAIL_FROM</code> must be a sender on a domain verified in Resend.
+          <code className="text-slate-200">RESEND_API_KEY</code> {t("ui.notif.comesFromResendComApiKeys")}{" "}
+          <code className="text-slate-200">DPP_NOTIFICATION_EMAIL_FROM</code> {t("ui.notif.mustBeASenderOnA")}
         </li>
-        <li>Redeploy, then add recipients below and use Run Sweep to send a test.</li>
+        <li>{t("ui.notif.redeployThenAddRecipientsBelowAnd")}</li>
       </ol>
     </details>
   );
@@ -275,12 +276,12 @@ export function NotificationCenterDashboard({ initialSummary, initialWebhooks, i
       const { expiryCheck, expiryNotifications, anomalySweep } = result.data;
       push({
         variant: "success",
-        title: "Notification sweep complete",
-        description: `${expiryCheck.newAlerts + expiryCheck.escalated} cert escalation(s), ${expiryNotifications.dispatched} notification(s) sent, ${anomalySweep.dispatched} anomaly alert(s) dispatched.`,
+        title: t("ui.notif.notificationSweepComplete"),
+        description: t("ui.notif.certEscalationSNotificationSSent", { v0: expiryCheck.newAlerts + expiryCheck.escalated, v1: expiryNotifications.dispatched, v2: anomalySweep.dispatched }),
       });
       await refreshLog();
     } catch (err) {
-      push({ variant: "error", title: "Sweep failed", description: err instanceof Error ? err.message : "Unknown error" });
+      push({ variant: "error", title: t("ui.notif.sweepFailed"), description: err instanceof Error ? err.message : "Unknown error" });
     } finally {
       setSweeping(false);
     }
@@ -310,9 +311,9 @@ export function NotificationCenterDashboard({ initialSummary, initialWebhooks, i
       });
       if (!result.ok || !result.data) throw new Error(result.error || "Failed to save settings");
       setSettings(result.data);
-      push({ variant: "success", title: "Notification settings saved" });
+      push({ variant: "success", title: t("ui.notif.notificationSettingsSaved") });
     } catch (err) {
-      push({ variant: "error", title: "Couldn't save settings", description: err instanceof Error ? err.message : "Unknown error" });
+      push({ variant: "error", title: t("ui.notif.couldnTSaveSettings"), description: err instanceof Error ? err.message : "Unknown error" });
     } finally {
       setSavingSettings(false);
     }
@@ -344,9 +345,9 @@ export function NotificationCenterDashboard({ initialSummary, initialWebhooks, i
       setNewDescription("");
       setNewEventTypes(new Set(ALL_EVENT_TYPES.map((e) => e.value)));
       setShowAddWebhook(false);
-      push({ variant: "success", title: "Webhook endpoint added" });
+      push({ variant: "success", title: t("ui.notif.webhookEndpointAdded") });
     } catch (err) {
-      push({ variant: "error", title: "Couldn't add webhook", description: err instanceof Error ? err.message : "Unknown error" });
+      push({ variant: "error", title: t("ui.notif.couldnTAddWebhook"), description: err instanceof Error ? err.message : "Unknown error" });
     } finally {
       setCreatingWebhook(false);
     }
@@ -359,7 +360,7 @@ export function NotificationCenterDashboard({ initialSummary, initialWebhooks, i
       if (!result.ok || !result.data) throw new Error(result.error || "Failed to update webhook endpoint");
       setWebhooks((prev) => prev.map((w) => (w.id === endpoint.id ? result.data! : w)));
     } catch (err) {
-      push({ variant: "error", title: "Couldn't update webhook", description: err instanceof Error ? err.message : "Unknown error" });
+      push({ variant: "error", title: t("ui.notif.couldnTUpdateWebhook"), description: err instanceof Error ? err.message : "Unknown error" });
     } finally {
       setBusyWebhookId(null);
     }
@@ -372,9 +373,9 @@ export function NotificationCenterDashboard({ initialSummary, initialWebhooks, i
       if (!result.ok) throw new Error(result.error || "Failed to delete webhook endpoint");
       setWebhooks((prev) => prev.filter((w) => w.id !== id));
       if (revealedSecret?.id === id) setRevealedSecret(null);
-      push({ variant: "success", title: "Webhook endpoint deleted" });
+      push({ variant: "success", title: t("ui.notif.webhookEndpointDeleted") });
     } catch (err) {
-      push({ variant: "error", title: "Couldn't delete webhook", description: err instanceof Error ? err.message : "Unknown error" });
+      push({ variant: "error", title: t("ui.notif.couldnTDeleteWebhook"), description: err instanceof Error ? err.message : "Unknown error" });
     } finally {
       setBusyWebhookId(null);
     }
@@ -388,14 +389,14 @@ export function NotificationCenterDashboard({ initialSummary, initialWebhooks, i
       push({
         variant: result.data.delivered ? "success" : "error",
         title: result.data.delivered ? "Test webhook delivered" : "Test webhook failed",
-        description: result.data.error ?? `Responded with HTTP ${result.data.responseCode ?? "—"}`,
+        description: result.data.error ?? t("ui.notif.respondedWithHttp", { v0: result.data.responseCode ?? "—" }),
       });
       await refreshLog();
       const res = await fetch("/api/notifications/webhooks", { cache: "no-store" });
       const json = await res.json();
       if (res.ok && json.success) setWebhooks(json.data);
     } catch (err) {
-      push({ variant: "error", title: "Couldn't send test webhook", description: err instanceof Error ? err.message : "Unknown error" });
+      push({ variant: "error", title: t("ui.notif.couldnTSendTestWebhook"), description: err instanceof Error ? err.message : "Unknown error" });
     } finally {
       setBusyWebhookId(null);
     }
@@ -405,9 +406,9 @@ export function NotificationCenterDashboard({ initialSummary, initialWebhooks, i
     if (!revealedSecret) return;
     try {
       await navigator.clipboard.writeText(revealedSecret.secret);
-      push({ variant: "success", title: "Secret copied to clipboard" });
+      push({ variant: "success", title: t("ui.notif.secretCopiedToClipboard") });
     } catch {
-      push({ variant: "error", title: "Couldn't copy — select and copy the secret manually" });
+      push({ variant: "error", title: t("ui.notif.couldnTCopySelectAndCopy") });
     }
   };
 
@@ -457,7 +458,7 @@ export function NotificationCenterDashboard({ initialSummary, initialWebhooks, i
             onClick={handleRunSweep}
             disabled={sweeping}
             className="flex items-center gap-1.5 text-[11px] bg-emerald-500 hover:bg-emerald-400 disabled:opacity-50 text-slate-950 font-bold px-3 py-1.5 rounded-lg transition-all shrink-0"
-            title="Run the certificate-expiry check and compliance anomaly sweep now, dispatching any due notifications"
+            title={t("ui.notif.runTheCertificateExpiryCheckAnd")}
           >
             {sweeping ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />}
             {t("notifications.button.runSweep")}
@@ -474,7 +475,7 @@ export function NotificationCenterDashboard({ initialSummary, initialWebhooks, i
             ) : (
               <ShieldAlert className="w-4 h-4 text-amber-400" />
             )}
-            Overview
+            {t("ui.notif.overview")}
           </h2>
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
             <SummaryChip Icon={AlertOctagon} label={t("notifications.chip.expired")} count={summary.expiryAlerts.expiredCount} cls="bg-rose-500/10 border-rose-500/30 text-rose-400" />
@@ -482,7 +483,7 @@ export function NotificationCenterDashboard({ initialSummary, initialWebhooks, i
             <SummaryChip Icon={Clock} label={t("notifications.chip.soon")} count={summary.expiryAlerts.expiringSoonCount} cls="bg-amber-500/10 border-amber-500/30 text-amber-400" />
             <SummaryChip Icon={ShieldAlert} label={t("notifications.chip.anomalies")} count={summary.pendingAnomalyCount} cls="bg-fuchsia-500/10 border-fuchsia-500/30 text-fuchsia-400" />
             <SummaryChip Icon={WebhookIcon} label={t("notifications.chip.activeWebhooks")} count={summary.activeWebhookCount} cls="bg-cyan-500/10 border-cyan-500/30 text-cyan-400" />
-            <SummaryChip Icon={Mail} label={summary.emailConfigured ? "Email Ready" : "In-app Only"} count={summary.recentFailureCount} cls={summary.emailConfigured ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-400" : "bg-slate-800 border-slate-700 text-slate-400"} />
+            <SummaryChip Icon={Mail} label={summary.emailConfigured ? t("ui.notif.emailReady") : t("ui.notif.inAppOnly")} count={summary.recentFailureCount} cls={summary.emailConfigured ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-400" : "bg-slate-800 border-slate-700 text-slate-400"} />
           </div>
           {!summary.emailConfigured && (settings.emailEnabled || emailEnabledDraft) && (
             <EmailSetupNotice missingEnvVars={summary.emailMissingEnvVars ?? ["RESEND_API_KEY", "DPP_NOTIFICATION_EMAIL_FROM"]} />
@@ -494,14 +495,14 @@ export function NotificationCenterDashboard({ initialSummary, initialWebhooks, i
           <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-5 space-y-4">
             <h2 className="text-sm font-bold text-white flex items-center gap-2">
               <Mail className="w-4 h-4 text-emerald-400" />
-              Notification Settings
+              {t("ui.notif.notificationSettings")}
             </h2>
 
             <label className="flex items-center justify-between gap-3 cursor-pointer">
               <span className="text-xs text-slate-300">
-                Email notifications
+                {t("ui.notif.emailNotifications")}
                 {!summary.emailConfigured && (
-                  <span className="block text-[10px] text-slate-500 font-mono mt-0.5">Delivery not set up — alerts stay in-app until configured</span>
+                  <span className="block text-[10px] text-slate-500 font-mono mt-0.5">{t("ui.notif.deliveryNotSetUpAlertsStay")}</span>
                 )}
               </span>
               <button
@@ -514,18 +515,18 @@ export function NotificationCenterDashboard({ initialSummary, initialWebhooks, i
             </label>
 
             <div>
-              <span className="text-[11px] text-slate-400 font-mono block mb-1.5">Recipients (comma-separated)</span>
+              <span className="text-[11px] text-slate-400 font-mono block mb-1.5">{t("ui.notif.recipientsCommaSeparated")}</span>
               <input
                 type="text"
                 value={recipientsDraft}
                 onChange={(e) => setRecipientsDraft(e.target.value)}
-                placeholder="compliance@example.com, ops@example.com"
+                placeholder={t("ui.notif.complianceExampleComOpsExampleCom")}
                 className="w-full bg-slate-950 border border-slate-800 text-xs font-mono text-slate-200 rounded-xl px-3 py-2.5 focus:outline-none focus:border-emerald-500"
               />
             </div>
 
             <div>
-              <span className="text-[11px] text-slate-400 font-mono block mb-1.5">Notify on expiry tiers</span>
+              <span className="text-[11px] text-slate-400 font-mono block mb-1.5">{t("ui.notif.notifyOnExpiryTiers")}</span>
               <div className="flex flex-wrap gap-2">
                 {ALL_TIERS.map((tier) => {
                   const active = tiersDraft.has(tier.value);
@@ -539,7 +540,7 @@ export function NotificationCenterDashboard({ initialSummary, initialWebhooks, i
                       }`}
                     >
                       {active ? <Check className="w-3 h-3 inline mr-1" /> : null}
-                      {tier.label}
+                      {t(tier.label)}
                     </button>
                   );
                 })}
@@ -547,7 +548,7 @@ export function NotificationCenterDashboard({ initialSummary, initialWebhooks, i
             </div>
 
             <label className="flex items-center justify-between gap-3 cursor-pointer">
-              <span className="text-xs text-slate-300">Compliance anomaly notifications</span>
+              <span className="text-xs text-slate-300">{t("ui.notif.complianceAnomalyNotifications")}</span>
               <button
                 type="button"
                 onClick={() => setAnomalyDraft((v) => !v)}
@@ -563,11 +564,11 @@ export function NotificationCenterDashboard({ initialSummary, initialWebhooks, i
               className="w-full flex items-center justify-center gap-2 py-2.5 bg-emerald-500 hover:bg-emerald-400 disabled:opacity-40 text-slate-950 font-bold rounded-xl transition text-xs"
             >
               {savingSettings ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
-              {savingSettings ? "Saving..." : "Save Settings"}
+              {savingSettings ? t("ui.common.saving") : t("ui.notif.saveSettings")}
             </button>
             {settings.updatedBy && (
               <p className="text-[10px] text-slate-600 font-mono">
-                Last updated by {settings.updatedBy} · {new Date(settings.updatedAt).toLocaleString()}
+                {t("ui.notif.lastUpdatedBy")} {settings.updatedBy} · {new Date(settings.updatedAt).toLocaleString()}
               </p>
             )}
           </div>
@@ -577,13 +578,13 @@ export function NotificationCenterDashboard({ initialSummary, initialWebhooks, i
             <div className="flex items-center justify-between">
               <h2 className="text-sm font-bold text-white flex items-center gap-2">
                 <WebhookIcon className="w-4 h-4 text-emerald-400" />
-                Webhook Endpoints
+                {t("ui.notif.webhookEndpoints")}
               </h2>
               <button
                 onClick={() => setShowAddWebhook((v) => !v)}
                 className="flex items-center gap-1.5 text-[11px] bg-slate-800 hover:bg-slate-700 text-slate-300 px-2.5 py-1.5 rounded-lg transition-all"
               >
-                <Plus className="w-3.5 h-3.5" /> Add Webhook
+                <Plus className="w-3.5 h-3.5" /> {t("ui.notif.addWebhook")}
               </button>
             </div>
 
@@ -591,7 +592,7 @@ export function NotificationCenterDashboard({ initialSummary, initialWebhooks, i
               <div className="bg-amber-500/5 border border-amber-500/30 rounded-xl p-3 space-y-2">
                 <p className="text-[11px] text-amber-400 font-mono flex items-start gap-1.5">
                   <Info className="w-3.5 h-3.5 mt-0.5 shrink-0" />
-                  Signing secret — copy it now, it will never be shown again.
+                  {t("ui.notif.signingSecretCopyItNowIt")}
                 </p>
                 <div className="flex items-center gap-2">
                   <code className="flex-1 min-w-0 text-[10px] font-mono text-slate-200 bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-2 truncate">
@@ -626,7 +627,7 @@ export function NotificationCenterDashboard({ initialSummary, initialWebhooks, i
                   type="text"
                   value={newDescription}
                   onChange={(e) => setNewDescription(e.target.value)}
-                  placeholder="Description (optional)"
+                  placeholder={t("ui.notif.descriptionOptional")}
                   className="w-full bg-slate-900 border border-slate-800 text-xs font-mono text-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:border-emerald-500"
                 />
                 <div className="flex flex-wrap gap-1.5">
@@ -641,7 +642,7 @@ export function NotificationCenterDashboard({ initialSummary, initialWebhooks, i
                           active ? "bg-emerald-500/10 border-emerald-500/40 text-emerald-400" : "bg-slate-900 border-slate-800 text-slate-500"
                         }`}
                       >
-                        {et.label}
+                        {t(et.label)}
                       </button>
                     );
                   })}
@@ -652,14 +653,14 @@ export function NotificationCenterDashboard({ initialSummary, initialWebhooks, i
                   className="w-full flex items-center justify-center gap-2 py-2 bg-emerald-500 hover:bg-emerald-400 disabled:opacity-40 text-slate-950 font-bold rounded-lg transition text-xs"
                 >
                   {creatingWebhook ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Plus className="w-3.5 h-3.5" />}
-                  {creatingWebhook ? "Adding..." : "Add Webhook"}
+                  {creatingWebhook ? t("ui.common.adding") : t("ui.notif.addWebhook")}
                 </button>
               </div>
             )}
 
             <div className="space-y-2 max-h-[360px] overflow-y-auto">
               {webhooks.length === 0 ? (
-                <p className="text-xs text-slate-500 font-mono text-center py-6">No webhook endpoints configured yet.</p>
+                <p className="text-xs text-slate-500 font-mono text-center py-6">{t("ui.notif.noWebhookEndpointsConfiguredYet")}</p>
               ) : (
                 webhooks.map((endpoint) => (
                   <div key={endpoint.id} className="bg-slate-950 border border-slate-800 rounded-xl p-3">
@@ -680,7 +681,7 @@ export function NotificationCenterDashboard({ initialSummary, initialWebhooks, i
                       <button
                         onClick={() => handleToggleActive(endpoint)}
                         disabled={busyWebhookId === endpoint.id}
-                        title={endpoint.isActive ? "Active — click to pause" : "Paused — click to activate"}
+                        title={endpoint.isActive ? t("ui.notif.activeClickToPause") : t("ui.notif.pausedClickToActivate")}
                         className={`shrink-0 p-1.5 rounded-lg border ${
                           endpoint.isActive ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-400" : "bg-slate-800 border-slate-700 text-slate-500"
                         }`}
@@ -693,8 +694,8 @@ export function NotificationCenterDashboard({ initialSummary, initialWebhooks, i
                       <div className="flex items-center gap-2 min-w-0">
                         {endpoint.lastStatus && <StatusBadge status={endpoint.lastStatus} />}
                         <span className="text-[10px] text-slate-600 font-mono truncate">
-                          {endpoint.totalDeliveries} sent
-                          {endpoint.consecutiveFailures > 0 ? ` · ${endpoint.consecutiveFailures} failing` : ""}
+                          {endpoint.totalDeliveries} {t("ui.notif.sent")}
+                          {endpoint.consecutiveFailures > 0 ? t("ui.notif.failing", { v0: endpoint.consecutiveFailures }) : ""}
                         </span>
                       </div>
                       <div className="flex items-center gap-1.5 shrink-0">
@@ -704,7 +705,7 @@ export function NotificationCenterDashboard({ initialSummary, initialWebhooks, i
                           className="flex items-center gap-1 text-[10px] bg-slate-800 hover:bg-slate-700 disabled:opacity-50 text-slate-300 px-2 py-1 rounded-lg"
                         >
                           {busyWebhookId === endpoint.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <Send className="w-3 h-3" />}
-                          Test
+                          {t("ui.notif.test")}
                         </button>
                         <button
                           onClick={() => handleDeleteWebhook(endpoint.id)}
@@ -730,11 +731,11 @@ export function NotificationCenterDashboard({ initialSummary, initialWebhooks, i
           <div className="flex items-center justify-between mb-3">
             <h2 className="text-sm font-bold text-white flex items-center gap-2">
               <Clock className="w-4 h-4 text-emerald-400" />
-              Delivery Log
+              {t("ui.notif.deliveryLog")}
             </h2>
             <div className="flex items-center gap-2">
               <button onClick={refreshLog} className="flex items-center gap-1.5 text-[11px] bg-slate-800 hover:bg-slate-700 text-slate-300 px-2.5 py-1.5 rounded-lg transition-all">
-                <RefreshCw className="w-3 h-3" /> Refresh
+                <RefreshCw className="w-3 h-3" /> {t("common.refresh")}
               </button>
               {summary.recentLog.length > 8 && (
                 <button
@@ -742,14 +743,14 @@ export function NotificationCenterDashboard({ initialSummary, initialWebhooks, i
                   className="flex items-center gap-1.5 text-[11px] bg-slate-800 hover:bg-slate-700 text-slate-300 px-2.5 py-1.5 rounded-lg transition-all"
                 >
                   {logExpanded ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
-                  {logExpanded ? "Show Less" : `Show All (${summary.recentLog.length})`}
+                  {logExpanded ? t("ui.notif.showLess") : t("ui.notif.showAll", { v0: summary.recentLog.length })}
                 </button>
               )}
             </div>
           </div>
 
           {summary.recentLog.length === 0 ? (
-            <p className="text-xs text-slate-500 font-mono text-center py-6">No notifications dispatched yet.</p>
+            <p className="text-xs text-slate-500 font-mono text-center py-6">{t("ui.notif.noNotificationsDispatchedYet")}</p>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-left font-mono text-xs min-w-[720px]">

@@ -218,7 +218,7 @@ export function AuditLogDashboard({
     try {
       const res = await fetch(`/api/audit-log?${buildQuery(f, p, pageSize)}`);
       const json = await res.json();
-      if (!res.ok || !json.success) throw new Error(json?.error || `Request failed with status ${res.status}`);
+      if (!res.ok || !json.success) throw new Error(json?.error || t("ui.audit.requestFailedWithStatus", { v0: res.status }));
       setResult(json.data);
       setFilterOptions(json.data.filterOptions);
       setPage(json.data.page);
@@ -268,7 +268,7 @@ export function AuditLogDashboard({
     try {
       const res = await fetch("/api/audit-log/verify");
       const json = await res.json();
-      if (!res.ok || !json.success) throw new Error(json?.error || `Request failed with status ${res.status}`);
+      if (!res.ok || !json.success) throw new Error(json?.error || t("ui.audit.requestFailedWithStatus", { v0: res.status }));
       setVerification(json.data);
     } catch (err) {
       setVerifyError(err instanceof Error ? err.message : "Failed to verify ledger integrity");
@@ -343,7 +343,7 @@ export function AuditLogDashboard({
               onClick={handleVerify}
               disabled={verifying}
               className="flex items-center gap-1.5 text-xs bg-slate-100 hover:bg-white disabled:opacity-50 disabled:cursor-not-allowed text-slate-900 font-bold px-3 py-2 rounded-lg transition-all whitespace-nowrap"
-              title="Recompute the full hash chain and confirm no entry has been tampered with"
+              title={t("ui.audit.recomputeTheFullHashChainAnd")}
             >
               {verifying ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <ShieldCheck className="w-3.5 h-3.5" />}
               {verifying ? t("audit.button.verifying") : t("audit.button.verifyLedger")}
@@ -352,7 +352,7 @@ export function AuditLogDashboard({
               onClick={handleExport}
               disabled={exporting}
               className="flex items-center gap-1.5 text-xs bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold px-3 py-2 rounded-lg transition-all whitespace-nowrap"
-              title="Export the currently filtered audit log as an Excel workbook, with an embedded integrity check"
+              title={t("ui.audit.exportTheCurrentlyFilteredAuditLog")}
             >
               {exporting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <FileSpreadsheet className="w-3.5 h-3.5" />}
               {exporting ? t("common.generating") : t("audit.button.exportExcel")}
@@ -391,22 +391,22 @@ export function AuditLogDashboard({
             <div className="min-w-0">
               <p className="text-sm font-semibold text-white">
                 {verification === null
-                  ? "Ledger integrity not yet checked this session"
+                  ? t("ui.audit.ledgerIntegrityNotYetCheckedThis")
                   : verification.ok
-                    ? "Ledger integrity verified — no tampering detected"
-                    : "Ledger integrity check FAILED"}
+                    ? t("ui.audit.ledgerIntegrityVerifiedNoTamperingDetected")
+                    : t("ui.audit.ledgerIntegrityCheckFailed")}
               </p>
               <p className="text-[11px] text-slate-400 font-mono mt-0.5">
                 {verification === null &&
-                  "Click \"Verify Full Ledger\" to recompute the SHA-256 hash chain over every entry."}
+                  t("ui.audit.clickVerifyFullLedgerToRecompute")}
                 {verification !== null &&
-                  `Checked ${verification.totalChecked} entries` +
+                  t("ui.audit.checkedEntries", { v0: verification.totalChecked }) +
                     (verification.firstSequence !== null
                       ? ` (#${verification.firstSequence}–#${verification.lastSequence})`
                       : "") +
                     "."}
                 {verification !== null && !verification.ok && verification.brokenReason
-                  ? ` Broken at entry #${verification.brokenAtSequence}: ${verification.brokenReason}`
+                  ? t("ui.audit.brokenAtEntry", { v0: verification.brokenAtSequence, v1: verification.brokenReason })
                   : ""}
               </p>
             </div>
@@ -423,9 +423,9 @@ export function AuditLogDashboard({
         <div className="bg-slate-900/60 border border-slate-800 rounded-xl p-4">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
             <div>
-              <label className="block text-[10px] uppercase tracking-wider text-slate-500 mb-1">Action</label>
+              <label className="block text-[10px] uppercase tracking-wider text-slate-500 mb-1">{t("audit.table.action")}</label>
               <select value={filters.action} onChange={(e) => updateFilter("action", e.target.value)} className={inputCls}>
-                <option value="">All actions</option>
+                <option value="">{t("ui.audit.allActions")}</option>
                 {filterOptions.actions.map((a) => (
                   <option key={a} value={a}>
                     {a}
@@ -434,9 +434,9 @@ export function AuditLogDashboard({
               </select>
             </div>
             <div>
-              <label className="block text-[10px] uppercase tracking-wider text-slate-500 mb-1">Actor / Role</label>
+              <label className="block text-[10px] uppercase tracking-wider text-slate-500 mb-1">{t("ui.audit.actorRole")}</label>
               <select value={filters.actorRole} onChange={(e) => updateFilter("actorRole", e.target.value)} className={inputCls}>
-                <option value="">All actors</option>
+                <option value="">{t("ui.audit.allActors")}</option>
                 {filterOptions.actorRoles.map((r) => (
                   <option key={r} value={r}>
                     {r}
@@ -445,21 +445,21 @@ export function AuditLogDashboard({
               </select>
             </div>
             <div>
-              <label className="block text-[10px] uppercase tracking-wider text-slate-500 mb-1">From date</label>
+              <label className="block text-[10px] uppercase tracking-wider text-slate-500 mb-1">{t("ui.audit.fromDate")}</label>
               <input type="date" value={filters.dateFrom} onChange={(e) => updateFilter("dateFrom", e.target.value)} className={inputCls} />
             </div>
             <div>
-              <label className="block text-[10px] uppercase tracking-wider text-slate-500 mb-1">To date</label>
+              <label className="block text-[10px] uppercase tracking-wider text-slate-500 mb-1">{t("ui.audit.toDate")}</label>
               <input type="date" value={filters.dateTo} onChange={(e) => updateFilter("dateTo", e.target.value)} className={inputCls} />
             </div>
             <div>
-              <label className="block text-[10px] uppercase tracking-wider text-slate-500 mb-1">Batch ID</label>
+              <label className="block text-[10px] uppercase tracking-wider text-slate-500 mb-1">{t("audit.table.batchId")}</label>
               <div className="relative">
                 <Search className="w-3.5 h-3.5 text-slate-500 absolute left-2.5 top-1/2 -translate-y-1/2" />
                 <input
                   value={batchIdDraft}
                   onChange={(e) => setBatchIdDraft(e.target.value)}
-                  placeholder="Search batch ID..."
+                  placeholder={t("ui.audit.searchBatchId")}
                   className={`${inputCls} pl-7`}
                 />
               </div>
@@ -467,13 +467,13 @@ export function AuditLogDashboard({
           </div>
           {hasActiveFilters && (
             <div className="mt-3 flex items-center justify-between">
-              <span className="text-[11px] text-slate-500 font-mono">Filters active</span>
+              <span className="text-[11px] text-slate-500 font-mono">{t("ui.audit.filtersActive")}</span>
               <button
                 onClick={clearFilters}
                 className="flex items-center gap-1 text-[11px] text-slate-400 hover:text-white transition-all"
               >
                 <X className="w-3 h-3" />
-                Clear filters
+                {t("ui.audit.clearFilters")}
               </button>
             </div>
           )}
@@ -492,10 +492,10 @@ export function AuditLogDashboard({
             <div className="min-w-0">
               <h3 className="text-base font-semibold flex items-center gap-2">
                 <ScrollText className="w-5 h-5 text-emerald-400" />
-                Chronological Ledger
+                {t("ui.audit.chronologicalLedger")}
               </h3>
               <p className="text-xs text-slate-400 mt-1">
-                {result.total} matching {result.total === 1 ? "entry" : "entries"} · newest first
+                {result.total} {t("ui.audit.matching")} {result.total === 1 ? t("ui.audit.entry") : t("ui.audit.entries")} {t("ui.audit.newestFirst")}
               </p>
             </div>
           </div>
@@ -517,13 +517,13 @@ export function AuditLogDashboard({
                 {loading && result.entries.length === 0 ? (
                   <tr>
                     <td colSpan={7} className="text-center p-6 text-slate-500">
-                      Loading ledger entries...
+                      {t("ui.audit.loadingLedgerEntries")}
                     </td>
                   </tr>
                 ) : result.entries.length === 0 ? (
                   <tr>
                     <td colSpan={7} className="text-center p-6 text-slate-500">
-                      No audit log entries match the current filters.
+                      {t("ui.audit.noAuditLogEntriesMatchThe")}
                     </td>
                   </tr>
                 ) : (
@@ -559,7 +559,7 @@ export function AuditLogDashboard({
           {/* Pagination */}
           <div className="flex flex-wrap items-center justify-between gap-3 mt-4 pt-4 border-t border-slate-800/60">
             <span className="text-[11px] text-slate-500 font-mono">
-              Page {result.page} of {totalPages}
+              {t("ui.audit.page")} {result.page} {t("ui.common.of")} {totalPages}
             </span>
             <div className="flex items-center gap-2">
               <button
@@ -568,14 +568,14 @@ export function AuditLogDashboard({
                 className="flex items-center gap-1 text-xs bg-slate-800 hover:bg-slate-700 disabled:opacity-40 disabled:cursor-not-allowed text-slate-300 px-3 py-1.5 rounded-lg transition-all"
               >
                 <ChevronLeft className="w-3.5 h-3.5" />
-                Prev
+                {t("ui.audit.prev")}
               </button>
               <button
                 onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
                 disabled={result.page >= totalPages || loading}
                 className="flex items-center gap-1 text-xs bg-slate-800 hover:bg-slate-700 disabled:opacity-40 disabled:cursor-not-allowed text-slate-300 px-3 py-1.5 rounded-lg transition-all"
               >
-                Next
+                {t("ui.audit.next")}
                 <ChevronRight className="w-3.5 h-3.5" />
               </button>
             </div>

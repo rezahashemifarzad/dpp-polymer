@@ -76,14 +76,14 @@ const MAX_LABELS_PER_SHEET = 200;
 const LAYOUT_OPTIONS: { value: SheetLayout; label: string; description: string; perPage: number }[] = [
   {
     value: "grid",
-    label: "Standard Grid",
-    description: "2 × 5 labels per A4 sheet — compact, hand-cut labels for general packaging.",
+    label: "ui.gen.standardGrid",
+    description: "ui.gen.25LabelsPerA4Sheet",
     perPage: 10,
   },
   {
     value: "large",
-    label: "Large Industrial",
-    description: "1 × 3 labels per A4 sheet — bigger QR + type, sized for a manufacturing-line label printer.",
+    label: "ui.gen.largeIndustrial",
+    description: "ui.gen.13LabelsPerA4Sheet",
     perPage: 3,
   },
 ];
@@ -191,19 +191,19 @@ export function GeneratorSuiteDashboard() {
       const res = await fetch(`/api/passports/label-sheet.pdf?${params.toString()}`);
       if (!res.ok) {
         const json = await res.json().catch(() => null);
-        throw new Error(json?.error || `Request failed with status ${res.status}`);
+        throw new Error(json?.error || t("ui.audit.requestFailedWithStatus", { v0: res.status }));
       }
       const blob = await res.blob();
       triggerBlobDownload(blob, `dpp-batch-labels-${selectedEligible.length}-${layout}.pdf`);
       push({
         variant: "success",
-        title: "Label sheet generated",
-        description: `${totalLabels} label(s) across ${estimatedPages} A4 page(s) (${activeLayout.label}).`,
+        title: t("ui.gen.labelSheetGenerated"),
+        description: t("ui.gen.labelSAcrossA4PageS", { v0: totalLabels, v1: estimatedPages, v2: t(activeLayout.label) }),
       });
     } catch (err) {
       const message = err instanceof Error ? err.message : "Failed to generate label sheet";
       setSheetError(message);
-      push({ variant: "error", title: "Label sheet generation failed", description: message });
+      push({ variant: "error", title: t("ui.gen.labelSheetGenerationFailed"), description: message });
     } finally {
       setPreparingSheet(false);
     }
@@ -259,7 +259,7 @@ export function GeneratorSuiteDashboard() {
             <div className="flex flex-wrap items-center justify-between gap-3 mb-3">
               <h2 className="text-sm font-semibold text-slate-100 flex items-center gap-2">
                 <Layers className="w-4 h-4 text-emerald-400" />
-                Select Batches
+                {t("ui.gen.selectBatches")}
               </h2>
               <div className="flex items-center gap-2">
                 <button
@@ -267,14 +267,14 @@ export function GeneratorSuiteDashboard() {
                   onClick={selectAllFiltered}
                   className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-[11px] font-semibold"
                 >
-                  Select All
+                  {t("ui.common.selectAll")}
                 </button>
                 <button
                   type="button"
                   onClick={clearSelection}
                   className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-[11px] font-semibold"
                 >
-                  Clear
+                  {t("ui.common.clear")}
                 </button>
               </div>
             </div>
@@ -283,7 +283,7 @@ export function GeneratorSuiteDashboard() {
               <Search className="w-4 h-4 text-slate-500 absolute left-3 top-1/2 -translate-y-1/2" />
               <input
                 type="text"
-                placeholder="Search batch ID, grade, polymer, or GTIN..."
+                placeholder={t("ui.common.searchBatchIdGradePolymerOr")}
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 className="w-full bg-slate-950 border border-slate-800 text-xs font-mono text-slate-200 rounded-xl pl-9 pr-4 py-2.5 focus:outline-none focus:border-emerald-500"
@@ -292,10 +292,10 @@ export function GeneratorSuiteDashboard() {
 
             <div className="flex-1 overflow-y-auto border border-slate-800 rounded-xl divide-y divide-slate-800/60 min-h-[240px] max-h-[480px]">
               {loading ? (
-                <div className="p-6 text-center text-xs text-slate-500 font-mono">Loading passports...</div>
+                <div className="p-6 text-center text-xs text-slate-500 font-mono">{t("ui.gen.loadingPassports")}</div>
               ) : filtered.length === 0 ? (
                 <div className="p-6 text-center text-xs text-slate-500 font-mono">
-                  {passports.length === 0 ? "No passports issued yet." : "No batches match your search."}
+                  {passports.length === 0 ? t("ui.gen.noPassportsIssuedYet") : t("ui.common.noBatchesMatchYourSearch")}
                 </div>
               ) : (
                 filtered.map((p) => {
@@ -315,10 +315,10 @@ export function GeneratorSuiteDashboard() {
                           e.stopPropagation();
                           toggleRow(p.id);
                         }}
-                        aria-label={isSelected ? "Deselect batch" : "Select batch"}
+                        aria-label={isSelected ? t("ui.gen.deselectBatch") : t("ui.gen.selectBatch")}
                         className="shrink-0"
                         disabled={!p.qrCodePayloadUrl}
-                        title={!p.qrCodePayloadUrl ? "No QR link recorded — can't be added to a label sheet" : undefined}
+                        title={!p.qrCodePayloadUrl ? t("ui.gen.noQrLinkRecordedCanT") : undefined}
                       >
                         {isSelected ? (
                           <CheckSquare className="w-4 h-4 text-emerald-400" />
@@ -330,7 +330,7 @@ export function GeneratorSuiteDashboard() {
                         <div className="text-xs font-mono font-bold text-emerald-400 truncate">{p.batchId}</div>
                         <div className="text-[11px] text-slate-400 truncate">
                           {p.polymerType} · {p.grade}
-                          {!p.qrCodePayloadUrl && <span className="text-amber-400 ml-1.5">no QR</span>}
+                          {!p.qrCodePayloadUrl && <span className="text-amber-400 ml-1.5">{t("ui.gen.noQr")}</span>}
                         </div>
                       </div>
                       <a
@@ -338,11 +338,11 @@ export function GeneratorSuiteDashboard() {
                         target="_blank"
                         rel="noreferrer"
                         onClick={(e) => e.stopPropagation()}
-                        title="Download certificate PDF for this batch"
+                        title={t("ui.gen.downloadCertificatePdfForThisBatch")}
                         className="shrink-0 inline-flex items-center gap-1 text-[10px] text-slate-300 hover:text-white bg-slate-800 hover:bg-slate-700 px-2 py-1 rounded-lg transition-all"
                       >
                         <FileBadge className="w-3 h-3" />
-                        <span className="hidden sm:inline">Certificate</span>
+                        <span className="hidden sm:inline">{t("ui.common.certificate")}</span>
                       </a>
                     </div>
                   );
@@ -351,9 +351,8 @@ export function GeneratorSuiteDashboard() {
             </div>
 
             <p className="text-[10px] text-slate-500 font-mono mt-2">
-              {selected.size} selected ({selectedEligible.length} eligible for label sheet
-              {selectedMissingQr > 0 ? `, ${selectedMissingQr} missing a QR link` : ""}) · {MAX_LABELS_PER_SHEET} max
-              per sheet
+              {selected.size} {t("ui.gen.selected")}{selectedEligible.length} {t("ui.gen.eligibleForLabelSheet")}
+              {selectedMissingQr > 0 ? t("ui.gen.missingAQrLink", { v0: selectedMissingQr }) : ""}) · {MAX_LABELS_PER_SHEET} {t("ui.gen.maxPerSheet")}
             </p>
           </div>
 
@@ -377,7 +376,7 @@ export function GeneratorSuiteDashboard() {
                         style={{ width: layout === "large" ? 140 : 96, height: layout === "large" ? 140 : 96 }}
                         className="flex items-center justify-center text-slate-400 text-[9px] font-mono text-center px-2"
                       >
-                        No QR link recorded
+                        {t("ui.common.noQrLinkRecorded")}
                       </div>
                     )}
                   </div>
@@ -391,12 +390,12 @@ export function GeneratorSuiteDashboard() {
                       {focusedPassport.polymerType} · {focusedPassport.grade}
                     </div>
                     <div className="text-slate-500 text-[10px] font-mono mt-0.5">GTIN {focusedPassport.gtin}</div>
-                    <div className="text-slate-600 text-[9px] font-mono mt-1.5">Scan to verify · Polymer DPP</div>
+                    <div className="text-slate-600 text-[9px] font-mono mt-1.5">{t("ui.gen.scanToVerifyPolymerDpp")}</div>
                   </div>
                 </div>
               ) : (
                 <p className="text-xs text-slate-500 font-mono py-6 text-center">
-                  Click a batch on the left to preview its certificate &amp; label.
+                  {t("ui.gen.clickABatchOnTheLeft")}
                 </p>
               )}
             </div>
@@ -405,7 +404,7 @@ export function GeneratorSuiteDashboard() {
               <h2 className="text-sm font-semibold text-slate-100">{t("generator.section.labelSheetSettings")}</h2>
 
               <div className="space-y-2">
-                <span className="text-[11px] text-slate-400 font-mono block">Layout</span>
+                <span className="text-[11px] text-slate-400 font-mono block">{t("ui.gen.layout")}</span>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                   {LAYOUT_OPTIONS.map((opt) => (
                     <button
@@ -424,9 +423,9 @@ export function GeneratorSuiteDashboard() {
                         ) : (
                           <SquareIcon className="w-3.5 h-3.5 text-emerald-400" />
                         )}
-                        {opt.label}
+                        {t(opt.label)}
                       </div>
-                      <p className="text-[10px] text-slate-400 leading-relaxed">{opt.description}</p>
+                      <p className="text-[10px] text-slate-400 leading-relaxed">{t(opt.description)}</p>
                     </button>
                   ))}
                 </div>
@@ -434,7 +433,7 @@ export function GeneratorSuiteDashboard() {
 
               <div>
                 <span className="text-[11px] text-slate-400 font-mono block mb-1">
-                  Copies per batch: {copiesPerBatch}
+                  {t("ui.gen.copiesPerBatch")} {copiesPerBatch}
                 </span>
                 <input
                   type="range"
@@ -447,10 +446,10 @@ export function GeneratorSuiteDashboard() {
               </div>
 
               <div className="bg-slate-950 border border-slate-800 rounded-xl p-3 font-mono text-[11px] flex justify-between">
-                <span className="text-slate-500">Estimated output</span>
+                <span className="text-slate-500">{t("ui.gen.estimatedOutput")}</span>
                 <span className="text-emerald-400 font-bold">
-                  {totalLabels} label{totalLabels === 1 ? "" : "s"} · {estimatedPages} page
-                  {estimatedPages === 1 ? "" : "s"}
+                  {totalLabels} {t(totalLabels === 1 ? "ui.gen.label" : "ui.gen.labels")} · {estimatedPages}{" "}
+                  {t(estimatedPages === 1 ? "ui.gen.page" : "ui.gen.pages")}
                 </span>
               </div>
 
