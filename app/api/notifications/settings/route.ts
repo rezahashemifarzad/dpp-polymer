@@ -17,10 +17,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { authorize, unauthorizedResponse } from "@/lib/rbac";
 import { getNotificationSettings, updateNotificationSettings } from "@/lib/services/notification-settings";
+import { authorizeApiRequest } from "@/lib/api-auth";
 
 export const dynamic = "force-dynamic";
 
-export async function GET() {
+export async function GET(req: NextRequest) {
+  // Access-control audit (2026-09-30): ADMIN only (session or API key).
+  const auth = await authorizeApiRequest(req, ["ADMIN"]);
+  if (!auth.ok) return auth.response;
+
   try {
     const data = await getNotificationSettings();
     return NextResponse.json({ success: true, data });

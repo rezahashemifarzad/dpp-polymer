@@ -200,3 +200,52 @@ export async function requireAdminSession(): Promise<AdminUser> {
 
   return admin;
 }
+
+// ---------------------------------------------------------------------------
+// Access-control audit (2026-09-30) — non-redirecting session resolution.
+// ---------------------------------------------------------------------------
+
+export type ViewerRole = "ADMIN" | "AUDITOR" | "CUSTOMER";
+
+export interface SessionActor {
+  role: ViewerRole;
+  actorId: string;
+  /** Human-readable identity for audit-log `actor` fields, e.g. "ADMIN:ops@example.com". */
+  label: string;
+}
+
+/**
+ * Resolves the current cookie session to an ACTIVE actor, or null. Unlike the
+ * require*Session() helpers above it never redirects, so Route Handlers can
+ * answer 401/403 JSON and Server Components can branch on the viewer's role
+ * (e.g. render the Home console read-only for guests).
+ *
+ * A session whose actor row is missing or soft-revoked (active = false)
+ * resolves to null — deactivating an account takes effect on its very next
+ * request, not when its 12-hour session happens to expire.
+ */
+export async function getSessionActor(): Promise<SessionActor | null> {
+  const session = await getSession();
+  if (!session) return null;
+
+  switch (session.actorType) {
+    case "ADMIN": {
+      const admin = await prisma.adminUser.findUnique({ where: { id: session.actorId } });
+      return admin && admin.active ? { role: "ADMIN", actorId: admin.id, label: `ADMIN:${admin.email}` } : null;
+    }
+    case "AUDITOR": {
+      const auditor = await prisma.auditor.findUnique({ where: { id: session.actorId } });
+      return auditor && auditor.active
+        ? { role: "AUDITOR", actorId: auditor.id, label: `AUDITOR:${auditor.email ?? auditor.id}` }
+        : null;
+    }
+    case "CUSTOMER": {
+      const client = await prisma.client.findUnique({ where: { id: session.actorId } });
+      return client && client.active
+        ? { role: "CUSTOMER", actorId: client.id, label: `CUSTOMER:${client.contactEmail ?? client.id}` }
+        : null;
+    }
+    default:
+      return null;
+  }
+}

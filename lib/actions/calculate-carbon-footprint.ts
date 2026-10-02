@@ -15,6 +15,7 @@ import {
   calculateAndPersistCarbonFootprint,
   type CalculateCarbonFootprintInput,
 } from "@/lib/services/calculate-carbon-footprint";
+import { requireAdminSession } from "@/lib/session-auth";
 
 export interface CalculateCarbonFootprintActionResult {
   ok: boolean;
@@ -32,6 +33,10 @@ export async function calculateCarbonFootprintAction(
   batchId: string,
   input: CalculateCarbonFootprintInput
 ): Promise<CalculateCarbonFootprintActionResult> {
+  // Access-control audit (2026-09-30): admin-only mutation/read. Called
+  // OUTSIDE the try/catch so Next.js's redirect to /login propagates.
+  await requireAdminSession();
+
   try {
     const result = await calculateAndPersistCarbonFootprint(batchId, input, "ADMIN");
     if (!result.ok) {

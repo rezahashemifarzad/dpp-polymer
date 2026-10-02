@@ -25,6 +25,7 @@ import {
   PassportNotFoundError,
   InvalidTransitionError,
 } from "@/lib/services/transition-passport-status";
+import { authorizeApiRequest } from "@/lib/api-auth";
 
 // STEP: the transition core (ALLOWED_TRANSITIONS, the hash re-chain, the
 // update + audit-log write, all inside one $transaction) was extracted to
@@ -45,9 +46,13 @@ const PatchSchema = z.object({
 });
 
 export async function GET(
-  _req: NextRequest,
+  req: NextRequest,
   { params }: { params: Promise<{ batchId: string }> }
 ) {
+  // Access-control audit (2026-09-30): ADMIN, AUDITOR, MANUFACTURER only (session or API key).
+  const auth = await authorizeApiRequest(req, ["ADMIN", "AUDITOR", "MANUFACTURER"]);
+  if (!auth.ok) return auth.response;
+
   const { batchId } = await params;
 
   try {
@@ -129,6 +134,16 @@ export async function PATCH(
     );
   }
   const { status: nextStatus, reason } = parsed.data;
+
+  // Access-control audit (2026-09-30) — least privilege: an auditor's job is
+  // to issue a verified passport. Revoking or superseding a passport is a
+  // destructive lifecycle change reserved for ADMIN.
+  if (nextStatus !== "ISSUED" && role !== "ADMIN") {
+    return NextResponse.json(
+      { success: false, error: `Forbidden: only ADMIN may set status ${nextStatus}` },
+      { status: 403 }
+    );
+  }
 
   try {
     const updated = await prisma.$transaction((tx) =>

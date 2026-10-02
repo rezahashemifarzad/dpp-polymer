@@ -15,12 +15,17 @@
  * certifications[].validUntil).
  */
 
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { computePortfolioExpiryAlerts } from "@/lib/services/expiry-alert-service";
+import { authorizeApiRequest } from "@/lib/api-auth";
 
 export const dynamic = "force-dynamic";
 
-export async function GET() {
+export async function GET(req: NextRequest) {
+  // Access-control audit (2026-09-30): ADMIN, AUDITOR only (session or API key).
+  const auth = await authorizeApiRequest(req, ["ADMIN", "AUDITOR"]);
+  if (!auth.ok) return auth.response;
+
   try {
     const data = await computePortfolioExpiryAlerts();
     return NextResponse.json({ success: true, data });

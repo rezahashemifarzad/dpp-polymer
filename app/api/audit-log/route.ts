@@ -26,6 +26,7 @@ import {
   AUDIT_LOG_DEFAULT_PAGE_SIZE,
   type AuditLogFilters,
 } from "@/lib/services/audit-log-service";
+import { authorizeApiRequest } from "@/lib/api-auth";
 
 export const dynamic = "force-dynamic";
 
@@ -57,6 +58,10 @@ function parseFilters(params: URLSearchParams): AuditLogFilters {
 }
 
 export async function GET(req: NextRequest) {
+  // Access-control audit (2026-09-30): ADMIN, AUDITOR only (session or API key).
+  const auth = await authorizeApiRequest(req, ["ADMIN", "AUDITOR"]);
+  if (!auth.ok) return auth.response;
+
   try {
     const params = req.nextUrl.searchParams;
     const filters = parseFilters(params);

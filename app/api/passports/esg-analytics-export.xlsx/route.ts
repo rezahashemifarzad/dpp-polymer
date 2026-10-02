@@ -22,13 +22,18 @@
  * other .xlsx export route in this app.
  */
 
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { generateEsgAnalyticsWorkbook } from "@/lib/services/generate-esg-analytics-workbook";
+import { authorizeApiRequest } from "@/lib/api-auth";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-export async function GET() {
+export async function GET(req: NextRequest) {
+  // Access-control audit (2026-09-30): ADMIN, AUDITOR only (session or API key).
+  const auth = await authorizeApiRequest(req, ["ADMIN", "AUDITOR"]);
+  if (!auth.ok) return auth.response;
+
   try {
     const workbookBuffer = await generateEsgAnalyticsWorkbook();
     const dateStamp = new Date().toISOString().slice(0, 10);

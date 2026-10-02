@@ -18,13 +18,18 @@
  * ledger-export.xlsx.
  */
 
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { generateGreenTaxWorkbook } from "@/lib/services/generate-ledger-workbook";
+import { authorizeApiRequest } from "@/lib/api-auth";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-export async function GET() {
+export async function GET(req: NextRequest) {
+  // Access-control audit (2026-09-30): ADMIN only (session or API key).
+  const auth = await authorizeApiRequest(req, ["ADMIN"]);
+  if (!auth.ok) return auth.response;
+
   try {
     const workbookBuffer = await generateGreenTaxWorkbook();
     const dateStamp = new Date().toISOString().slice(0, 10);

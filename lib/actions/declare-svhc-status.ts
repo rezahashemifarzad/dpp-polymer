@@ -14,6 +14,7 @@
  */
 
 import { declareSvhcStatus } from "@/lib/services/declare-svhc-status";
+import { requireAdminSession } from "@/lib/session-auth";
 
 export interface DeclareSvhcStatusActionResult {
   ok: boolean;
@@ -26,6 +27,10 @@ export async function declareSvhcStatusAction(
   batchId: string,
   input: unknown
 ): Promise<DeclareSvhcStatusActionResult> {
+  // Access-control audit (2026-09-30): admin-only mutation/read. Called
+  // OUTSIDE the try/catch so Next.js's redirect to /login propagates.
+  await requireAdminSession();
+
   try {
     const result = await declareSvhcStatus(batchId, input, "ADMIN");
     if (!result.ok) {

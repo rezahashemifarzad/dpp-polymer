@@ -13,6 +13,7 @@
  */
 
 import { getFormSuggestions, type FormSuggestions } from "@/lib/services/form-suggestions";
+import { requireAdminSession } from "@/lib/session-auth";
 
 export interface GetFormSuggestionsActionResult {
   ok: boolean;
@@ -21,6 +22,10 @@ export interface GetFormSuggestionsActionResult {
 }
 
 export async function getFormSuggestionsAction(): Promise<GetFormSuggestionsActionResult> {
+  // Access-control audit (2026-09-30): admin-only mutation/read. Called
+  // OUTSIDE the try/catch so Next.js's redirect to /login propagates.
+  await requireAdminSession();
+
   try {
     const data = await getFormSuggestions();
     return { ok: true, data };

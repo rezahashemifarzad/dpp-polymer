@@ -43,6 +43,7 @@ import {
   generateQrLabelSheetPdf,
   type LabelSheetLayout,
 } from "@/lib/services/generate-qr-label-sheet-pdf";
+import { authorizeApiRequest } from "@/lib/api-auth";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -55,6 +56,10 @@ export const dynamic = "force-dynamic";
 const MAX_BATCHES_PER_SHEET = 200;
 
 export async function GET(req: NextRequest) {
+  // Access-control audit (2026-09-30): ADMIN, MANUFACTURER only (session or API key).
+  const auth = await authorizeApiRequest(req, ["ADMIN", "MANUFACTURER"]);
+  if (!auth.ok) return auth.response;
+
   const { searchParams } = new URL(req.url);
   const raw = searchParams.get("batchIds") ?? "";
   const batchIds = Array.from(

@@ -21,13 +21,18 @@
  * verbatim, so the fix should be visible there, not just in server logs.
  */
 
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { computePortfolioSvhcSummary } from "@/lib/services/svhc-compliance-service";
 import { SchemaOutOfDateError } from "@/lib/services/schema-drift";
+import { authorizeApiRequest } from "@/lib/api-auth";
 
 export const dynamic = "force-dynamic";
 
-export async function GET() {
+export async function GET(req: NextRequest) {
+  // Access-control audit (2026-09-30): ADMIN, AUDITOR only (session or API key).
+  const auth = await authorizeApiRequest(req, ["ADMIN", "AUDITOR"]);
+  if (!auth.ok) return auth.response;
+
   try {
     const data = await computePortfolioSvhcSummary();
     return NextResponse.json({ success: true, data });

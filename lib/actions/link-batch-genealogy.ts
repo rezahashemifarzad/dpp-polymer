@@ -12,6 +12,7 @@
  */
 
 import { linkBatchGenealogy, type LinkBatchGenealogyInput } from "@/lib/services/link-batch-genealogy";
+import { requireAdminSession } from "@/lib/session-auth";
 
 export interface LinkBatchGenealogyActionResult {
   ok: boolean;
@@ -23,6 +24,10 @@ export async function linkBatchGenealogyAction(
   childBatchId: string,
   input: LinkBatchGenealogyInput
 ): Promise<LinkBatchGenealogyActionResult> {
+  // Access-control audit (2026-09-30): admin-only mutation/read. Called
+  // OUTSIDE the try/catch so Next.js's redirect to /login propagates.
+  await requireAdminSession();
+
   try {
     const result = await linkBatchGenealogy(childBatchId, input, "ADMIN");
     if (!result.ok) {

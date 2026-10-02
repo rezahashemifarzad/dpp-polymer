@@ -4,7 +4,11 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "tsx scripts/check-access-control.ts && next build",
+    "check:access": "tsx scripts/check-access-control.ts",
+    "check:i18n": "tsx scripts/check-i18n.ts",
+    "check:types": "tsc --noEmit",
+    "check": "npm run check:access && npm run check:i18n",
     "start": "next start",
     "lint": "eslint",
     "postinstall": "prisma generate"

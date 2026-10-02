@@ -24,13 +24,18 @@
  * requirement as every other PDF route in this app.
  */
 
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { generateGreenTaxReportPdf } from "@/lib/services/generate-green-tax-report-pdf";
+import { authorizeApiRequest } from "@/lib/api-auth";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-export async function GET() {
+export async function GET(req: NextRequest) {
+  // Access-control audit (2026-09-30): ADMIN only (session or API key).
+  const auth = await authorizeApiRequest(req, ["ADMIN"]);
+  if (!auth.ok) return auth.response;
+
   try {
     const pdfBuffer = await generateGreenTaxReportPdf();
     const dateStamp = new Date().toISOString().slice(0, 10);

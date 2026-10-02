@@ -12,6 +12,7 @@
  */
 
 import { addChainOfCustodyRecord } from "@/lib/services/add-chain-of-custody-record";
+import { requireAdminSession } from "@/lib/session-auth";
 
 export interface AddChainOfCustodyRecordActionResult {
   ok: boolean;
@@ -24,6 +25,10 @@ export async function addChainOfCustodyRecordAction(
   batchId: string,
   input: unknown
 ): Promise<AddChainOfCustodyRecordActionResult> {
+  // Access-control audit (2026-09-30): admin-only mutation/read. Called
+  // OUTSIDE the try/catch so Next.js's redirect to /login propagates.
+  await requireAdminSession();
+
   try {
     const result = await addChainOfCustodyRecord(batchId, input, "ADMIN");
     if (!result.ok) {

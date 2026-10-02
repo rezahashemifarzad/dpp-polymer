@@ -35,10 +35,17 @@ import { Prisma, DppStatus, PolymerType } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { createPassport } from "@/lib/services/create-passport";
 import { authorize, unauthorizedResponse } from "@/lib/rbac";
+import { resolveApiPrincipal } from "@/lib/api-auth";
 import { getPassportCertificationAlert } from "@/lib/utils/certification-status";
 import { NO_HARD_DELETE_POLICY_MESSAGE } from "@/lib/utils/passport-lifecycle";
 
 const MAX_PAGE_SIZE = 100;
+
+// Access-control audit (2026-09-30): lifecycle states an anonymous caller may
+// see. DRAFT and PENDING_VERIFICATION batches are internal until issued;
+// REVOKED/SUPERSEDED stay visible because their printed QR codes still
+// resolve publicly and must show the revocation.
+const PUBLIC_STATUSES: DppStatus[] = ["ISSUED", "REVOKED", "SUPERSEDED"];
 const DEFAULT_PAGE_SIZE = 25;
 
 function parsePagination(searchParams: URLSearchParams) {
@@ -53,6 +60,14 @@ function parsePagination(searchParams: URLSearchParams) {
 }
 
 export async function GET(req: NextRequest) {
+  // Access-control audit (2026-09-30): this list powers the public Home page,
+  // so anonymous callers are allowed — but they get the PUBLIC projection
+  // only: issued/revoked/superseded passports, VERIFIED certifications and
+  // VERIFIED chain-of-custody records. ADMIN/AUDITOR sessions and
+  // ADMIN/AUDITOR/MANUFACTURER API keys get the full internal records.
+  const { principal } = await resolveApiPrincipal(req, ["ADMIN", "AUDITOR", "MANUFACTURER"]);
+  const isPrivileged = principal !== null;
+
   try {
     const { searchParams } = new URL(req.url);
     const { page, pageSize } = parsePagination(searchParams);
@@ -73,6 +88,21 @@ export async function GET(req: NextRequest) {
       }
       where.status = statusParam as DppStatus;
     }
+
+    if (!isPrivileged) {
+      if (statusParam && !PUBLIC_STATUSES.includes(statusParam as DppStatus)) {
+        return NextResponse.json(
+          { success: true, data: [], pagination: { page, pageSize, total: 0, totalPages: 1 } },
+          { headers: { "Cache-Control": "no-store" } }
+        );
+      }
+      if (!statusParam) {
+        where.status = { in: PUBLIC_STATUSES };
+      }
+    }
+
+    const certificationWhere: Prisma.CertificationWhereInput = isPrivileged ? {} : { verificationStatus: "VERIFIED" };
+    const custodyWhere: Prisma.ChainOfCustodyRecordWhereInput = isPrivileged ? {} : { status: "VERIFIED" };
 
     if (polymerTypeParam) {
       if (!Object.values(PolymerType).includes(polymerTypeParam as PolymerType)) {
@@ -105,7 +135,7 @@ export async function GET(req: NextRequest) {
         take: pageSize,
         include: {
           manufacturer: { select: { id: true, legalName: true, country: true } },
-          certifications: true,
+          certifications: { where: certificationWhere },
           gs1Link: true,
           parentLinks: {
             include: {
@@ -126,7 +156,7 @@ export async function GET(req: NextRequest) {
           // Multi-tier Supply Chain Verification & Auditor Portal Expansion
           // — every tier record, all statuses (admin-facing shape). See
           // ChainOfCustodyRecord in prisma/schema.prisma.
-          chainOfCustodyRecords: { orderBy: { sequence: "asc" } },
+          chainOfCustodyRecords: { where: custodyWhere, orderBy: { sequence: "asc" } },
           // REACH Article 33 SVHC Declaration — see the matching comment on
           // GET /api/passports/[batchId]'s own include block.
           substanceDeclarations: true,
@@ -152,7 +182,7 @@ export async function GET(req: NextRequest) {
         total,
         totalPages: Math.max(1, Math.ceil(total / pageSize)),
       },
-    });
+    }, { headers: { "Cache-Control": "no-store" } });
   } catch (error) {
     console.error("GET /api/passports failed:", error);
     // Deliberately NOT `success: true` on failure — a caller filtering on

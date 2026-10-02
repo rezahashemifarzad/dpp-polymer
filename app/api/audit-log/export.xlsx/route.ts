@@ -21,6 +21,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { AuditAction } from "@prisma/client";
 import { generateAuditLogWorkbook } from "@/lib/services/generate-audit-log-workbook";
 import type { AuditLogFilters } from "@/lib/services/audit-log-service";
+import { authorizeApiRequest } from "@/lib/api-auth";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -53,6 +54,10 @@ function parseFilters(params: URLSearchParams): AuditLogFilters {
 }
 
 export async function GET(req: NextRequest) {
+  // Access-control audit (2026-09-30): ADMIN, AUDITOR only (session or API key).
+  const auth = await authorizeApiRequest(req, ["ADMIN", "AUDITOR"]);
+  if (!auth.ok) return auth.response;
+
   try {
     const filters = parseFilters(req.nextUrl.searchParams);
     const workbookBuffer = await generateAuditLogWorkbook(filters);

@@ -11,6 +11,7 @@
  */
 
 import { declarePpwrCompliance } from "@/lib/services/declare-ppwr-compliance";
+import { requireAdminSession } from "@/lib/session-auth";
 
 export interface DeclarePpwrComplianceActionResult {
   ok: boolean;
@@ -29,6 +30,10 @@ export async function declarePpwrComplianceAction(
   batchId: string,
   input: unknown
 ): Promise<DeclarePpwrComplianceActionResult> {
+  // Access-control audit (2026-09-30): admin-only mutation/read. Called
+  // OUTSIDE the try/catch so Next.js's redirect to /login propagates.
+  await requireAdminSession();
+
   try {
     const result = await declarePpwrCompliance(batchId, input, "ADMIN");
     if (!result.ok) {

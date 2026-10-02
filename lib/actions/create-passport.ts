@@ -22,6 +22,7 @@
  */
 
 import { createPassport, type CreatePassportResult } from "@/lib/services/create-passport";
+import { requireAdminSession } from "@/lib/session-auth";
 
 export interface CreatePassportActionResult {
   ok: boolean;
@@ -45,6 +46,10 @@ function toPlainJson(value: unknown): unknown {
 }
 
 export async function createPassportAction(rawInput: unknown): Promise<CreatePassportActionResult> {
+  // Access-control audit (2026-09-30): admin-only mutation/read. Called
+  // OUTSIDE the try/catch so Next.js's redirect to /login propagates.
+  await requireAdminSession();
+
   try {
     const result: CreatePassportResult = await createPassport(rawInput);
     if (!result.ok) {

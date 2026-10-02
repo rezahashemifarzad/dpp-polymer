@@ -12,10 +12,15 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { getRecentNotificationLog } from "@/lib/services/notification-service";
+import { authorizeApiRequest } from "@/lib/api-auth";
 
 export const dynamic = "force-dynamic";
 
 export async function GET(req: NextRequest) {
+  // Access-control audit (2026-09-30): ADMIN only (session or API key).
+  const auth = await authorizeApiRequest(req, ["ADMIN"]);
+  if (!auth.ok) return auth.response;
+
   try {
     const limitParam = req.nextUrl.searchParams.get("limit");
     const limit = limitParam ? Number(limitParam) : undefined;

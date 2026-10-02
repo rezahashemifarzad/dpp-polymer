@@ -23,6 +23,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { authorize, unauthorizedResponse } from "@/lib/rbac";
 import { addChainOfCustodyRecord } from "@/lib/services/add-chain-of-custody-record";
+import { authorizeApiRequest } from "@/lib/api-auth";
 
 export async function POST(
   req: NextRequest,
@@ -58,9 +59,13 @@ export async function POST(
 }
 
 export async function GET(
-  _req: NextRequest,
+  req: NextRequest,
   { params }: { params: Promise<{ batchId: string }> }
 ) {
+  // Access-control audit (2026-09-30): ADMIN, AUDITOR, MANUFACTURER only (session or API key).
+  const auth = await authorizeApiRequest(req, ["ADMIN", "AUDITOR", "MANUFACTURER"]);
+  if (!auth.ok) return auth.response;
+
   const { batchId } = await params;
 
   try {

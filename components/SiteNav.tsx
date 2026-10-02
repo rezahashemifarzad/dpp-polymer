@@ -90,6 +90,7 @@ import { LanguageSelector } from "@/components/LanguageSelector";
 // lib/i18n/app-dictionary.ts via useLanguage()'s t() below at render time
 // instead of a hardcoded English string.
 import { useLanguage } from "@/lib/hooks/use-language";
+import { getViewerRoleAction } from "@/lib/actions/get-viewer-role";
 
 const NAV_LINKS = [
   { href: "/", labelKey: "nav.home", icon: Home },
@@ -107,11 +108,37 @@ const NAV_LINKS = [
   { href: "/login", labelKey: "nav.signin", icon: LogIn },
 ] as const;
 
+// Access-control audit (2026-09-30): links into the admin console are shown
+// only to a signed-in ADMIN. Hiding them is UX only — /admin/* is enforced
+// server-side by app/admin/layout.tsx — but guests should not be offered
+// management areas they cannot use.
+const ADMIN_ONLY_HREFS = new Set<string>(["/admin", "/admin/esg-analytics"]);
+
 export default function SiteNav() {
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
   const panelRef = useRef<HTMLDivElement>(null);
   const { t } = useLanguage();
+  const [viewerRole, setViewerRole] = useState<"ADMIN" | "AUDITOR" | "CUSTOMER" | null>(null);
+
+  // Re-resolve on every navigation so signing in/out (both end in a
+  // redirect) updates the visible links. Defaults to null = guest, so admin
+  // links never flash for an anonymous visitor.
+  useEffect(() => {
+    let cancelled = false;
+    getViewerRoleAction()
+      .then((role) => {
+        if (!cancelled) setViewerRole(role);
+      })
+      .catch(() => {
+        if (!cancelled) setViewerRole(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [pathname]);
+
+  const visibleLinks = NAV_LINKS.filter(({ href }) => viewerRole === "ADMIN" || !ADMIN_ONLY_HREFS.has(href));
 
   // Auto-close on every route change — the primary mechanism for "clicking
   // a link closes the menu" (belt-and-suspenders with each Link's own
@@ -187,7 +214,7 @@ export default function SiteNav() {
               five links never wrap at exactly the md breakpoint; full
               icon+label from lg up. */}
           <nav className="hidden md:flex items-center gap-1 bg-slate-900 border border-slate-800 p-1 rounded-xl shrink-0">
-            {NAV_LINKS.map(({ href, labelKey, icon: Icon }) => {
+            {visibleLinks.map(({ href, labelKey, icon: Icon }) => {
               const active = pathname === href;
               const label = t(labelKey);
               return (
@@ -242,7 +269,7 @@ export default function SiteNav() {
             className="md:hidden absolute inset-x-0 top-full z-50 bg-slate-950 border-b border-slate-800 shadow-xl shadow-black/40 animate-[slideDown_180ms_ease-out]"
           >
             <nav className="px-3 py-3 space-y-1">
-              {NAV_LINKS.map(({ href, labelKey, icon: Icon }) => {
+              {visibleLinks.map(({ href, labelKey, icon: Icon }) => {
                 const active = pathname === href;
                 return (
                   <Link
