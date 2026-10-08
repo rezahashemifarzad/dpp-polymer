@@ -93,7 +93,9 @@ import { useLanguage } from "@/lib/hooks/use-language";
 import { getViewerRoleAction } from "@/lib/actions/get-viewer-role";
 
 const NAV_LINKS = [
-  { href: "/", labelKey: "nav.home", icon: Home },
+  // Platform home moved from "/" to "/app" when "/" became the public
+  // corporate landing page (app/page.tsx).
+  { href: "/app", labelKey: "nav.home", icon: Home },
   { href: "/admin", labelKey: "nav.admin", icon: ShieldCheck },
   { href: "/admin/esg-analytics", labelKey: "nav.esg", icon: BarChart3 },
   { href: "/auditor", labelKey: "nav.auditor", icon: KeyRound },
@@ -114,6 +116,9 @@ const NAV_LINKS = [
 // management areas they cannot use.
 const ADMIN_ONLY_HREFS = new Set<string>(["/admin", "/admin/esg-analytics"]);
 
+/** Public corporate-site paths that render their own header instead. */
+const CORPORATE_PATHS = new Set<string>(["/", "/imprint", "/privacy"]);
+
 export default function SiteNav() {
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -125,6 +130,8 @@ export default function SiteNav() {
   // redirect) updates the visible links. Defaults to null = guest, so admin
   // links never flash for an anonymous visitor.
   useEffect(() => {
+    // No role lookup on the public corporate pages, where this bar is hidden.
+    if (pathname && CORPORATE_PATHS.has(pathname)) return;
     let cancelled = false;
     getViewerRoleAction()
       .then((role) => {
@@ -168,6 +175,10 @@ export default function SiteNav() {
     };
   }, [mobileOpen]);
 
+  // The public corporate site (landing, imprint, privacy) has its own
+  // header and footer (components/landing/*); this internal-tooling bar
+  // starts at /app.
+  if (pathname && CORPORATE_PATHS.has(pathname)) return null;
   if (pathname?.startsWith("/01/")) return null;
   if (pathname?.startsWith("/portal/")) return null;
 
@@ -192,7 +203,7 @@ export default function SiteNav() {
     <header className="sticky top-0 z-50 bg-slate-950 border-b border-slate-800">
       <div className="px-4 sm:px-6 h-14 flex items-center justify-between gap-2 sm:gap-4">
         <Link
-          href="/"
+          href="/app"
           className="shrink-0 text-sm font-bold tracking-tight text-white hover:text-slate-200 transition-colors"
         >
           Polymer<span className="text-emerald-400">.DPP</span>

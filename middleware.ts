@@ -44,6 +44,19 @@ import { NextRequest, NextResponse } from "next/server";
 import { SESSION_COOKIE_NAME } from "@/lib/session-constants";
 
 export function middleware(req: NextRequest) {
+  // Corporate landing page vs platform (2026-10-08): "/" is the public
+  // company website. When the same deployment is also served on an "app."
+  // subdomain (e.g. app.dpp-polymer.de, added as a domain in Vercel), that
+  // host's root opens the platform at /app instead. No auth check here —
+  // /app is publicly readable and decides admin controls server-side.
+  if (req.nextUrl.pathname === "/") {
+    const host = req.headers.get("host") ?? "";
+    if (host.startsWith("app.")) {
+      return NextResponse.rewrite(new URL("/app", req.url));
+    }
+    return NextResponse.next();
+  }
+
   const hasSessionCookie = Boolean(req.cookies.get(SESSION_COOKIE_NAME)?.value);
   if (!hasSessionCookie) {
     const loginUrl = new URL("/login", req.url);
@@ -54,5 +67,5 @@ export function middleware(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/portal/:path*", "/admin/:path*"],
+  matcher: ["/", "/portal/:path*", "/admin/:path*"],
 };

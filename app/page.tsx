@@ -1,28 +1,53 @@
 /**
- * app/page.tsx — Home
+ * app/page.tsx — Corporate landing page (public)
  * -----------------------------------------------------------------------
- * Access-control audit (2026-09-30): Home stays publicly readable, but it is
- * read-only for everyone except an active ADMIN session. This thin Server
- * Component resolves the viewer's role on the server and hands the client
- * console a single boolean, so management controls are never rendered (not
- * even briefly) for guests, auditors or customers.
+ * The root path is the public company website. The platform (Material
+ * Ledger console) moved to /app (app/app/page.tsx); "Launch App" /
+ * "Launch Platform" link there, and "Log in" goes to /login.
  *
- * This is the UX layer only. The real enforcement is server-side:
- *   - every mutation Server Action calls requireAdminSession() itself;
- *   - GET /api/passports returns only the public projection (issued /
- *     revoked / superseded passports, verified certificates and verified
- *     chain-of-custody records) to anyone who is not ADMIN/AUDITOR/MANUFACTURER;
- *   - exports and label sheets require an authorized session or API key.
- *
- * force-dynamic: the output depends on the request's session cookie.
+ * Fully static: no session, no database access, so it is prerendered at
+ * build time and served from Vercel's edge cache. components/SiteNav.tsx
+ * (the platform's internal nav) does not render on this path.
  */
 
-import { getSessionActor } from "@/lib/session-auth";
-import CompletePolymerDPP from "./home-console";
+import type { Metadata } from "next";
+import { LandingNav } from "@/components/landing/landing-nav";
+import { HeroSection } from "@/components/landing/hero-section";
+import { ValuePillars } from "@/components/landing/value-pillars";
+import { ComplianceSection } from "@/components/landing/compliance-section";
+import { SecuritySection } from "@/components/landing/security-section";
+import { PilotCta } from "@/components/landing/pilot-cta";
+import { LandingFooter } from "@/components/landing/landing-footer";
+import { SITE } from "@/lib/site-config";
 
-export const dynamic = "force-dynamic";
+export const metadata: Metadata = {
+  title: `${SITE.name} — ${SITE.tagline}`,
+  description: SITE.description,
+  openGraph: {
+    title: `${SITE.name} — ${SITE.tagline}`,
+    description: SITE.description,
+    type: "website",
+  },
+};
 
-export default async function HomePage() {
-  const actor = await getSessionActor();
-  return <CompletePolymerDPP canManage={actor?.role === "ADMIN"} />;
+export default function LandingPage() {
+  return (
+    <div className="flex min-h-screen flex-col bg-white font-sans text-navy-900">
+      <a
+        href="#main"
+        className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[60] focus:rounded-md focus:bg-white focus:px-4 focus:py-2 focus:text-sm focus:font-semibold focus:text-navy-900"
+      >
+        Skip to content
+      </a>
+      <LandingNav />
+      <main id="main" className="flex-1">
+        <HeroSection />
+        <ValuePillars />
+        <ComplianceSection />
+        <SecuritySection />
+        <PilotCta />
+      </main>
+      <LandingFooter />
+    </div>
+  );
 }
