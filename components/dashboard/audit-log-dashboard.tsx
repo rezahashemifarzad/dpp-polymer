@@ -284,7 +284,7 @@ export function AuditLogDashboard({
       const query = buildQuery(filters, 1, pageSize);
       await downloadFromRoute(
         `/api/audit-log/export.xlsx?${query}`,
-        `polymer-dpp-audit-log-export-${new Date().toISOString().slice(0, 10)}.xlsx`
+        `dpp-polymer-audit-log-export-${new Date().toISOString().slice(0, 10)}.xlsx`
       );
     } catch (err) {
       setExportError(err instanceof Error ? err.message : "Failed to generate the audit log export workbook");

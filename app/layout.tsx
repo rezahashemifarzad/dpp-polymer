@@ -15,7 +15,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Polymer DPP Platform",
+  title: "DPP-Polymer — Digital Product Passport Platform",
   description: "Digital Product Passport Platform",
 };
 

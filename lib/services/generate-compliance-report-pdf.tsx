@@ -188,7 +188,7 @@ function ComplianceReportDocument({
       <Page size="A4" style={styles.page} wrap>
         <View style={styles.header} fixed>
           <View>
-            <Text style={styles.brand}>POLYMER DPP</Text>
+            <Text style={styles.brand}>DPP-POLYMER</Text>
             <Text style={styles.title}>EU ESPR 2026 Compliance Report</Text>
             <Text style={styles.subtitle}>Portfolio Sustainability &amp; Traceability Summary</Text>
           </View>
@@ -354,7 +354,7 @@ function ComplianceReportDocument({
           style={styles.footer}
           fixed
           render={({ pageNumber, totalPages }) =>
-            `Page ${pageNumber} of ${totalPages} · Generated ${generatedAt} · Polymer DPP EU ESPR 2026 Compliance Report · Portfolio point-in-time export, not a substitute for live GS1 Digital Link verification of any individual batch.`
+            `Page ${pageNumber} of ${totalPages} · Generated ${generatedAt} · DPP-Polymer EU ESPR 2026 Compliance Report · Portfolio point-in-time export, not a substitute for live GS1 Digital Link verification of any individual batch.`
           }
         />
       </Page>

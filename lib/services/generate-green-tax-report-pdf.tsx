@@ -183,7 +183,7 @@ function GreenTaxReportDocument({
       <Page size="A4" style={styles.page} wrap>
         <View style={styles.header} fixed>
           <View>
-            <Text style={styles.brand}>POLYMER DPP</Text>
+            <Text style={styles.brand}>DPP-POLYMER</Text>
             <Text style={styles.title}>Green Tax &amp; Plastic Packaging Compliance Report</Text>
             <Text style={styles.subtitle}>EU Plastic Packaging Tax &amp; Green Accounting Summary</Text>
           </View>
@@ -386,7 +386,7 @@ function GreenTaxReportDocument({
           style={styles.footer}
           fixed
           render={({ pageNumber, totalPages }) =>
-            `Page ${pageNumber} of ${totalPages} · Generated ${generatedAt} · Polymer DPP Green Tax & Plastic Packaging Compliance Report · Illustrative estimate, not tax or legal advice — see Portfolio Summary disclaimer.`
+            `Page ${pageNumber} of ${totalPages} · Generated ${generatedAt} · DPP-Polymer Green Tax & Plastic Packaging Compliance Report · Illustrative estimate, not tax or legal advice — see Portfolio Summary disclaimer.`
           }
         />
       </Page>

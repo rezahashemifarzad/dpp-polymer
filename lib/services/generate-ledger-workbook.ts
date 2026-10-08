@@ -247,7 +247,7 @@ async function buildAuditTrailSheet(workbook: ExcelJS.Workbook) {
 
 export async function generateLedgerWorkbook(): Promise<Buffer> {
   const workbook = new ExcelJS.Workbook();
-  workbook.creator = "Polymer DPP";
+  workbook.creator = "DPP-Polymer";
   workbook.created = new Date();
 
   await buildMaterialLedgerSheet(workbook);
@@ -387,7 +387,7 @@ async function buildGreenValuationHistorySheet(workbook: ExcelJS.Workbook) {
 
 export async function generateGreenTaxWorkbook(): Promise<Buffer> {
   const workbook = new ExcelJS.Workbook();
-  workbook.creator = "Polymer DPP";
+  workbook.creator = "DPP-Polymer";
   workbook.created = new Date();
 
   // Primary data — a failure here means the workbook has nothing

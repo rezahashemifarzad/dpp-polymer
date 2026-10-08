@@ -59,7 +59,7 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, ShieldCheck, BarChart3, KeyRound, Building2, LogIn, Menu, X } from "lucide-react";
+import { ArrowLeft, Home, ShieldCheck, BarChart3, KeyRound, Building2, LogIn, Menu, X } from "lucide-react";
 // Phase 7 - Step 3 (Advanced Global Search & Multi-Layer Filtering Suite)
 // — mounted from here, not hand-copied into each /admin/* page's own
 // header, for the exact same "one shared component, no drift" reason
@@ -91,6 +91,7 @@ import { LanguageSelector } from "@/components/LanguageSelector";
 // instead of a hardcoded English string.
 import { useLanguage } from "@/lib/hooks/use-language";
 import { getViewerRoleAction } from "@/lib/actions/get-viewer-role";
+import { CORPORATE_SITE_PATHS, homeForAppLanguage } from "@/lib/site-config";
 
 const NAV_LINKS = [
   // Platform home moved from "/" to "/app" when "/" became the public
@@ -117,13 +118,16 @@ const NAV_LINKS = [
 const ADMIN_ONLY_HREFS = new Set<string>(["/admin", "/admin/esg-analytics"]);
 
 /** Public corporate-site paths that render their own header instead. */
-const CORPORATE_PATHS = new Set<string>(["/", "/imprint", "/privacy"]);
+const CORPORATE_PATHS = new Set<string>(CORPORATE_SITE_PATHS);
 
 export default function SiteNav() {
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
   const panelRef = useRef<HTMLDivElement>(null);
-  const { t } = useLanguage();
+  const { t, lang } = useLanguage();
+  // "Main site" returns to the corporate website in the platform language
+  // (/ for EN, /de for DE, /fr for FR).
+  const mainSiteHref = homeForAppLanguage(lang);
   const [viewerRole, setViewerRole] = useState<"ADMIN" | "AUDITOR" | "CUSTOMER" | null>(null);
 
   // Re-resolve on every navigation so signing in/out (both end in a
@@ -202,12 +206,25 @@ export default function SiteNav() {
         below nothing else that mattered at that layer. */}
     <header className="sticky top-0 z-50 bg-slate-950 border-b border-slate-800">
       <div className="px-4 sm:px-6 h-14 flex items-center justify-between gap-2 sm:gap-4">
-        <Link
-          href="/app"
-          className="shrink-0 text-sm font-bold tracking-tight text-white hover:text-slate-200 transition-colors"
-        >
-          Polymer<span className="text-emerald-400">.DPP</span>
-        </Link>
+        <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+          {/* Return link to the public corporate website (/, /de or /fr). */}
+          <Link
+            href={mainSiteHref}
+            title={t("nav.mainSite")}
+            className="group shrink-0 inline-flex items-center gap-1.5 rounded-lg px-2 py-1.5 text-xs font-medium text-slate-400 transition-colors hover:bg-slate-800/70 hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-400"
+          >
+            <ArrowLeft className="w-3.5 h-3.5 transition-transform duration-200 group-hover:-translate-x-0.5 motion-reduce:transition-none" aria-hidden="true" />
+            <span className="hidden sm:inline">{t("nav.mainSite")}</span>
+            <span className="sr-only sm:hidden">{t("nav.mainSite")}</span>
+          </Link>
+          <span className="h-5 w-px shrink-0 bg-slate-800" aria-hidden="true" />
+          <Link
+            href="/app"
+            className="shrink-0 text-sm font-bold tracking-tight text-white hover:text-slate-200 transition-colors"
+          >
+            DPP<span className="text-emerald-400">-</span>Polymer
+          </Link>
+        </div>
 
         <div className="flex items-center gap-2 min-w-0">
           {isAdminSection && (
@@ -280,6 +297,15 @@ export default function SiteNav() {
             className="md:hidden absolute inset-x-0 top-full z-50 bg-slate-950 border-b border-slate-800 shadow-xl shadow-black/40 animate-[slideDown_180ms_ease-out]"
           >
             <nav className="px-3 py-3 space-y-1">
+              <Link
+                href={mainSiteHref}
+                onClick={() => setMobileOpen(false)}
+                className="flex items-center gap-3 px-4 py-3.5 rounded-lg text-sm font-medium text-slate-400 hover:text-white hover:bg-slate-800/80 transition-colors"
+              >
+                <ArrowLeft className="w-4.5 h-4.5 shrink-0" aria-hidden="true" />
+                {t("nav.mainSite")}
+              </Link>
+              <div className="my-1 border-t border-slate-800" aria-hidden="true" />
               {visibleLinks.map(({ href, labelKey, icon: Icon }) => {
                 const active = pathname === href;
                 return (

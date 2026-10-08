@@ -38,7 +38,7 @@ export async function GET(req: NextRequest) {
       status: 200,
       headers: {
         "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        "Content-Disposition": `attachment; filename="polymer-dpp-green-tax-export-${dateStamp}.xlsx"`,
+        "Content-Disposition": `attachment; filename="dpp-polymer-green-tax-export-${dateStamp}.xlsx"`,
         "Cache-Control": "no-store",
       },
     });

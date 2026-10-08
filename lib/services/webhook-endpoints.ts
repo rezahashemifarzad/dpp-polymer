@@ -223,7 +223,7 @@ export async function testWebhookEndpoint(id: string): Promise<TestWebhookEndpoi
     occurredAt: new Date().toISOString(),
     batchId: "N/A",
     severity: null,
-    title: "Polymer DPP — Test Webhook",
+    title: "DPP-Polymer — Test Webhook",
     message: "This is a test delivery triggered from the Notifications & Webhooks admin panel. No compliance event occurred.",
     data: {},
   });

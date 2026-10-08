@@ -337,7 +337,7 @@ function ClientPortal({
               <h2 className="text-sm font-semibold mb-4">Purchased Batches</h2>
               {portfolio.batches.length === 0 ? (
                 <p className="text-xs text-slate-500 py-6 text-center">
-                  No batches have been allocated to your account yet. Contact your Polymer-DPP account
+                  No batches have been allocated to your account yet. Contact your DPP-Polymer account
                   manager to have your purchases linked here.
                 </p>
               ) : (

@@ -113,7 +113,7 @@ export async function dispatchNotificationEvent(actor: string, event: Notificati
       const html = `<p><strong>${escapeHtml(event.title)}</strong></p><p>${escapeHtml(event.message)}</p><p style="color:#64748b;font-size:12px">Batch: ${escapeHtml(event.batchId)}</p>`;
       const result = await sendNotificationEmail(
         settings.emailRecipients,
-        `[Polymer DPP] ${event.title}`,
+        `[DPP-Polymer] ${event.title}`,
         `${event.message}\n\nBatch: ${event.batchId}`,
         html
       );

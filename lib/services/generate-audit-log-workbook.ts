@@ -166,7 +166,7 @@ async function buildIntegritySheet(
 
 export async function generateAuditLogWorkbook(filters: AuditLogFilters = {}): Promise<Buffer> {
   const workbook = new ExcelJS.Workbook();
-  workbook.creator = "Polymer DPP";
+  workbook.creator = "DPP-Polymer";
   workbook.created = new Date();
   const exportedAt = new Date();
 

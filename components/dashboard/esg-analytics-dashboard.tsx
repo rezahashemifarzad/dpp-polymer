@@ -311,7 +311,7 @@ export function EsgAnalyticsDashboard({
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = `polymer-dpp-green-tax-report-${summary.generatedAt.slice(0, 10)}.pdf`;
+      a.download = `dpp-polymer-green-tax-report-${summary.generatedAt.slice(0, 10)}.pdf`;
       document.body.appendChild(a);
       a.click();
       a.remove();
@@ -336,7 +336,7 @@ export function EsgAnalyticsDashboard({
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = `polymer-dpp-green-tax-export-${summary.generatedAt.slice(0, 10)}.xlsx`;
+      a.download = `dpp-polymer-green-tax-export-${summary.generatedAt.slice(0, 10)}.xlsx`;
       document.body.appendChild(a);
       a.click();
       a.remove();
@@ -391,7 +391,7 @@ export function EsgAnalyticsDashboard({
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = `polymer-dpp-compliance-report-${summary.generatedAt.slice(0, 10)}.pdf`;
+      a.download = `dpp-polymer-compliance-report-${summary.generatedAt.slice(0, 10)}.pdf`;
       document.body.appendChild(a);
       a.click();
       a.remove();
@@ -416,7 +416,7 @@ export function EsgAnalyticsDashboard({
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = `polymer-dpp-esg-data-sheets-${summary.generatedAt.slice(0, 10)}.xlsx`;
+      a.download = `dpp-polymer-esg-data-sheets-${summary.generatedAt.slice(0, 10)}.xlsx`;
       document.body.appendChild(a);
       a.click();
       a.remove();

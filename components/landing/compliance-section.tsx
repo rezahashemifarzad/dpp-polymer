@@ -7,75 +7,46 @@
  */
 
 import { SectionHeading } from "./section-heading";
+import type { SiteLocale } from "@/lib/site-config";
+import { LANDING_COPY } from "@/lib/i18n/landing-dictionary";
 
-interface Framework {
-  name: string;
-  reference: string;
-  coverage: string;
+interface ComplianceSectionProps {
+  locale: SiteLocale;
 }
 
-const FRAMEWORKS: Framework[] = [
-  {
-    name: "ESPR",
-    reference: "Regulation (EU) 2024/1781",
-    coverage:
-      "Structured passport per batch with a unique identifier, a QR data carrier resolving to a public passport, and lifecycle states (issued, revoked, superseded) that never delete history.",
-  },
-  {
-    name: "PPWR",
-    reference: "Regulation (EU) 2025/40",
-    coverage: "Post-consumer and post-industrial recycled-content shares and per-batch packaging compliance declarations.",
-  },
-  {
-    name: "REACH",
-    reference: "Regulation (EC) No 1907/2006",
-    coverage: "Substance of Very High Concern declarations above 0.1 % w/w, with portfolio-wide alerts.",
-  },
-  {
-    name: "ISCC PLUS",
-    reference: "Mass-balance chain of custody",
-    coverage: "Chain-of-custody records and certificates reviewed by named auditors, with expiry monitoring.",
-  },
-  {
-    name: "GS1 Digital Link",
-    reference: "ISO/IEC 18975",
-    coverage: "Standard web URIs per GTIN and batch, printed as QR labels for packaging and delivery documents.",
-  },
-  {
-    name: "Product carbon footprint",
-    reference: "Cradle-to-gate, kg CO₂e/kg",
-    coverage: "Footprint per batch from feedstock and process inputs, calculated with exact decimal arithmetic and stored with the passport.",
-  },
-];
-
-export function ComplianceSection() {
+export function ComplianceSection({ locale }: ComplianceSectionProps) {
+  const copy = LANDING_COPY[locale].compliance;
   return (
-    <section aria-labelledby="compliance-title" id="compliance" className="scroll-mt-16 border-y border-slate-200 bg-slate-50 py-20 sm:py-28">
-      <div className="mx-auto max-w-6xl px-4 sm:px-6">
-        <SectionHeading
-          id="compliance-title"
-          eyebrow="Compliance"
-          title="Built around the regulations your customers will ask about."
-          lead="Each passport field maps to a requirement, so auditors and buyers get answers instead of attachments."
-        />
-        <div className="mt-14 overflow-hidden rounded-xl border border-slate-200 bg-white">
+    <section
+      aria-labelledby="compliance-title"
+      id="compliance"
+      className="scroll-mt-16 border-y border-slate-200/80 bg-slate-50 py-24 sm:py-32"
+    >
+      <div className="mx-auto max-w-6xl px-5 sm:px-6 lg:px-8">
+        <SectionHeading id="compliance-title" eyebrow={copy.eyebrow} title={copy.title} lead={copy.lead} />
+        <div className="mt-16 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-[0_1px_2px_rgba(6,17,31,0.04)]">
           <table className="w-full border-collapse text-left">
-            <caption className="sr-only">Regulations and standards supported by DPP-Polymer</caption>
-            <thead className="hidden bg-slate-50 text-xs font-semibold uppercase tracking-wider text-slate-500 md:table-header-group">
+            <caption className="sr-only">{copy.caption}</caption>
+            <thead className="hidden border-b border-slate-200 bg-slate-50/70 text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500 md:table-header-group">
               <tr>
-                <th scope="col" className="w-1/4 px-6 py-3">Framework</th>
-                <th scope="col" className="w-1/4 px-6 py-3">Reference</th>
-                <th scope="col" className="px-6 py-3">What DPP-Polymer records</th>
+                <th scope="col" className="w-[24%] px-7 py-3.5">{copy.columns.framework}</th>
+                <th scope="col" className="w-[24%] px-7 py-3.5">{copy.columns.reference}</th>
+                <th scope="col" className="px-7 py-3.5">{copy.columns.coverage}</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-200">
-              {FRAMEWORKS.map((f) => (
-                <tr key={f.name} className="flex flex-col gap-1 px-5 py-5 md:table-row md:p-0">
-                  <th scope="row" className="text-base font-semibold text-navy-900 md:px-6 md:py-5 md:align-top">
+            <tbody className="divide-y divide-slate-100">
+              {copy.frameworks.map((f) => (
+                <tr
+                  key={f.name}
+                  className="flex flex-col gap-1 px-6 py-5 transition-colors duration-150 hover:bg-slate-50/70 md:table-row md:p-0"
+                >
+                  <th scope="row" className="text-[15px] font-semibold text-navy-900 md:px-7 md:py-6 md:align-top">
                     {f.name}
                   </th>
-                  <td className="font-mono text-[13px] text-slate-500 md:px-6 md:py-5 md:align-top">{f.reference}</td>
-                  <td className="pt-1 text-[15px] leading-relaxed text-slate-700 md:px-6 md:py-5 md:pt-5 md:align-top">
+                  <td className="font-mono text-[12.5px] text-slate-500 md:px-7 md:py-6 md:align-top md:leading-6">
+                    {f.reference}
+                  </td>
+                  <td className="pt-1.5 text-[14.5px] leading-[1.65] text-slate-700 md:px-7 md:py-6 md:align-top">
                     {f.coverage}
                   </td>
                 </tr>
@@ -83,10 +54,7 @@ export function ComplianceSection() {
             </tbody>
           </table>
         </div>
-        <p className="mt-5 max-w-3xl text-sm leading-relaxed text-slate-500">
-          DPP-Polymer supports your compliance documentation. Responsibility for the accuracy of declarations remains with
-          the manufacturer or economic operator placing the product on the market.
-        </p>
+        <p className="mt-6 max-w-3xl text-[13px] leading-relaxed text-slate-500">{copy.disclaimer}</p>
       </div>
     </section>
   );

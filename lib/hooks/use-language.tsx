@@ -44,7 +44,10 @@ import { translateApp } from "@/lib/i18n/app-dictionary";
 export type AppLanguage = "EN" | "DE" | "FR";
 
 const SUPPORTED_LANGUAGES: readonly AppLanguage[] = ["EN", "DE", "FR"];
-const STORAGE_KEY = "dpp-app-language";
+/** localStorage key for the platform language; also written by the
+ * corporate site's EN/DE switch (components/landing/language-toggle.tsx). */
+export const LANGUAGE_STORAGE_KEY = "dpp-app-language";
+const STORAGE_KEY = LANGUAGE_STORAGE_KEY;
 
 interface LanguageContextValue {
   lang: AppLanguage;

@@ -733,7 +733,7 @@ export function GreenAccountingDashboard({
     try {
       await downloadFromRoute(
         "/api/passports/green-tax-report.pdf",
-        `polymer-dpp-green-tax-report-${dateStamp}.pdf`
+        `dpp-polymer-green-tax-report-${dateStamp}.pdf`
       );
     } catch (err) {
       setPdfError(err instanceof Error ? err.message : "Failed to generate green tax report PDF");
@@ -748,7 +748,7 @@ export function GreenAccountingDashboard({
     try {
       await downloadFromRoute(
         "/api/passports/green-tax-export.xlsx",
-        `polymer-dpp-green-tax-export-${dateStamp}.xlsx`
+        `dpp-polymer-green-tax-export-${dateStamp}.xlsx`
       );
     } catch (err) {
       setXlsxError(err instanceof Error ? err.message : "Failed to generate tax & financial Excel export");

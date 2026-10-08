@@ -77,7 +77,7 @@ export async function dispatchWebhook(url: string, secret: string, payload: Webh
         "Content-Type": "application/json",
         "X-DPP-Signature": `sha256=${signature}`,
         "X-DPP-Event": payload.eventType,
-        "User-Agent": "Polymer-DPP-Webhooks/1.0",
+        "User-Agent": "DPP-Polymer-Webhooks/1.0",
       },
       body: rawBody,
       signal: controller.signal,

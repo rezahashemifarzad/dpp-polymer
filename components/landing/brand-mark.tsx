@@ -19,7 +19,7 @@ export function BrandMark({ className = "" }: BrandMarkProps) {
         <circle cx="14" cy="9.5" r="2.6" className="fill-teal-400" />
         <circle cx="21" cy="18.5" r="2.6" className="fill-white" />
       </svg>
-      <span className="text-[15px] font-semibold tracking-tight">
+      <span className="text-[15px] font-semibold tracking-[-0.01em]">
         DPP<span className="text-slate-400">-</span>Polymer
       </span>
     </span>

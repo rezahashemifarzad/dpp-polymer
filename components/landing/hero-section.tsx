@@ -2,64 +2,59 @@
  * components/landing/hero-section.tsx
  * -----------------------------------------------------------------------
  * Navy hero: headline, sub-headline, the two primary actions (Request
- * Pilot, Launch Platform), three proof points, and a sample passport.
+ * Pilot, Launch Platform), a sample passport, and the trust band.
  */
 
-import { ArrowRight } from "lucide-react";
 import { CtaLink } from "./cta-link";
 import { PassportPreview } from "./passport-preview";
-import { ROUTES, pilotMailto } from "@/lib/site-config";
+import { TrustBand } from "./trust-band";
+import { ROUTES, pilotMailto, type SiteLocale } from "@/lib/site-config";
+import { LANDING_COPY } from "@/lib/i18n/landing-dictionary";
 
-const PROOF_POINTS = [
-  "GS1 Digital Link QR per batch",
-  "SHA-256 sealed records",
-  "Data hosted in the EU (Frankfurt)",
-] as const;
+interface HeroSectionProps {
+  locale: SiteLocale;
+}
 
-export function HeroSection() {
+export function HeroSection({ locale }: HeroSectionProps) {
+  const copy = LANDING_COPY[locale];
   return (
-    <section className="relative overflow-hidden bg-navy-950 text-white">
-      {/* Fine engineering grid, fading out toward the bottom. */}
+    <section className="relative isolate overflow-hidden bg-navy-950 text-white">
+      {/* Fine engineering grid, fading out toward the bottom, and one soft
+          navy light source top-right. Decorative only. */}
       <div
         aria-hidden="true"
-        className="pointer-events-none absolute inset-0 opacity-[0.07] [background-image:linear-gradient(to_right,white_1px,transparent_1px),linear-gradient(to_bottom,white_1px,transparent_1px)] [background-size:48px_48px] [mask-image:linear-gradient(to_bottom,black,transparent_85%)]"
+        className="pointer-events-none absolute inset-0 -z-10 opacity-[0.06] [background-image:linear-gradient(to_right,white_1px,transparent_1px),linear-gradient(to_bottom,white_1px,transparent_1px)] [background-size:56px_56px] [mask-image:linear-gradient(to_bottom,black,transparent_80%)]"
       />
-      <div className="relative mx-auto grid max-w-6xl items-center gap-14 px-4 pb-20 pt-16 sm:px-6 md:pt-24 lg:grid-cols-[1.1fr_0.9fr] lg:pb-28">
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute -right-40 -top-40 -z-10 h-[36rem] w-[36rem] rounded-full bg-navy-700/40 blur-3xl"
+      />
+
+      <div className="mx-auto grid max-w-6xl items-center gap-16 px-5 pb-20 pt-16 sm:px-6 md:pt-24 lg:grid-cols-[1.12fr_0.88fr] lg:px-8 lg:pb-24 lg:pt-28">
         <div>
-          <p className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-3 py-1 text-xs font-medium text-slate-300">
+          <p className="inline-flex items-center gap-2 rounded-full border border-white/[0.12] bg-white/[0.04] px-3 py-1 text-xs font-medium text-slate-300">
             <span className="h-1.5 w-1.5 rounded-full bg-teal-400" aria-hidden="true" />
-            Built for EU ESPR &amp; PPWR
+            {copy.hero.eyebrow}
           </p>
-          <h1 className="mt-6 text-4xl font-semibold leading-[1.1] tracking-tight text-balance sm:text-5xl">
-            Verifiable product passports for polymers and recyclates.
+          <h1 className="mt-7 text-[2.5rem] font-semibold leading-[1.06] tracking-[-0.028em] text-balance sm:text-5xl lg:text-[3.5rem]">
+            {copy.hero.title}
           </h1>
-          <p className="mt-6 max-w-xl text-lg leading-relaxed text-slate-300">
-            DPP-Polymer turns batch data from compounders and recyclers into audit-ready Digital Product
-            Passports: material properties, recycled content, carbon footprint and chain of custody, published
-            through a standard GS1 QR code.
-          </p>
-          <div className="mt-9 flex flex-col gap-3 sm:flex-row">
-            <CtaLink href={pilotMailto()} size="lg">
-              Request Pilot
-              <ArrowRight className="h-4 w-4" aria-hidden="true" />
+          <p className="mt-6 max-w-xl text-[17px] leading-[1.7] text-slate-300 text-pretty">{copy.hero.lead}</p>
+          <div className="mt-10 flex flex-col gap-3 sm:flex-row">
+            <CtaLink href={pilotMailto(locale)} variant="solid-light" size="lg" arrow>
+              {copy.hero.requestPilot}
             </CtaLink>
-            <CtaLink href={ROUTES.platform} variant="ghost-dark" size="lg">
-              Launch Platform
+            <CtaLink href={ROUTES.platform} variant="outline-light" size="lg">
+              {copy.hero.launchPlatform}
             </CtaLink>
           </div>
-          <ul className="mt-10 flex flex-col gap-x-6 gap-y-2 text-sm text-slate-400 sm:flex-row sm:flex-wrap">
-            {PROOF_POINTS.map((p) => (
-              <li key={p} className="flex items-center gap-2">
-                <span className="h-px w-3 bg-slate-500" aria-hidden="true" />
-                {p}
-              </li>
-            ))}
-          </ul>
         </div>
         <div className="flex justify-center lg:justify-end">
-          <PassportPreview />
+          <PassportPreview copy={copy.passport} />
         </div>
       </div>
+
+      <TrustBand copy={copy.trust} />
     </section>
   );
 }

@@ -362,7 +362,7 @@ function CompletePolymerDPPInner({ canManage }: { canManage: boolean }) {
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `polymer-dpp-ledger-export-${new Date().toISOString().slice(0, 10)}.xlsx`;
+      a.download = `dpp-polymer-ledger-export-${new Date().toISOString().slice(0, 10)}.xlsx`;
       document.body.appendChild(a);
       a.click();
       a.remove();
@@ -417,7 +417,7 @@ function CompletePolymerDPPInner({ canManage }: { canManage: boolean }) {
             <div>
               <div className="flex items-center gap-2 flex-wrap">
                 <h1 className="font-extrabold text-base tracking-tight text-white font-mono">
-                  POLYMER<span className="text-emerald-400">.DPP</span>
+                  DPP<span className="text-emerald-400">-</span>Polymer
                 </h1>
                 {/* Regulatory compliance badge — deliberately muted/neutral
                     rather than brand-emerald, so it reads as an official

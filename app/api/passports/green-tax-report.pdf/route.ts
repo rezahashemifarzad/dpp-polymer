@@ -44,7 +44,7 @@ export async function GET(req: NextRequest) {
       status: 200,
       headers: {
         "Content-Type": "application/pdf",
-        "Content-Disposition": `attachment; filename="polymer-dpp-green-tax-report-${dateStamp}.pdf"`,
+        "Content-Disposition": `attachment; filename="dpp-polymer-green-tax-report-${dateStamp}.pdf"`,
         "Cache-Control": "no-store",
       },
     });

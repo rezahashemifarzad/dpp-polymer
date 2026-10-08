@@ -68,7 +68,7 @@ function addNoteRow(sheet: ExcelJS.Worksheet, columnCount: number, text: string,
 export async function generateEsgAnalyticsWorkbook(): Promise<Buffer> {
   const esg = await getEsgAnalytics();
   const workbook = new ExcelJS.Workbook();
-  workbook.creator = "Polymer DPP";
+  workbook.creator = "DPP-Polymer";
   workbook.created = new Date();
 
   // --- Sheet 1: ESG Summary --------------------------------------------------

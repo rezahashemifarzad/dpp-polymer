@@ -137,7 +137,7 @@ function LabelSheetDocument({
                         {label.polymerType} · {label.grade}
                       </Text>
                       <Text style={styles.metaLarge}>GTIN {label.gtin}</Text>
-                      <Text style={styles.captionLarge}>Scan to verify · Polymer DPP</Text>
+                      <Text style={styles.captionLarge}>Scan to verify · DPP-Polymer</Text>
                     </View>
                   </View>
                 </View>
@@ -151,7 +151,7 @@ function LabelSheetDocument({
                         {label.polymerType} · {label.grade}
                       </Text>
                       <Text style={styles.meta}>GTIN {label.gtin}</Text>
-                      <Text style={styles.caption}>Scan to verify · Polymer DPP</Text>
+                      <Text style={styles.caption}>Scan to verify · DPP-Polymer</Text>
                     </View>
                   </View>
                 </View>
@@ -159,7 +159,7 @@ function LabelSheetDocument({
             )}
           </View>
           <Text style={styles.footer}>
-            Generated {generatedAt} · Polymer DPP factory batch labels ({layout === "large" ? "industrial" : "standard"} layout) · Page{" "}
+            Generated {generatedAt} · DPP-Polymer factory batch labels ({layout === "large" ? "industrial" : "standard"} layout) · Page{" "}
             {pageIndex + 1} of {pages.length}
           </Text>
         </Page>

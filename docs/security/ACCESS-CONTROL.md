@@ -1,4 +1,4 @@
-# Access-control matrix — Polymer DPP
+# Access-control matrix — DPP-Polymer
 
 Last audit: 2026-09-30. Enforced by code in `lib/session-auth.ts`, `lib/api-auth.ts`, `lib/rbac.ts`, `lib/auditor-auth.ts`, `lib/client-auth.ts`, `lib/erp-auth.ts` and `lib/supplier-invite-auth.ts`. Regression-checked by `npm run check:access` (also runs before every `npm run build`).
 

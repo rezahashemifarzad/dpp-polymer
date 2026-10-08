@@ -253,7 +253,7 @@ export function SupplierSubmissionForm({ token }: { token: string }) {
           <XCircle className="w-8 h-8 text-red-400 mx-auto mb-3" />
           <h1 className="text-base font-bold text-white mb-1">Link not valid</h1>
           <p className="text-xs text-slate-400 font-mono">
-            This supplier submission link is invalid, has been revoked, or has expired. Contact the Polymer DPP
+            This supplier submission link is invalid, has been revoked, or has expired. Contact the DPP-Polymer
             administrator who sent it to you for a new link.
           </p>
         </div>
@@ -268,7 +268,7 @@ export function SupplierSubmissionForm({ token }: { token: string }) {
           <CheckCircle2 className="w-8 h-8 text-emerald-400 mx-auto mb-3" />
           <h1 className="text-base font-bold text-white mb-1">Submission received</h1>
           <p className="text-xs text-slate-400 font-mono">
-            Thank you. Your proposed batch has been queued for review by the Polymer DPP compliance team. You&apos;ll
+            Thank you. Your proposed batch has been queued for review by the DPP-Polymer compliance team. You&apos;ll
             be contacted at the email on file once it&apos;s been approved or if more information is needed.
           </p>
           <button
@@ -294,7 +294,7 @@ export function SupplierSubmissionForm({ token }: { token: string }) {
           </div>
           <div className="min-w-0">
             <h1 className="text-lg font-bold tracking-wide">Supplier Batch Submission</h1>
-            <p className="text-xs text-slate-400">Polymer Digital Product Passport — Supplier Onboarding Portal</p>
+            <p className="text-xs text-slate-400">DPP-Polymer — Supplier Onboarding Portal</p>
           </div>
         </div>
 
