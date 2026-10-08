@@ -32,10 +32,10 @@
  *     matching how Auditor/Client accounts are CLI-provisioned (the new
  *     Accounts admin UI manages Auditor/Client, not AdminUser — deliberately
  *     out of scope here to keep this fix lightweight, per the request).
- *   - It does not touch middleware.ts's real security boundary — that
+ *   - It does not touch proxy.ts's real security boundary — that
  *     stays the DB-backed check here (see lib/session-auth.ts's own
  *     CVE-2025-29927 note on why middleware is only ever a fast, non-
- *     authoritative first filter). middleware.ts's matcher was extended to
+ *     authoritative first filter). proxy.ts's matcher was extended to
  *     also cover /admin/:path* for a fast cookie-presence redirect with a
  *     friendly `next=` param, purely as a UX nicety layered on top of this
  *     real check — see that file's own comment.

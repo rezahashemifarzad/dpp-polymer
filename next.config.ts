@@ -51,8 +51,68 @@ function resolveBaseUrl(): string {
   return "http://localhost:3000";
 }
 
+// ----------------------------------------------------------------------------
+// Security headers (code review 2026-10-08)
+// ----------------------------------------------------------------------------
+// Sent on every response (pages, API routes, static assets).
+//
+// Content-Security-Policy follows the Next.js "without nonces" pattern
+// (node_modules/next/dist/docs/01-app/02-guides/content-security-policy.md):
+// a nonce-based policy would force every page to render dynamically, which
+// would undo the static, edge-cached corporate site. 'unsafe-inline' for
+// scripts is required by Next's inline hydration scripts in that mode;
+// everything else is locked to this origin:
+//   - no third-party scripts, styles, fonts or connections (all fonts are
+//     self-hosted via next/font; QR codes, PDF/Excel downloads use data:
+//     and blob: URLs);
+//   - frame-ancestors 'none' + X-Frame-Options DENY: the platform can never
+//     be embedded in another site (click-jacking);
+//   - form-action 'self': Server Actions post back to this origin only.
+// 'unsafe-eval' is added in `next dev` only (React's dev error overlay).
+// upgrade-insecure-requests is only sent on Vercel (always HTTPS), so a
+// local `npm run build && npm start` over http://localhost keeps working.
+// On Vercel preview deployments, vercel.live is allowed so the Vercel
+// toolbar / preview comments keep working; production never allows it.
+const isDev = process.env.NODE_ENV === "development";
+const isVercel = process.env.VERCEL === "1";
+const isVercelPreview = process.env.VERCEL_ENV === "preview";
+const vercelLive = isVercelPreview ? " https://vercel.live" : "";
+
+const contentSecurityPolicy = [
+  "default-src 'self'",
+  `script-src 'self' 'unsafe-inline'${isDev ? " 'unsafe-eval'" : ""}${vercelLive}`,
+  `style-src 'self' 'unsafe-inline'${vercelLive}`,
+  `img-src 'self' blob: data:${vercelLive}`,
+  `font-src 'self' data:${vercelLive}`,
+  `connect-src 'self'${isVercelPreview ? " https://vercel.live wss://ws-us3.pusher.com" : ""}`,
+  `frame-src 'self'${vercelLive}`,
+  "object-src 'none'",
+  "base-uri 'self'",
+  "form-action 'self'",
+  "frame-ancestors 'none'",
+  ...(isVercel ? ["upgrade-insecure-requests"] : []),
+].join("; ");
+
+const securityHeaders = [
+  { key: "Content-Security-Policy", value: contentSecurityPolicy },
+  { key: "Strict-Transport-Security", value: "max-age=63072000; includeSubDomains" },
+  { key: "X-Frame-Options", value: "DENY" },
+  { key: "X-Content-Type-Options", value: "nosniff" },
+  { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
+  { key: "Cross-Origin-Opener-Policy", value: "same-origin" },
+  {
+    key: "Permissions-Policy",
+    value: "camera=(), microphone=(), geolocation=(), payment=(), usb=(), browsing-topics=()",
+  },
+];
+
 const nextConfig: NextConfig = {
-  /* config options here */
+  // Don't advertise the framework in an X-Powered-By header.
+  poweredByHeader: false,
+
+  async headers() {
+    return [{ source: "/:path*", headers: securityHeaders }];
+  },
 
   env: {
     NEXT_PUBLIC_BASE_URL: resolveBaseUrl(),

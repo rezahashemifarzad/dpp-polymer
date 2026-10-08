@@ -13,7 +13,7 @@
  * key modules stay exactly as they are, untouched and still duplicated,
  * since every existing route depends on their exact current behavior.
  *
- * Deliberately NOT the sole security boundary for /portal/*. middleware.ts
+ * Deliberately NOT the sole security boundary for /portal/*. proxy.ts
  * only checks cookie *presence* as a fast Edge-safe gate; the real check —
  * resolving the session, verifying actorType, and confirming the actor is
  * still active — happens here, called from each protected Server Component

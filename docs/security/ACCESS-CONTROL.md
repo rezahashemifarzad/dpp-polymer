@@ -4,7 +4,7 @@ Last audit: 2026-09-30. Enforced by code in `lib/session-auth.ts`, `lib/api-auth
 
 ## Principles
 
-1. **Server-side enforcement only counts.** Middleware and hidden buttons are UX. Every page, Route Handler and Server Action re-checks the caller itself.
+1. **Server-side enforcement only counts.** The proxy (`proxy.ts`) and hidden buttons are UX. Every page, Route Handler and Server Action re-checks the caller itself.
 2. **Deny by default.** A new API route or Server Action fails the build unless it calls a guard or is added to the public allow-list in `scripts/check-access-control.ts` with a reason.
 3. **Least privilege.** Auditors verify and read audit data; they cannot configure the platform, manage accounts or revoke passports. Customers and suppliers only reach their own scoped data.
 4. **Deactivation is immediate.** Sessions resolve the actor row on every request; `active = false` locks the account out on its next request.
@@ -84,4 +84,4 @@ Every action calls `requireAdminSession()` first, outside its try/catch, except:
 - No login rate limiting or lockout yet. Add per-IP and per-account throttling before a public launch.
 - Shared role keys (`x-dpp-api-key`) are coarse. Prefer per-integration keys (like the ERP and auditor keys) for new partners.
 - Admin sessions are all-powerful; there is no finer admin sub-role yet.
-- Middleware is only a cookie-presence fast path. The page, layout and handler checks are the real boundary.
+- Proxy (`proxy.ts`, formerly `middleware.ts`) is only a cookie-presence fast path. The page, layout and handler checks are the real boundary.

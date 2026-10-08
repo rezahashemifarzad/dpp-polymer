@@ -13,7 +13,7 @@
  * The platform itself lives under /app (Material Ledger console) and the
  * existing /admin, /portal/*, /auditor and /client-portal routes. A Vercel
  * domain such as app.dpp-polymer.de can point at the same deployment:
- * middleware.ts rewrites "/" on any "app." host to /app.
+ * proxy.ts rewrites "/" on any "app." host to /app.
  *
  * Legal details: an Impressum is mandatory for a commercial website in
  * Germany (§ 5 DDG). Fill in LEGAL_ENTITY below before the site goes live.

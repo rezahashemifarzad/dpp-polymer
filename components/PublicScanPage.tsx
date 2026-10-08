@@ -7,15 +7,16 @@
  * This is what a B2B buyer, auditor, or inspector sees when they scan the
  * QR code printed on a polymer bag/container.
  *
- * Visual language matches the manufacturer dashboard (PolymerPassportUI.jsx)
- * for brand consistency: slate/teal/amber palette, IBM Plex Sans/Mono, and
- * the same "hash fingerprint" barcode motif used there — this page is
- * where that motif does its real job (proving data integrity), rather
- * than the illustrative preview it was on the dashboard.
+ * Visual language: slate/teal/amber palette, Space Grotesk / IBM Plex
+ * Sans / IBM Plex Mono, and a "hash fingerprint" barcode motif that does
+ * its real job here (proving data integrity).
  *
- * NOTE: for production, prefer next/font/google over the runtime @import
- * below (avoids a render-blocking font fetch) — kept as @import here only
- * to match the standalone preview artifact byte-for-byte during review.
+ * Fonts (code review 2026-10-08): loaded with next/font/google, which
+ * downloads them at build time and serves them from this site's own
+ * domain. The page previously @import-ed fonts.googleapis.com at runtime,
+ * which sent every scanning visitor's IP address to Google (a GDPR issue
+ * in Germany) and is blocked by the Content-Security-Policy in
+ * next.config.ts.
  *
  * Multi-Language Support (see lib/i18n/dictionaries.ts) — every static UI
  * label on this page goes through `t(key, vars?)`, a locale bound to
@@ -31,6 +32,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { IBM_Plex_Mono, IBM_Plex_Sans, Space_Grotesk } from "next/font/google";
 import {
   ShieldCheck, ShieldAlert, Leaf, Recycle, Layers, Gauge, Hash,
   BadgeCheck, ExternalLink, Download, Copy, Check, AlertTriangle,
@@ -42,6 +44,7 @@ import {
   type Locale, SUPPORTED_LOCALES, DEFAULT_LOCALE, LOCALE_LABELS,
   isSupportedLocale, createTranslator,
 } from "@/lib/i18n/dictionaries";
+
 // In-Page Floating AI Assistant Widget, public rollout — mounted here
 // (this page's own chrome, since SiteNav deliberately never renders on
 // this route — see that file's own banner) with theme="light" to match
@@ -50,6 +53,27 @@ import {
 // action (see lib/actions/ask-assistant.ts's file banner for why those
 // are two distinct functions, not one gated by a client-supplied flag).
 import { AiAssistantWidget } from "@/components/dashboard/ai-assistant-widget";
+
+// Self-hosted at build time (see file banner). CSS variables are applied on
+// the page wrapper and read by the .f-display / .f-body / .f-mono classes.
+const displayFont = Space_Grotesk({
+  subsets: ["latin", "latin-ext"],
+  weight: ["600", "700"],
+  display: "swap",
+  variable: "--font-scan-display",
+});
+const bodyFont = IBM_Plex_Sans({
+  subsets: ["latin", "latin-ext"],
+  weight: ["400", "500", "600"],
+  display: "swap",
+  variable: "--font-scan-body",
+});
+const monoFont = IBM_Plex_Mono({
+  subsets: ["latin", "latin-ext"],
+  weight: ["400", "500"],
+  display: "swap",
+  variable: "--font-scan-mono",
+});
 
 /* ---------------------------------------------------------------------------
  * Types — mirror the JSON shape page.tsx passes down (Decimals already
@@ -433,12 +457,11 @@ export default function PublicScanPage({ passport, integrityVerified, linkTruste
   const t = useMemo(() => createTranslator(locale), [locale]);
 
   return (
-    <div className="min-h-screen bg-slate-50 f-body">
+    <div className={`min-h-screen bg-slate-50 f-body ${displayFont.variable} ${bodyFont.variable} ${monoFont.variable}`}>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap');
-        .f-display { font-family: 'Space Grotesk', sans-serif; }
-        .f-body { font-family: 'IBM Plex Sans', system-ui, sans-serif; }
-        .f-mono { font-family: 'IBM Plex Mono', monospace; }
+        .f-display { font-family: var(--font-scan-display), sans-serif; }
+        .f-body { font-family: var(--font-scan-body), system-ui, sans-serif; }
+        .f-mono { font-family: var(--font-scan-mono), monospace; }
       `}</style>
 
       {/* Scroll-trap fix (2026-09-29) — the detailed passport view is long

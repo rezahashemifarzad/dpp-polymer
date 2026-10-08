@@ -17,7 +17,7 @@
  *
  * Auth: requireAuditorSession() (lib/session-auth.ts) resolves the session
  * cookie to an active Auditor or redirects to /login — this is the real
- * boundary, not middleware.ts (see that file's own banner).
+ * boundary, not proxy.ts (see that file's own banner).
  */
 
 import Link from "next/link";

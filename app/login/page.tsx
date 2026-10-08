@@ -11,7 +11,7 @@
  * Server Component: if a valid session cookie is already present, redirect
  * straight to the matching portal instead of showing the form again — this
  * one cheap DB read happens only on this page, not on every /portal/*
- * navigation (that's middleware.ts's job, and it stays cookie-presence-only
+ * navigation (that's proxy.ts's job, and it stays cookie-presence-only
  * for speed — see that file's own banner).
  *
  * Deliberately a NEW page, not a change to the existing /auditor or
@@ -20,8 +20,8 @@
  */
 
 import { redirect } from "next/navigation";
-import Link from "next/link";
-import { ShieldCheck, ArrowLeft } from "lucide-react";
+import { ShieldCheck } from "lucide-react";
+import { MainSiteLink } from "@/components/main-site-link";
 import { getSession } from "@/lib/session-auth";
 import { LoginForm } from "./LoginForm";
 
@@ -57,9 +57,7 @@ export default async function LoginPage() {
         <LoginForm />
 
         <div className="mt-5 pt-4 border-t border-slate-800 text-center">
-          <Link href="/" className="inline-flex items-center gap-1 text-[11px] text-slate-500 hover:text-slate-300">
-            <ArrowLeft className="w-3 h-3" /> Back to Home
-          </Link>
+          <MainSiteLink />
         </div>
       </div>
     </div>

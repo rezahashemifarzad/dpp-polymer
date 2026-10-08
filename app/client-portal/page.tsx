@@ -22,11 +22,12 @@
 
 import { Fragment, useCallback, useEffect, useState } from "react";
 import {
-  ShieldCheck, KeyRound, Loader2, LogOut, RefreshCw, ArrowLeft,
+  ShieldCheck, KeyRound, Loader2, LogOut, RefreshCw,
   AlertTriangle, Building2, Package, Percent, Download, ExternalLink,
   CalendarDays, Factory, Boxes, Link2, ChevronDown, ChevronUp,
 } from "lucide-react";
 import Link from "next/link";
+import { MainSiteLink } from "@/components/main-site-link";
 import { ChainOfCustodyTimeline, type ChainOfCustodyTimelineRecord } from "@/components/dashboard/chain-of-custody-timeline";
 
 const SESSION_KEY_STORAGE = "dpp-client-key";
@@ -169,9 +170,7 @@ function ClientGate({ onAuthenticated }: { onAuthenticated: (key: string, identi
           </button>
         </form>
         <div className="mt-5 pt-4 border-t border-slate-800 text-center">
-          <Link href="/" className="inline-flex items-center gap-1 text-[11px] text-slate-500 hover:text-slate-300">
-            <ArrowLeft className="w-3 h-3" /> Back to Home
-          </Link>
+          <MainSiteLink />
         </div>
       </div>
     </div>

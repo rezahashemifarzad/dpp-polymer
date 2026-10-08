@@ -9,7 +9,7 @@
  *
  * Auth: requireClientSession() (lib/session-auth.ts) resolves the session
  * cookie to an active Client or redirects to /login — the real boundary,
- * not middleware.ts (see that file's own banner).
+ * not proxy.ts (see that file's own banner).
  */
 
 import Link from "next/link";

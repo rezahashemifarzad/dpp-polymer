@@ -1,6 +1,11 @@
 /**
- * middleware.ts
+ * proxy.ts
  * -----------------------------------------------------------------------
+ * Renamed from middleware.ts (code review 2026-10-08): Next.js 16 deprecated
+ * the `middleware` file convention in favour of `proxy` (same behaviour,
+ * function renamed from middleware() to proxy(), Node.js runtime by
+ * default). Logic below is unchanged.
+ *
  * Edge-safe FAST GATE for every session-based surface — /portal/auditor/*,
  * /portal/customer/* (Role-Based Authentication & Client/Auditor Portal
  * Suite), and /admin/* (added by the Production Readiness follow-up — Real
@@ -43,7 +48,7 @@ import { NextRequest, NextResponse } from "next/server";
 // lib/session-constants.ts's own file banner.
 import { SESSION_COOKIE_NAME } from "@/lib/session-constants";
 
-export function middleware(req: NextRequest) {
+export function proxy(req: NextRequest) {
   // Corporate landing page vs platform (2026-10-08): "/" is the public
   // company website. When the same deployment is also served on an "app."
   // subdomain (e.g. app.dpp-polymer.de, added as a domain in Vercel), that

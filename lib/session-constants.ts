@@ -2,13 +2,13 @@
  * lib/session-constants.ts
  * -----------------------------------------------------------------------
  * Just the session cookie name — split out of lib/session-auth.ts into its
- * own zero-dependency module specifically so middleware.ts (which runs on
- * the Edge runtime) can import it without pulling in lib/session-auth.ts's
- * other imports (@/lib/prisma, next/headers, next/navigation) into the
- * Edge bundle. Prisma Client in particular is not Edge-compatible, and
- * Next.js bundles a middleware file's entire static import graph — so
- * middleware.ts must import ONLY this constant, never lib/session-auth.ts
- * itself.
+ * own zero-dependency module specifically so proxy.ts can import it
+ * without pulling lib/session-auth.ts's other imports (@/lib/prisma,
+ * next/headers, next/navigation) into the proxy bundle. The proxy was an
+ * Edge-runtime middleware when this was written (Next.js 16 now runs
+ * proxy.ts on Node.js by default); keeping it dependency-free still keeps
+ * the proxy fast and deployable to the edge, so proxy.ts must import ONLY
+ * this constant, never lib/session-auth.ts itself.
  */
 
 export const SESSION_COOKIE_NAME = "dpp_session";

@@ -47,6 +47,16 @@
  * Usage:
  *   npx tsx scripts/seed-sample-passports.ts
  *
+ * Demo portal passwords: the sample buyers (Rhein-Pack, AutoMold) get a
+ * random password generated at creation time and printed once — no
+ * password is stored in this file. To replace the password of sample
+ * buyers that already exist (for example accounts created by an older
+ * version of this script, whose fixed passwords were committed to git),
+ * run:
+ *   npx tsx scripts/seed-sample-passports.ts --clients-only --rotate-demo-passwords
+ * Each existing sample buyer gets a new random password (printed once) and
+ * all of its open portal sessions are signed out.
+ *
  * What you get: 10 passports across 4 manufacturers. 8 are walked all the
  * way to ISSUED (fully signed, ready to show in the public QR scan page
  * and the B2B dashboard) — including both Niederrhein Polymer Werke
@@ -765,8 +775,9 @@ const PASSPORTS: PassportSpec[] = [
 // country/active/passwordHash/apiKeyHash); that qualitative status is
 // represented the same way a real preferred/approved buyer would look in
 // this data model instead: active: true, a working portal password (so
-// this can be logged into live during a pitch), and a framework-agreement
-// note on each allocation below.
+// this can be logged into live during a pitch — generated at random per
+// account, never committed), and a framework-agreement note on each
+// allocation below.
 // ----------------------------------------------------------------------------
 
 interface ClientSpec {
@@ -774,10 +785,18 @@ interface ClientSpec {
   companyName: string;
   contactEmail: string;
   country: string;
-  /** Demo-only portal password — printed once at the end of this script's
-   *  output, same "shown once" convention as scripts/create-auditor.ts. */
-  demoPassword: string;
 }
+
+/**
+ * Random demo portal password: 18 random bytes, base64url-encoded
+ * (24 characters, ~144 bits). Printed once, never stored in plain text —
+ * same "shown once" convention as scripts/create-auditor.ts.
+ */
+function generateDemoPassword(): string {
+  return randomBytes(18).toString("base64url");
+}
+
+const ROTATE_DEMO_PASSWORDS = process.argv.includes("--rotate-demo-passwords");
 
 const CLIENTS: ClientSpec[] = [
   {
@@ -785,14 +804,12 @@ const CLIENTS: ClientSpec[] = [
     companyName: "Rhein-Pack Verpackungslösungen GmbH",
     contactEmail: "einkauf@rhein-pack.example.de",
     country: "DE",
-    demoPassword: "RheinPack-Demo-2026!",
   },
   {
     key: "automold",
     companyName: "AutoMold Systeme GmbH",
     contactEmail: "procurement@automold-systeme.example.de",
     country: "DE",
-    demoPassword: "AutoMold-Demo-2026!",
   },
 ];
 
@@ -861,12 +878,20 @@ async function upsertClients(): Promise<Record<string, string>> {
     if (existing) {
       ids[c.key] = existing.id;
       console.log(`Client ready: ${existing.companyName} (${existing.country}) — id ${existing.id} [already existed]`);
+      if (ROTATE_DEMO_PASSWORDS) {
+        const newPassword = generateDemoPassword();
+        await prisma.client.update({ where: { id: existing.id }, data: { passwordHash: await hashPassword(newPassword) } });
+        const revoked = await prisma.session.deleteMany({ where: { actorType: "CUSTOMER", actorId: existing.id } });
+        console.log(`  Password rotated — new portal sign-in (shown once — /login): ${c.contactEmail} / ${newPassword}`);
+        console.log(`  Signed out ${revoked.count} open portal session(s).`);
+      }
       continue;
     }
 
     const rawApiKey = generateRawKey();
     const apiKeyHash = hashClientKey(rawApiKey);
-    const passwordHash = await hashPassword(c.demoPassword);
+    const demoPassword = generateDemoPassword();
+    const passwordHash = await hashPassword(demoPassword);
 
     const row = await prisma.client.create({
       data: {
@@ -880,7 +905,7 @@ async function upsertClients(): Promise<Record<string, string>> {
     });
     ids[c.key] = row.id;
     console.log(`Client created: ${row.companyName} (${row.country}) — id ${row.id}`);
-    console.log(`  Portal sign-in (shown once — /login): ${c.contactEmail} / ${c.demoPassword}`);
+    console.log(`  Portal sign-in (shown once — /login): ${c.contactEmail} / ${demoPassword}`);
     console.log(`  Buyer API key (x-dpp-client-key header, shown once): ${rawApiKey}`);
   }
   return ids;
@@ -1142,11 +1167,15 @@ function checkBaseUrlSafeToWrite(): void {
 // AutoMold) and their allocations, without creating or touching any
 // passport. Needs no --base-url, because no GS1 link is written. Use it
 // when /admin/accounts is missing a sample buyer — existing Client rows are
-// detected by contactEmail and left untouched (credentials never rotated).
+// detected by contactEmail and left untouched (credentials are only
+// rotated when --rotate-demo-passwords is also passed).
 const CLIENTS_ONLY = process.argv.includes("--clients-only");
 
 async function runClientsOnly(): Promise<void> {
   console.log("Clients-only mode: provisioning missing sample buyers. No passports are created or changed.\n");
+  if (ROTATE_DEMO_PASSWORDS) {
+    console.log("--rotate-demo-passwords set: existing sample buyers get a new random password.\n");
+  }
   const clientIds = await upsertClients();
 
   console.log("\nAllocating passports to Clients (skipped where a passport does not exist yet):");

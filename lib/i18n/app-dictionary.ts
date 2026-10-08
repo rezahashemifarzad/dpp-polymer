@@ -46,6 +46,7 @@ const EN: AppDictionary = {
   "nav.client": "Client Portal",
   "nav.signin": "Sign In",
   "nav.mainSite": "Main site",
+  "nav.backToHome": "Back to Home",
 
   "admin.title": "DPP Industrial Admin Console",
   "admin.subtitle": "Compounder & Material Lifecycle Management (ESPR Compliance)",
@@ -220,6 +221,7 @@ const DE: AppDictionary = {
   "nav.client": "Kundenportal",
   "nav.signin": "Anmelden",
   "nav.mainSite": "Zur Website",
+  "nav.backToHome": "Zurück zur Startseite",
 
   "admin.title": "DPP Industrie-Admin-Konsole",
   "admin.subtitle": "Compoundier- und Materiallebenszyklus-Management (ESPR-Konformität)",
@@ -384,6 +386,7 @@ const FR: AppDictionary = {
   "nav.client": "Portail client",
   "nav.signin": "Connexion",
   "nav.mainSite": "Site principal",
+  "nav.backToHome": "Retour à l'accueil",
 
   "admin.title": "Console d'administration industrielle DPP",
   "admin.subtitle": "Gestion du compoundage et du cycle de vie des matériaux (conformité ESPR)",

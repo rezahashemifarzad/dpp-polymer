@@ -36,7 +36,6 @@ import {
   Download,
   Factory,
   Award,
-  TrendingUp,
   Clock,
   AlertTriangle,
   ChevronDown,
@@ -62,35 +61,35 @@ const TIER_META: Record<
     badgeClass: "bg-emerald-500/10 text-emerald-400 border-emerald-500/30",
     barClass: "bg-emerald-500",
     icon: Award,
-    label: "suppliers.tier.preferred",
+    label: "Preferred",
   },
   Approved: {
     hex: "#14b8a6",
     badgeClass: "bg-teal-500/10 text-teal-400 border-teal-500/30",
     barClass: "bg-teal-500",
     icon: BadgeCheck,
-    label: "suppliers.tier.approved",
+    label: "Approved",
   },
   Watch: {
     hex: "#f59e0b",
     badgeClass: "bg-amber-500/10 text-amber-400 border-amber-500/30",
     barClass: "bg-amber-500",
     icon: Clock,
-    label: "suppliers.tier.watch",
+    label: "Watch",
   },
   "At Risk": {
     hex: "#f43f5e",
     badgeClass: "bg-rose-500/10 text-rose-400 border-rose-500/30",
     barClass: "bg-rose-500",
     icon: AlertTriangle,
-    label: "suppliers.tier.atRisk",
+    label: "At Risk",
   },
   "Insufficient Data": {
     hex: "#64748b",
     badgeClass: "bg-slate-500/10 text-slate-400 border-slate-500/30",
     barClass: "bg-slate-500",
     icon: FileWarning,
-    label: "ui.supRank.insufficientData",
+    label: "Insufficient Data",
   },
 };
 
@@ -193,7 +192,6 @@ function ScoreBar({ score, hex }: { score: number; hex: string }) {
 }
 
 function ExpiryChips({ certificates }: { certificates: SupplierScorecard["certificates"] }) {
-  const { t } = useLanguage();
   if (certificates.expired === 0 && certificates.expiringUrgent === 0 && certificates.expiringSoon === 0) {
     return <span className="text-slate-600 text-xs">—</span>;
   }
@@ -201,17 +199,17 @@ function ExpiryChips({ certificates }: { certificates: SupplierScorecard["certif
     <div className="flex items-center gap-1 flex-wrap justify-center">
       {certificates.expired > 0 && (
         <span className="text-[10px] font-bold bg-rose-500/10 text-rose-400 border border-rose-500/30 px-1.5 py-0.5 rounded-full">
-          {certificates.expired} {t("ui.supRank.expired")}
+          {certificates.expired} expired
         </span>
       )}
       {certificates.expiringUrgent > 0 && (
         <span className="text-[10px] font-bold bg-orange-500/10 text-orange-400 border border-orange-500/30 px-1.5 py-0.5 rounded-full">
-          {certificates.expiringUrgent} {t("ui.supRank.urgent")}
+          {certificates.expiringUrgent} urgent
         </span>
       )}
       {certificates.expiringSoon > 0 && (
         <span className="text-[10px] font-bold bg-amber-500/10 text-amber-400 border border-amber-500/30 px-1.5 py-0.5 rounded-full">
-          {certificates.expiringSoon} {t("ui.supRank.soon")}
+          {certificates.expiringSoon} soon
         </span>
       )}
     </div>
@@ -219,7 +217,6 @@ function ExpiryChips({ certificates }: { certificates: SupplierScorecard["certif
 }
 
 function SupplierDetailRow({ supplier }: { supplier: SupplierScorecard }) {
-  const { t } = useLanguage();
   const meta = TIER_META[supplier.tier];
   return (
     <tr className="bg-slate-950/60">
@@ -228,11 +225,11 @@ function SupplierDetailRow({ supplier }: { supplier: SupplierScorecard }) {
           <div>
             <h4 className="text-xs font-bold text-slate-300 uppercase tracking-wider mb-3 flex items-center gap-1.5">
               <Gauge className="w-3.5 h-3.5" style={{ color: meta.hex }} />
-              {t("ui.supRank.performanceScoreBreakdown")}
+              Performance Score Breakdown
             </h4>
             {supplier.performanceScore === null ? (
               <p className="text-xs text-slate-500 font-mono">
-                {t("ui.supRank.noActiveBatchesThisSupplierHas")}
+                No active batches — this supplier has no current activity to score.
               </p>
             ) : (
               <div className="space-y-3">
@@ -241,7 +238,7 @@ function SupplierDetailRow({ supplier }: { supplier: SupplierScorecard }) {
                     <div className="flex items-center justify-between gap-2 text-[11px] mb-1">
                       <span className="text-slate-300 font-semibold">{c.label}</span>
                       <span className="text-slate-500 font-mono shrink-0">
-                        {c.score}/100 · {Math.round(c.weight * 100)}{t("ui.common.weight")}
+                        {c.score}/100 · {Math.round(c.weight * 100)}% weight
                       </span>
                     </div>
                     <div className="w-full h-2 rounded-full bg-slate-900 overflow-hidden">
@@ -259,28 +256,28 @@ function SupplierDetailRow({ supplier }: { supplier: SupplierScorecard }) {
           <div>
             <h4 className="text-xs font-bold text-slate-300 uppercase tracking-wider mb-3 flex items-center gap-1.5">
               <ShieldCheck className="w-3.5 h-3.5 text-cyan-400" />
-              {t("ui.supRank.certificationBreakdown")}
+              Certification Breakdown
             </h4>
             <div className="grid grid-cols-3 gap-2 text-center mb-3">
               <div className="bg-slate-900 rounded-lg p-2 border border-slate-800">
                 <div className="text-lg font-extrabold text-emerald-400 font-mono">{supplier.certificates.verified}</div>
-                <div className="text-[9px] text-slate-500 uppercase">{t("ui.common.verified")}</div>
+                <div className="text-[9px] text-slate-500 uppercase">Verified</div>
               </div>
               <div className="bg-slate-900 rounded-lg p-2 border border-slate-800">
                 <div className="text-lg font-extrabold text-amber-400 font-mono">{supplier.certificates.pendingReview}</div>
-                <div className="text-[9px] text-slate-500 uppercase">{t("ui.supRank.pending")}</div>
+                <div className="text-[9px] text-slate-500 uppercase">Pending</div>
               </div>
               <div className="bg-slate-900 rounded-lg p-2 border border-slate-800">
                 <div className="text-lg font-extrabold text-rose-400 font-mono">{supplier.certificates.rejected}</div>
-                <div className="text-[9px] text-slate-500 uppercase">{t("ui.common.rejected")}</div>
+                <div className="text-[9px] text-slate-500 uppercase">Rejected</div>
               </div>
             </div>
             <div className="flex items-center justify-between text-[11px] text-slate-400 border-t border-slate-800/60 pt-3">
-              <span>{t("ui.supRank.vatRegistration")}</span>
+              <span>VAT / Registration</span>
               <span className="font-mono text-slate-300">{supplier.vatNumber ?? "—"}</span>
             </div>
             <div className="flex items-center justify-between text-[11px] text-slate-400 mt-1.5">
-              <span>{t("ui.supRank.batchStatusMix")}</span>
+              <span>Batch Status Mix</span>
               <span className="font-mono text-slate-300 text-right">
                 {Object.entries(supplier.statusBreakdown)
                   .map(([status, count]) => `${status}: ${count}`)
@@ -409,7 +406,7 @@ export function SupplierRankingDashboard({ summary }: { summary: SupplierAnalyti
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <span className="text-[10px] text-slate-500 font-mono hidden md:inline">
-              {t("ui.common.generated")} {new Date(summary.generatedAt).toLocaleString()}
+              Generated {new Date(summary.generatedAt).toLocaleString()}
             </span>
             <button
               onClick={handleRefresh}
@@ -473,7 +470,8 @@ export function SupplierRankingDashboard({ summary }: { summary: SupplierAnalyti
         {summary.unassignedBatchCount > 0 && (
           <div className="flex items-start gap-2 bg-slate-900/60 border border-slate-800 rounded-xl p-3 text-[11px] text-slate-400 font-mono">
             <FileWarning className="w-3.5 h-3.5 text-slate-500 shrink-0 mt-0.5" />
-            {summary.unassignedBatchCount} {t("ui.supRank.batchEsHaveNoSupplierManufacturer")}
+            {summary.unassignedBatchCount} batch(es) have no supplier (manufacturer) linked and are excluded from this
+            ranking — see each batch's own record to assign one.
           </div>
         )}
 
@@ -485,7 +483,7 @@ export function SupplierRankingDashboard({ summary }: { summary: SupplierAnalyti
             </div>
             <div>
               <div className="text-lg font-extrabold text-white font-mono">{summary.portfolioAvgRecycledContentPercent}%</div>
-              <div className="text-[10px] text-slate-500 uppercase tracking-wider">{t("ui.supRank.portfolioAvgPcr")}</div>
+              <div className="text-[10px] text-slate-500 uppercase tracking-wider">Portfolio Avg PCR</div>
             </div>
           </div>
           <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-4 flex items-center gap-3">
@@ -496,7 +494,7 @@ export function SupplierRankingDashboard({ summary }: { summary: SupplierAnalyti
               <div className="text-lg font-extrabold text-white font-mono">
                 {summary.portfolioAvgCarbonFootprintKgCO2ePerKg !== null ? numberFmt(summary.portfolioAvgCarbonFootprintKgCO2ePerKg, 3) : "—"}
               </div>
-              <div className="text-[10px] text-slate-500 uppercase tracking-wider">{t("ui.supRank.portfolioAvgPcfKgCo2eKg")}</div>
+              <div className="text-[10px] text-slate-500 uppercase tracking-wider">Portfolio Avg PCF (kg CO2e/kg)</div>
             </div>
           </div>
           <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-4 flex items-center gap-3">
@@ -505,7 +503,7 @@ export function SupplierRankingDashboard({ summary }: { summary: SupplierAnalyti
             </div>
             <div>
               <div className="text-lg font-extrabold text-white font-mono">{summary.totalBatches}</div>
-              <div className="text-[10px] text-slate-500 uppercase tracking-wider">{t("ui.supRank.totalBatchesTracked")}</div>
+              <div className="text-[10px] text-slate-500 uppercase tracking-wider">Total Batches Tracked</div>
             </div>
           </div>
         </div>
@@ -513,15 +511,15 @@ export function SupplierRankingDashboard({ summary }: { summary: SupplierAnalyti
         {/* --- Ranking table --------------------------------------------------- */}
         <div className="bg-slate-900/60 border border-slate-800 rounded-3xl p-6 backdrop-blur-xl">
           <h3 className="text-sm font-bold text-white flex items-center gap-1.5 mb-1">
-            <Gauge className="w-4 h-4 text-sky-400" /> {t("ui.supRank.supplierRanking")}
+            <Gauge className="w-4 h-4 text-sky-400" /> Supplier Ranking
           </h3>
           <p className="text-[11px] text-slate-400 font-mono mb-4">
-            {t("ui.supRank.clickAColumnHeaderToSort")} {summary.suppliers.length} {t("ui.supRank.supplierSTotal")}
+            Click a column header to sort, click a row to expand its full score breakdown. {summary.suppliers.length} supplier(s) total.
           </p>
 
           {summary.suppliers.length === 0 ? (
             <div className="text-center py-10 text-slate-500 text-sm font-mono">
-              {t("ui.supRank.noSuppliersWithLinkedBatchesYet")}
+              No suppliers with linked batches yet — link a Manufacturer to a passport to see it ranked here.
             </div>
           ) : (
             <div className="overflow-x-auto -mx-1 px-1">
@@ -577,7 +575,7 @@ export function SupplierRankingDashboard({ summary }: { summary: SupplierAnalyti
                               className={`inline-flex items-center gap-1 text-[10px] px-2 py-0.5 border rounded-full font-semibold ${meta.badgeClass}`}
                             >
                               <TierIcon className="w-2.5 h-2.5" />
-                              {t(meta.label)}
+                              {meta.label}
                             </span>
                           </td>
                           <td className="py-2.5 px-2 text-right text-white">
@@ -612,7 +610,11 @@ export function SupplierRankingDashboard({ summary }: { summary: SupplierAnalyti
         </div>
 
         <p className="text-[10px] text-slate-500 font-mono pb-4">
-          {t("ui.supRank.scoringMethodologyCertificationVerificationRate35")}
+          Scoring methodology: certification verification rate (35% weight), certificate currency / not-expired rate
+          (25%), recycled content adoption vs. the EU PPWR 2030 baseline target (25%), and carbon footprint reporting
+          completeness (15%) — weighted sum, 0-100. Computed fresh on every request from the same ledger figures used
+          elsewhere in this app; there is no stored or cached supplier score. Suppliers with no active (non-revoked,
+          non-superseded) batches show as "Insufficient Data" rather than being scored 0.
         </p>
       </main>
     </div>
