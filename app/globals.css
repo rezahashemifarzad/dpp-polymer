@@ -95,3 +95,17 @@ body {
 .scrollbar-hide::-webkit-scrollbar {
   display: none;
 }
+
+/* Smooth in-page scrolling for anchor links such as the landing page's
+   "Contact" nav link (#contact). Sections use scroll-mt-16 so they stop
+   below the sticky header. Off for visitors who prefer reduced motion.
+   <html data-scroll-behavior="smooth"> in app/layout.tsx tells Next.js to
+   keep route changes instant. */
+html {
+  scroll-behavior: smooth;
+}
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+}
