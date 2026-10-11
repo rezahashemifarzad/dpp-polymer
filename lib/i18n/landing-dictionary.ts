@@ -64,6 +64,12 @@ export interface LandingCopy {
     title: string;
     lead: string;
     emailLabel: string;
+    /** Button that opens the inquiry dialog. */
+    cta: string;
+    dialogTitle: string;
+    dialogLead: string;
+    /** Close button of the inquiry dialog. */
+    close: string;
     form: {
       name: string;
       company: string;
@@ -268,6 +274,10 @@ const EN: LandingCopy = {
     title: "Get in touch.",
     lead: "Questions about Digital Product Passports, a pilot project or an existing account? Send us a message and we will get back to you.",
     emailLabel: "Email",
+    cta: "Contact Us",
+    dialogTitle: "Contact us",
+    dialogLead: "Tell us briefly what you need and we will reply by email.",
+    close: "Close",
     form: {
       name: "Full name",
       company: "Company / organization",
@@ -475,6 +485,10 @@ const DE: LandingCopy = {
     title: "Sprechen Sie uns an.",
     lead: "Fragen zu Digitalen Produktpässen, einem Pilotprojekt oder einem bestehenden Konto? Senden Sie uns eine Nachricht, wir melden uns bei Ihnen.",
     emailLabel: "E-Mail",
+    cta: "Kontakt aufnehmen",
+    dialogTitle: "Kontakt aufnehmen",
+    dialogLead: "Beschreiben Sie kurz Ihr Anliegen, wir antworten Ihnen per E-Mail.",
+    close: "Schließen",
     form: {
       name: "Vollständiger Name",
       company: "Unternehmen / Organisation",
@@ -682,6 +696,10 @@ const FR: LandingCopy = {
     title: "Contactez-nous.",
     lead: "Des questions sur les passeports numériques de produits, un projet pilote ou un compte existant ? Envoyez-nous un message, nous vous répondrons.",
     emailLabel: "E-mail",
+    cta: "Nous contacter",
+    dialogTitle: "Nous contacter",
+    dialogLead: "Décrivez brièvement votre besoin, nous vous répondrons par e-mail.",
+    close: "Fermer",
     form: {
       name: "Nom complet",
       company: "Entreprise / organisation",

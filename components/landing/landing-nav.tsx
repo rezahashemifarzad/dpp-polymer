@@ -34,7 +34,9 @@ export function LandingNav({ locale, alternates }: LandingNavProps) {
     { href: sectionHref(locale, "features"), label: copy.nav.features },
     { href: sectionHref(locale, "compliance"), label: copy.nav.compliance },
     { href: sectionHref(locale, "security"), label: copy.nav.security },
-    { href: sectionHref(locale, "contact"), label: copy.nav.contact },
+    // Opens the inquiry dialog on the landing page (contact-dialog.tsx);
+    // elsewhere, and without JavaScript, it leads to the #contact section.
+    { href: sectionHref(locale, "contact"), label: copy.nav.contact, contactTrigger: true },
   ];
 
   return (
@@ -50,7 +52,12 @@ export function LandingNav({ locale, alternates }: LandingNavProps) {
 
         <nav aria-label={copy.a11y.mainNav} className="hidden items-center gap-9 md:flex">
           {sections.map((link) => (
-            <Link key={link.href} href={link.href} className={NAV_LINK}>
+            <Link
+              key={link.href}
+              href={link.href}
+              className={NAV_LINK}
+              {...("contactTrigger" in link ? { "data-contact-trigger": "" } : {})}
+            >
               {link.label}
             </Link>
           ))}
@@ -83,6 +90,7 @@ export function LandingNav({ locale, alternates }: LandingNavProps) {
                     key={link.href}
                     href={link.href}
                     className="rounded-lg px-3 py-2.5 text-sm font-medium text-slate-200 transition-colors hover:bg-white/[0.06] hover:text-white"
+                    {...("contactTrigger" in link ? { "data-contact-trigger": "" } : {})}
                   >
                     {link.label}
                   </Link>

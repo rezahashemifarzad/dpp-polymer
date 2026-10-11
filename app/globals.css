@@ -109,3 +109,59 @@ html {
     scroll-behavior: auto;
   }
 }
+
+/* Inquiry dialog (components/landing/contact-dialog.tsx) — a native
+   <dialog>. Tailwind's reset removes the browser's `margin: auto`, which is
+   what centres a modal dialog, so it is restored here. Opening and closing
+   fade and scale the panel and fade the backdrop (`allow-discrete` +
+   @starting-style animate the display/top-layer change); browsers without
+   that support simply show and hide it. Page scrolling is locked while the
+   dialog is open. */
+.contact-dialog {
+  margin: auto;
+  opacity: 0;
+  transform: translateY(12px) scale(0.98);
+  transition:
+    opacity 200ms ease-out,
+    transform 200ms ease-out,
+    overlay 200ms allow-discrete,
+    display 200ms allow-discrete;
+}
+.contact-dialog[open] {
+  opacity: 1;
+  transform: none;
+}
+@starting-style {
+  .contact-dialog[open] {
+    opacity: 0;
+    transform: translateY(12px) scale(0.98);
+  }
+}
+.contact-dialog::backdrop {
+  background-color: rgb(6 17 31 / 0);
+  backdrop-filter: blur(0);
+  transition:
+    background-color 200ms ease-out,
+    backdrop-filter 200ms ease-out,
+    overlay 200ms allow-discrete,
+    display 200ms allow-discrete;
+}
+.contact-dialog[open]::backdrop {
+  background-color: rgb(6 17 31 / 0.6);
+  backdrop-filter: blur(4px);
+}
+@starting-style {
+  .contact-dialog[open]::backdrop {
+    background-color: rgb(6 17 31 / 0);
+    backdrop-filter: blur(0);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .contact-dialog,
+  .contact-dialog::backdrop {
+    transition: none;
+  }
+}
+html:has(.contact-dialog[open]) {
+  overflow: hidden;
+}

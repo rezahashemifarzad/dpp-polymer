@@ -9,6 +9,8 @@
  * feedback (lib/inquiry.ts) and again on the server, which is the check
  * that counts.
  *
+ * Shown inside the inquiry dialog (contact-dialog.tsx).
+ *
  * States: idle → sending → success (the form is replaced by a thank-you
  * panel) or error (a message above the button; what was typed is kept).
  * Errors are announced to screen readers and focus moves to the first
@@ -33,6 +35,11 @@ import type { LandingCopy } from "@/lib/i18n/landing-dictionary";
 interface ContactFormProps {
   locale: SiteLocale;
   copy: LandingCopy["contact"]["form"];
+  /** When set, the success panel offers a close button with this label. */
+  closeLabel?: string;
+  onClose?: () => void;
+  /** Reports whether the thank-you panel is showing. */
+  onSentChange?: (sent: boolean) => void;
 }
 
 const FIELD_ORDER: readonly InquiryField[] = ["name", "company", "email", "message"];
@@ -44,11 +51,15 @@ const CONTROL =
 const CONTROL_OK = "border-slate-300 hover:border-slate-400";
 const CONTROL_BAD = "border-rose-500";
 
-export function ContactForm({ locale, copy }: ContactFormProps) {
+export function ContactForm({ locale, copy, closeLabel, onClose, onSentChange }: ContactFormProps) {
   const formRef = useRef<HTMLFormElement>(null);
   const [fieldErrors, setFieldErrors] = useState<InquiryFieldErrors>({});
   const [formError, setFormError] = useState<string | null>(null);
-  const [sent, setSent] = useState(false);
+  const [sent, setSentState] = useState(false);
+  const setSent = (value: boolean) => {
+    setSentState(value);
+    onSentChange?.(value);
+  };
   const [isPending, startTransition] = useTransition();
 
   const showErrors = (errors: InquiryFieldErrors) => {
@@ -92,13 +103,25 @@ export function ContactForm({ locale, copy }: ContactFormProps) {
         <CheckCircle2 className="h-9 w-9 text-teal-700" aria-hidden="true" />
         <h3 className="mt-5 text-xl font-semibold tracking-[-0.01em] text-navy-900">{copy.successTitle}</h3>
         <p className="mt-2 text-[15.5px] leading-[1.65] text-slate-600">{copy.successBody}</p>
-        <button
-          type="button"
-          onClick={() => setSent(false)}
-          className="mt-7 rounded-sm text-[14px] font-semibold text-navy-900 underline decoration-slate-300 underline-offset-4 hover:decoration-navy-900 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-navy-700"
-        >
-          {copy.sendAnother}
-        </button>
+        <div className="mt-7 flex flex-wrap items-center gap-x-6 gap-y-3">
+          {onClose && closeLabel && (
+            <button
+              type="button"
+              onClick={onClose}
+              autoFocus
+              className="inline-flex h-11 items-center justify-center rounded-lg bg-navy-900 px-5 text-[14.5px] font-semibold text-white transition-colors duration-200 hover:bg-navy-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-navy-700"
+            >
+              {closeLabel}
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={() => setSent(false)}
+            className="rounded-sm text-[14px] font-semibold text-navy-900 underline decoration-slate-300 underline-offset-4 hover:decoration-navy-900 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-navy-700"
+          >
+            {copy.sendAnother}
+          </button>
+        </div>
       </div>
     );
   }

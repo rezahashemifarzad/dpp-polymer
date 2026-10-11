@@ -35,7 +35,7 @@ export function LandingFooter({ locale }: LandingFooterProps) {
         { href: ROUTES.platform, label: copy.nav.launchApp },
         { href: ROUTES.login, label: copy.nav.login },
         { href: pilotMailto(locale), label: copy.hero.requestPilot },
-        { href: sectionHref(locale, "contact"), label: copy.footer.contact },
+        { href: sectionHref(locale, "contact"), label: copy.footer.contact, contactTrigger: true },
       ],
     },
     {
@@ -75,7 +75,11 @@ export function LandingFooter({ locale }: LandingFooterProps) {
                 {col.links.map((link) => (
                   <li key={link.label}>
                     {link.href.startsWith("/") ? (
-                      <Link href={link.href} className={LINK_CLASS}>
+                      <Link
+                        href={link.href}
+                        className={LINK_CLASS}
+                        {...("contactTrigger" in link ? { "data-contact-trigger": "" } : {})}
+                      >
                         {link.label}
                       </Link>
                     ) : (
