@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import SiteNav from "@/components/SiteNav";
 import { LanguageProvider } from "@/lib/hooks/use-language";
+import { SITE, siteUrl } from "@/lib/site-config";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -15,8 +16,16 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
+  metadataBase: siteUrl(),
   title: "DPP-Polymer — Digital Product Passport Platform",
   description: "Digital Product Passport Platform",
+  applicationName: SITE.name,
+  openGraph: {
+    siteName: SITE.name,
+    type: "website",
+    title: "DPP-Polymer — Digital Product Passport Platform",
+    description: "Digital Product Passport Platform",
+  },
 };
 
 export default function RootLayout({

@@ -486,7 +486,7 @@ export function NotificationCenterDashboard({ initialSummary, initialWebhooks, i
             <SummaryChip Icon={Mail} label={summary.emailConfigured ? t("ui.notif.emailReady") : t("ui.notif.inAppOnly")} count={summary.recentFailureCount} cls={summary.emailConfigured ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-400" : "bg-slate-800 border-slate-700 text-slate-400"} />
           </div>
           {!summary.emailConfigured && (settings.emailEnabled || emailEnabledDraft) && (
-            <EmailSetupNotice missingEnvVars={summary.emailMissingEnvVars ?? ["RESEND_API_KEY", "DPP_NOTIFICATION_EMAIL_FROM"]} />
+            <EmailSetupNotice missingEnvVars={summary.emailMissingEnvVars ?? ["RESEND_API_KEY"]} />
           )}
         </div>
 

@@ -18,7 +18,7 @@ import { ComplianceSection } from "./compliance-section";
 import { SecuritySection } from "./security-section";
 import { PilotCta } from "./pilot-cta";
 import { LandingFooter } from "./landing-footer";
-import { LOCALE_ROUTES, siteUrl, type SiteLocale } from "@/lib/site-config";
+import { LOCALE_ROUTES, SITE, siteUrl, type SiteLocale } from "@/lib/site-config";
 import { LANDING_COPY } from "@/lib/i18n/landing-dictionary";
 
 const OG_LOCALE: Record<SiteLocale, string> = { en: "en_GB", de: "de_DE", fr: "fr_FR" };
@@ -47,6 +47,7 @@ export function corporateMetadata(
       title,
       description,
       type: "website",
+      siteName: SITE.name,
       locale: OG_LOCALE[locale],
       url: LOCALE_ROUTES[locale][page],
     },

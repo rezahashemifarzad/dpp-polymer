@@ -7,7 +7,7 @@
 
 import Link from "next/link";
 import { BrandMark } from "./brand-mark";
-import { LEGAL_ENTITY, LOCALE_ROUTES, ROUTES, pilotMailto, sectionHref, type SiteLocale } from "@/lib/site-config";
+import { CONTACT_EMAIL, LEGAL_ENTITY, LOCALE_ROUTES, ROUTES, pilotMailto, sectionHref, type SiteLocale } from "@/lib/site-config";
 import { LANDING_COPY } from "@/lib/i18n/landing-dictionary";
 
 const LINK_CLASS =
@@ -60,6 +60,11 @@ export function LandingFooter({ locale }: LandingFooterProps) {
               <BrandMark />
             </Link>
             <p className="mt-4 text-[13.5px] leading-relaxed text-slate-400">{copy.footer.tagline}</p>
+            <p className="mt-4">
+              <a href={`mailto:${CONTACT_EMAIL}`} className={LINK_CLASS}>
+                {CONTACT_EMAIL}
+              </a>
+            </p>
           </div>
           {columns.map((col) => (
             <nav key={col.title} aria-label={col.title}>

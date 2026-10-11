@@ -13,17 +13,28 @@
  * body — no library, no connection pooling, no port 25/587 firewall
  * concerns in a serverless (Vercel) deployment.
  *
- * Required env vars (both optional — see isEmailDispatchConfigured below):
- *   RESEND_API_KEY            — Resend API key (dashboard: resend.com/api-keys)
- *   DPP_NOTIFICATION_EMAIL_FROM — verified sender address/domain in Resend
+ * Env vars (see isEmailDispatchConfigured below):
+ *   RESEND_API_KEY            — Resend API key (dashboard: resend.com/api-keys).
+ *                               Required to send.
+ *   DPP_NOTIFICATION_EMAIL_FROM — optional sender override. Defaults to the
+ *                               official mailbox, "DPP-Polymer <info@dpp-polymer.de>"
+ *                               (DEFAULT_EMAIL_FROM); the dpp-polymer.de domain
+ *                               must be verified in Resend (resend.com/domains).
  *
- * Neither is set by default in this project's .env (confirmed — DATABASE_URL
- * only). Without them, sendNotificationEmail() returns
+ * Every email also carries Reply-To: info@dpp-polymer.de, so replies land in
+ * the official mailbox whatever the sender is.
+ *
+ * Without RESEND_API_KEY, sendNotificationEmail() returns
  * `{ ok: false, skipped: true, ... }` rather than throwing — the caller
  * (lib/services/notification-service.ts) turns that into a NotificationLog
  * row with status SKIPPED, so the admin notifications UI clearly shows
  * "email not configured" instead of a silent no-op or a crashed cron run.
  */
+
+import { CONTACT_EMAIL, SITE } from "@/lib/site-config";
+
+/** Sender used when DPP_NOTIFICATION_EMAIL_FROM is not set. */
+export const DEFAULT_EMAIL_FROM = `${SITE.name} <${CONTACT_EMAIL}>`;
 
 export interface EmailDispatchResult {
   ok: boolean;
@@ -33,7 +44,7 @@ export interface EmailDispatchResult {
 
 /** The env vars email delivery needs. Names only — values are never
  * surfaced to the UI or logs. */
-export const EMAIL_DISPATCH_ENV_VARS = ["RESEND_API_KEY", "DPP_NOTIFICATION_EMAIL_FROM"] as const;
+export const EMAIL_DISPATCH_ENV_VARS = ["RESEND_API_KEY"] as const;
 
 export interface EmailDispatchStatus {
   configured: boolean;
@@ -74,7 +85,7 @@ export async function sendNotificationEmail(
     return { ok: false, skipped: true, error: notConfigured };
   }
   const apiKey = process.env.RESEND_API_KEY!.trim();
-  const from = process.env.DPP_NOTIFICATION_EMAIL_FROM!.trim();
+  const from = process.env.DPP_NOTIFICATION_EMAIL_FROM?.trim() || DEFAULT_EMAIL_FROM;
   if (recipients.length === 0) {
     return { ok: false, skipped: true, error: "No notification email recipients configured" };
   }
@@ -88,6 +99,7 @@ export async function sendNotificationEmail(
       },
       body: JSON.stringify({
         from,
+        reply_to: CONTACT_EMAIL,
         to: recipients,
         subject,
         text: bodyText,

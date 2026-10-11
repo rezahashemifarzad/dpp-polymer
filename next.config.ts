@@ -22,7 +22,12 @@ import type { NextConfig } from "next";
 //   1. NEXT_PUBLIC_BASE_URL, if explicitly set — always wins when
 //      present (e.g. to point at a custom domain instead of the
 //      *.vercel.app one), exactly as before.
-//   2. VERCEL_PROJECT_PRODUCTION_URL — the project's stable production
+//   2. https://dpp-polymer.de — the official production domain, used for
+//      every Vercel PRODUCTION build (VERCEL_ENV === "production"), so
+//      canonical links, Open Graph URLs, the sitemap and every GS1 /
+//      QR link point at the custom domain even if the dashboard
+//      variable is missing. Preview builds are not affected.
+//   2b. VERCEL_PROJECT_PRODUCTION_URL — the project's stable production
 //      domain (e.g. "dpp-polymer.vercel.app"), constant across
 //      redeploys. Preferred over VERCEL_URL for production builds.
 //   3. VERCEL_URL — the current deployment's own URL. Covers preview
@@ -38,9 +43,14 @@ import type { NextConfig } from "next";
 // changes at all and keep working exactly as they already do. This
 // computation runs once, at build time, which is also when Vercel's
 // System Environment Variables are populated.
+const PRODUCTION_URL = "https://dpp-polymer.de";
+
 function resolveBaseUrl(): string {
   if (process.env.NEXT_PUBLIC_BASE_URL) {
     return process.env.NEXT_PUBLIC_BASE_URL.replace(/\/+$/, "");
+  }
+  if (process.env.VERCEL_ENV === "production") {
+    return PRODUCTION_URL;
   }
   if (process.env.VERCEL_PROJECT_PRODUCTION_URL) {
     return `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`;

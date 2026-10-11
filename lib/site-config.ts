@@ -26,6 +26,9 @@ export const SITE_LOCALES: readonly SiteLocale[] = ["en", "de", "fr"];
 
 export const SITE = {
   name: "DPP-Polymer",
+  /** Official production domain (apex is canonical; www redirects to it in Vercel). */
+  domain: "dpp-polymer.de",
+  productionUrl: "https://dpp-polymer.de",
 } as const;
 
 /** Routes into the platform — identical in both languages. */
@@ -56,19 +59,25 @@ export function sectionHref(locale: SiteLocale, section: "features" | "complianc
 
 /**
  * Absolute base URL for metadata (canonical + hreflang). next.config.ts
- * resolves NEXT_PUBLIC_BASE_URL at build time (explicit value, else the
- * Vercel production URL, else localhost).
+ * resolves NEXT_PUBLIC_BASE_URL at build time (explicit value, else
+ * https://dpp-polymer.de on Vercel production, else the deployment URL,
+ * else localhost).
  */
 export function siteUrl(): URL {
   return new URL(process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000");
 }
 
 /**
- * Pilot requests go to this mailbox. Set NEXT_PUBLIC_PILOT_CONTACT_EMAIL in
- * Vercel (Project → Settings → Environment Variables) to change it without
- * a code edit.
+ * Official contact mailbox for all platform inquiries (pilot requests,
+ * Imprint, privacy contact, footer, and the sender / reply-to of
+ * transactional email — see lib/services/email-dispatch.ts). Set
+ * NEXT_PUBLIC_CONTACT_EMAIL in Vercel (Project → Settings → Environment
+ * Variables) to change it without a code edit.
  */
-export const PILOT_CONTACT_EMAIL = process.env.NEXT_PUBLIC_PILOT_CONTACT_EMAIL?.trim() || "pilot@dpp-polymer.de";
+export const CONTACT_EMAIL = process.env.NEXT_PUBLIC_CONTACT_EMAIL?.trim() || "info@dpp-polymer.de";
+
+/** Pilot requests go to the official contact mailbox. */
+export const PILOT_CONTACT_EMAIL = CONTACT_EMAIL;
 
 const PILOT_MAIL: Record<SiteLocale, { subject: string; body: string }> = {
   en: {
@@ -115,7 +124,7 @@ export const LEGAL_ENTITY: LegalEntity = {
   street: "",
   postalCodeAndCity: "",
   country: { en: "Germany", de: "Deutschland", fr: "Allemagne" },
-  email: PILOT_CONTACT_EMAIL,
+  email: CONTACT_EMAIL,
   phone: "",
   commercialRegister: "",
   vatId: "",
