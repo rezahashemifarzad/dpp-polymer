@@ -7,7 +7,7 @@
 
 import Link from "next/link";
 import { BrandMark } from "./brand-mark";
-import { CONTACT_EMAIL, LEGAL_ENTITY, LOCALE_ROUTES, ROUTES, pilotMailto, sectionHref, type SiteLocale } from "@/lib/site-config";
+import { CONTACT_EMAIL, LEGAL_ENTITY, LOCALE_ROUTES, ROUTES, contactMailto, pilotMailto, sectionHref, type SiteLocale } from "@/lib/site-config";
 import { LANDING_COPY } from "@/lib/i18n/landing-dictionary";
 
 const LINK_CLASS =
@@ -35,6 +35,7 @@ export function LandingFooter({ locale }: LandingFooterProps) {
         { href: ROUTES.platform, label: copy.nav.launchApp },
         { href: ROUTES.login, label: copy.nav.login },
         { href: pilotMailto(locale), label: copy.hero.requestPilot },
+        { href: sectionHref(locale, "contact"), label: copy.footer.contact },
       ],
     },
     {
@@ -60,8 +61,9 @@ export function LandingFooter({ locale }: LandingFooterProps) {
               <BrandMark />
             </Link>
             <p className="mt-4 text-[13.5px] leading-relaxed text-slate-400">{copy.footer.tagline}</p>
-            <p className="mt-4">
-              <a href={`mailto:${CONTACT_EMAIL}`} className={LINK_CLASS}>
+            <p className="mt-5 text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">{copy.footer.contact}</p>
+            <p className="mt-2">
+              <a href={contactMailto()} className={`${LINK_CLASS} font-medium text-slate-200`}>
                 {CONTACT_EMAIL}
               </a>
             </p>

@@ -17,6 +17,7 @@ import { ValuePillars } from "./value-pillars";
 import { ComplianceSection } from "./compliance-section";
 import { SecuritySection } from "./security-section";
 import { PilotCta } from "./pilot-cta";
+import { ContactSection } from "./contact-section";
 import { LandingFooter } from "./landing-footer";
 import { LOCALE_ROUTES, SITE, siteUrl, type SiteLocale } from "@/lib/site-config";
 import { LANDING_COPY } from "@/lib/i18n/landing-dictionary";
@@ -80,6 +81,7 @@ export function LandingPage({ locale }: LandingPageProps) {
         <ComplianceSection locale={locale} />
         <SecuritySection locale={locale} />
         <PilotCta locale={locale} />
+        <ContactSection locale={locale} />
       </main>
       <LandingFooter locale={locale} />
     </div>

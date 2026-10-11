@@ -16,7 +16,7 @@ import type { SiteLocale } from "@/lib/site-config";
 export interface LandingCopy {
   meta: { title: string; description: string };
   a11y: { skipToContent: string; mainNav: string; openMenu: string; languageSwitch: string; home: string };
-  nav: { features: string; compliance: string; security: string; login: string; launchApp: string };
+  nav: { features: string; compliance: string; security: string; contact: string; login: string; launchApp: string };
   hero: { eyebrow: string; title: string; lead: string; requestPilot: string; launchPlatform: string };
   trust: { label: string; items: { title: string; detail: string }[] };
   passport: {
@@ -59,7 +59,9 @@ export interface LandingCopy {
     launchPlatform: string;
     steps: { title: string; body: string }[];
   };
+  contact: { eyebrow: string; title: string; lead: string; emailLabel: string; cta: string };
   footer: {
+    contact: string;
     tagline: string;
     product: string;
     platform: string;
@@ -84,7 +86,7 @@ const EN: LandingCopy = {
     languageSwitch: "Language",
     home: "DPP-Polymer home",
   },
-  nav: { features: "Features", compliance: "Compliance", security: "Security", login: "Log in", launchApp: "Launch App" },
+  nav: { features: "Features", compliance: "Compliance", security: "Security", contact: "Contact", login: "Log in", launchApp: "Launch App" },
   hero: {
     eyebrow: "Built for EU ESPR & PPWR",
     title: "Verifiable product passports for polymers and recyclates.",
@@ -235,7 +237,15 @@ const EN: LandingCopy = {
       { title: "Issue", body: "Publish passports, print GS1 QR labels and share access with auditors and buyers." },
     ],
   },
+  contact: {
+    eyebrow: "Contact",
+    title: "Get in touch.",
+    lead: "Questions about Digital Product Passports, a pilot project or an existing account? Write to us and we will get back to you.",
+    emailLabel: "Email",
+    cta: "Send an email",
+  },
   footer: {
+    contact: "Contact",
     tagline: "Digital Product Passports for polymers and recyclates.",
     product: "Product",
     platform: "Platform",
@@ -260,7 +270,7 @@ const DE: LandingCopy = {
     languageSwitch: "Sprache",
     home: "DPP-Polymer Startseite",
   },
-  nav: { features: "Funktionen", compliance: "Compliance", security: "Sicherheit", login: "Anmelden", launchApp: "App öffnen" },
+  nav: { features: "Funktionen", compliance: "Compliance", security: "Sicherheit", contact: "Kontakt", login: "Anmelden", launchApp: "App öffnen" },
   hero: {
     eyebrow: "Entwickelt für EU-ESPR & PPWR",
     title: "Verifizierbare Produktpässe für Kunststoffe und Rezyklate.",
@@ -411,7 +421,15 @@ const DE: LandingCopy = {
       { title: "Ausstellen", body: "Veröffentlichen Sie Produktpässe, drucken Sie GS1-QR-Etiketten und geben Sie Prüfern und Einkäufern Zugriff." },
     ],
   },
+  contact: {
+    eyebrow: "Kontakt",
+    title: "Sprechen Sie uns an.",
+    lead: "Fragen zu Digitalen Produktpässen, einem Pilotprojekt oder einem bestehenden Konto? Schreiben Sie uns, wir melden uns bei Ihnen.",
+    emailLabel: "E-Mail",
+    cta: "E-Mail schreiben",
+  },
   footer: {
+    contact: "Kontakt",
     tagline: "Digitale Produktpässe für Kunststoffe und Rezyklate.",
     product: "Produkt",
     platform: "Plattform",
@@ -436,7 +454,7 @@ const FR: LandingCopy = {
     languageSwitch: "Langue",
     home: "Accueil DPP-Polymer",
   },
-  nav: { features: "Fonctionnalités", compliance: "Conformité", security: "Sécurité", login: "Connexion", launchApp: "Ouvrir l'application" },
+  nav: { features: "Fonctionnalités", compliance: "Conformité", security: "Sécurité", contact: "Contact", login: "Connexion", launchApp: "Ouvrir l'application" },
   hero: {
     eyebrow: "Conçu pour l'ESPR et le PPWR européens",
     title: "Des passeports produits vérifiables pour les polymères et les recyclats.",
@@ -587,7 +605,15 @@ const FR: LandingCopy = {
       { title: "Émettre", body: "Publiez les passeports, imprimez les étiquettes QR GS1 et ouvrez l'accès aux auditeurs et aux acheteurs." },
     ],
   },
+  contact: {
+    eyebrow: "Contact",
+    title: "Contactez-nous.",
+    lead: "Des questions sur les passeports numériques de produits, un projet pilote ou un compte existant ? Écrivez-nous, nous vous répondrons.",
+    emailLabel: "E-mail",
+    cta: "Envoyer un e-mail",
+  },
   footer: {
+    contact: "Contact",
     tagline: "Passeports numériques de produits pour polymères et recyclats.",
     product: "Produit",
     platform: "Plateforme",

@@ -34,6 +34,7 @@ export function LandingNav({ locale, alternates }: LandingNavProps) {
     { href: sectionHref(locale, "features"), label: copy.nav.features },
     { href: sectionHref(locale, "compliance"), label: copy.nav.compliance },
     { href: sectionHref(locale, "security"), label: copy.nav.security },
+    { href: sectionHref(locale, "contact"), label: copy.nav.contact },
   ];
 
   return (

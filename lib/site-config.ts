@@ -53,7 +53,7 @@ export function homeForAppLanguage(lang: "EN" | "DE" | "FR"): string {
 }
 
 /** Anchor link to a section of the landing page in the given language. */
-export function sectionHref(locale: SiteLocale, section: "features" | "compliance" | "security" | "pilot"): string {
+export function sectionHref(locale: SiteLocale, section: "features" | "compliance" | "security" | "pilot" | "contact"): string {
   return `${LOCALE_ROUTES[locale].home}#${section}`;
 }
 
@@ -75,6 +75,11 @@ export function siteUrl(): URL {
  * Variables) to change it without a code edit.
  */
 export const CONTACT_EMAIL = process.env.NEXT_PUBLIC_CONTACT_EMAIL?.trim() || "info@dpp-polymer.de";
+
+/** Plain mail link to the official contact mailbox (general inquiries). */
+export function contactMailto(): string {
+  return `mailto:${CONTACT_EMAIL}`;
+}
 
 /** Pilot requests go to the official contact mailbox. */
 export const PILOT_CONTACT_EMAIL = CONTACT_EMAIL;
