@@ -21,8 +21,10 @@
  *                               (DEFAULT_EMAIL_FROM); the dpp-polymer.de domain
  *                               must be verified in Resend (resend.com/domains).
  *
- * Every email also carries Reply-To: info@dpp-polymer.de, so replies land in
- * the official mailbox whatever the sender is.
+ * Every email carries Reply-To: info@dpp-polymer.de by default, so replies
+ * land in the official mailbox whatever the sender is. A caller can pass
+ * options.replyTo instead (the inquiry form sets it to the visitor's
+ * address — see lib/actions/submit-inquiry.ts).
  *
  * Without RESEND_API_KEY, sendNotificationEmail() returns
  * `{ ok: false, skipped: true, ... }` rather than throwing — the caller
@@ -78,7 +80,8 @@ export async function sendNotificationEmail(
   recipients: string[],
   subject: string,
   bodyText: string,
-  bodyHtml: string
+  bodyHtml: string,
+  options: { replyTo?: string } = {}
 ): Promise<EmailDispatchResult> {
   const notConfigured = describeEmailNotConfigured();
   if (notConfigured) {
@@ -99,7 +102,7 @@ export async function sendNotificationEmail(
       },
       body: JSON.stringify({
         from,
-        reply_to: CONTACT_EMAIL,
+        reply_to: options.replyTo?.trim() || CONTACT_EMAIL,
         to: recipients,
         subject,
         text: bodyText,

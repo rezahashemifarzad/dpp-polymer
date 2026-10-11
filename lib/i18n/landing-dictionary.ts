@@ -59,7 +59,33 @@ export interface LandingCopy {
     launchPlatform: string;
     steps: { title: string; body: string }[];
   };
-  contact: { eyebrow: string; title: string; lead: string; emailLabel: string; cta: string };
+  contact: {
+    eyebrow: string;
+    title: string;
+    lead: string;
+    emailLabel: string;
+    form: {
+      name: string;
+      company: string;
+      email: string;
+      topic: string;
+      topics: { general: string; pilot: string; compliance: string; partnership: string };
+      message: string;
+      submit: string;
+      sending: string;
+      successTitle: string;
+      successBody: string;
+      sendAnother: string;
+      errorRequired: string;
+      errorInvalidEmail: string;
+      errorTooLong: string;
+      /** Followed by the contact address as a link. */
+      errorFailed: string;
+      /** Followed by the contact address as a link. */
+      errorUnavailable: string;
+      privacyNote: string;
+    };
+  };
   footer: {
     contact: string;
     tagline: string;
@@ -240,9 +266,32 @@ const EN: LandingCopy = {
   contact: {
     eyebrow: "Contact",
     title: "Get in touch.",
-    lead: "Questions about Digital Product Passports, a pilot project or an existing account? Write to us and we will get back to you.",
+    lead: "Questions about Digital Product Passports, a pilot project or an existing account? Send us a message and we will get back to you.",
     emailLabel: "Email",
-    cta: "Send an email",
+    form: {
+      name: "Full name",
+      company: "Company / organization",
+      email: "Business email",
+      topic: "Topic",
+      topics: {
+        general: "General Inquiry",
+        pilot: "Pilot Testing",
+        compliance: "Compliance & Regulatory Setup",
+        partnership: "Partnership",
+      },
+      message: "Message",
+      submit: "Send inquiry",
+      sending: "Sending…",
+      successTitle: "Thank you for reaching out!",
+      successBody: "We will get back to you shortly.",
+      sendAnother: "Send another inquiry",
+      errorRequired: "This field is required.",
+      errorInvalidEmail: "Enter a valid email address.",
+      errorTooLong: "This entry is too long.",
+      errorFailed: "Your inquiry could not be sent. Please try again or write to",
+      errorUnavailable: "The form is not available right now. Please write to",
+      privacyNote: "We use your details only to answer your inquiry.",
+    },
   },
   footer: {
     contact: "Contact",
@@ -424,9 +473,32 @@ const DE: LandingCopy = {
   contact: {
     eyebrow: "Kontakt",
     title: "Sprechen Sie uns an.",
-    lead: "Fragen zu Digitalen Produktpässen, einem Pilotprojekt oder einem bestehenden Konto? Schreiben Sie uns, wir melden uns bei Ihnen.",
+    lead: "Fragen zu Digitalen Produktpässen, einem Pilotprojekt oder einem bestehenden Konto? Senden Sie uns eine Nachricht, wir melden uns bei Ihnen.",
     emailLabel: "E-Mail",
-    cta: "E-Mail schreiben",
+    form: {
+      name: "Vollständiger Name",
+      company: "Unternehmen / Organisation",
+      email: "Geschäftliche E-Mail",
+      topic: "Thema",
+      topics: {
+        general: "Allgemeine Anfrage",
+        pilot: "Pilotprojekt",
+        compliance: "Compliance & regulatorische Einrichtung",
+        partnership: "Partnerschaft",
+      },
+      message: "Nachricht",
+      submit: "Anfrage senden",
+      sending: "Wird gesendet…",
+      successTitle: "Vielen Dank für Ihre Anfrage!",
+      successBody: "Wir melden uns in Kürze bei Ihnen.",
+      sendAnother: "Weitere Anfrage senden",
+      errorRequired: "Dieses Feld ist erforderlich.",
+      errorInvalidEmail: "Geben Sie eine gültige E-Mail-Adresse ein.",
+      errorTooLong: "Diese Eingabe ist zu lang.",
+      errorFailed: "Ihre Anfrage konnte nicht gesendet werden. Bitte versuchen Sie es erneut oder schreiben Sie an",
+      errorUnavailable: "Das Formular ist derzeit nicht verfügbar. Bitte schreiben Sie an",
+      privacyNote: "Wir verwenden Ihre Angaben ausschließlich zur Beantwortung Ihrer Anfrage.",
+    },
   },
   footer: {
     contact: "Kontakt",
@@ -608,9 +680,32 @@ const FR: LandingCopy = {
   contact: {
     eyebrow: "Contact",
     title: "Contactez-nous.",
-    lead: "Des questions sur les passeports numériques de produits, un projet pilote ou un compte existant ? Écrivez-nous, nous vous répondrons.",
+    lead: "Des questions sur les passeports numériques de produits, un projet pilote ou un compte existant ? Envoyez-nous un message, nous vous répondrons.",
     emailLabel: "E-mail",
-    cta: "Envoyer un e-mail",
+    form: {
+      name: "Nom complet",
+      company: "Entreprise / organisation",
+      email: "E-mail professionnel",
+      topic: "Sujet",
+      topics: {
+        general: "Demande générale",
+        pilot: "Projet pilote",
+        compliance: "Conformité et mise en place réglementaire",
+        partnership: "Partenariat",
+      },
+      message: "Message",
+      submit: "Envoyer la demande",
+      sending: "Envoi en cours…",
+      successTitle: "Merci pour votre message !",
+      successBody: "Nous vous répondrons très prochainement.",
+      sendAnother: "Envoyer une autre demande",
+      errorRequired: "Ce champ est obligatoire.",
+      errorInvalidEmail: "Saisissez une adresse e-mail valide.",
+      errorTooLong: "Cette saisie est trop longue.",
+      errorFailed: "Votre demande n'a pas pu être envoyée. Veuillez réessayer ou écrire à",
+      errorUnavailable: "Le formulaire n'est pas disponible pour le moment. Veuillez écrire à",
+      privacyNote: "Nous utilisons vos informations uniquement pour répondre à votre demande.",
+    },
   },
   footer: {
     contact: "Contact",

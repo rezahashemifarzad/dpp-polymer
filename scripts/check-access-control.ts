@@ -44,6 +44,9 @@ const PUBLIC_ACTIONS = new Set<string>([
   "lib/actions/logout.ts logoutAction",
   "lib/actions/ask-assistant.ts askPublicAssistantAction",
   "lib/actions/get-viewer-role.ts getViewerRoleAction",
+  // Landing-page inquiry form: visitors have no session. Sends one email to
+  // the fixed contact mailbox only; reads and writes no platform data.
+  "lib/actions/submit-inquiry.ts submitInquiryAction",
 ]);
 
 const ROUTE_GUARDS = [
