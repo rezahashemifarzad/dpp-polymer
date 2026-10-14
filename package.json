@@ -4,11 +4,12 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "tsx scripts/check-access-control.ts && next build",
+    "build": "tsx scripts/check-access-control.ts && tsc -p tsconfig.site-copy.json && next build",
     "check:access": "tsx scripts/check-access-control.ts",
     "check:i18n": "tsx scripts/check-i18n.ts",
+    "check:site-copy": "tsc -p tsconfig.site-copy.json",
     "check:types": "tsc --noEmit",
-    "check": "npm run check:access && npm run check:i18n",
+    "check": "npm run check:access && npm run check:i18n && npm run check:site-copy",
     "start": "next start",
     "lint": "eslint",
     "postinstall": "prisma generate"

@@ -1,0 +1,18 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "incremental": false
+  },
+  "include": [
+    "next-env.d.ts",
+    "lib/i18n/landing-dictionary.ts",
+    "lib/i18n/compliance-frameworks.ts",
+    "components/landing/**/*.tsx",
+    "app/page.tsx",
+    "app/de/**/*.tsx",
+    "app/fr/**/*.tsx",
+    "app/imprint/**/*.tsx",
+    "app/privacy/**/*.tsx"
+  ]
+}

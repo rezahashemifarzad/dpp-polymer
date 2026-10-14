@@ -7,6 +7,9 @@
  * client-side useLanguage() dictionary. `LandingCopy` is the contract: a
  * missing or extra field in either language is a type error.
  *
+ * The Compliance section's framework list (full names, definitions,
+ * status, platform support) lives in lib/i18n/compliance-frameworks.ts.
+ *
  * German copy uses the formal "Sie"; German and French use their own number
  * formatting (decimal comma).
  */
@@ -39,8 +42,6 @@ export interface LandingCopy {
     title: string;
     lead: string;
     caption: string;
-    columns: { framework: string; reference: string; coverage: string };
-    frameworks: { name: string; reference: string; coverage: string }[];
     disclaimer: string;
   };
   security: {
@@ -192,41 +193,6 @@ const EN: LandingCopy = {
     title: "Built around the regulations your customers will ask about.",
     lead: "Each passport field maps to a requirement, so auditors and buyers get answers instead of attachments.",
     caption: "Regulations and standards supported by DPP-Polymer",
-    columns: { framework: "Framework", reference: "Reference", coverage: "What DPP-Polymer records" },
-    frameworks: [
-      {
-        name: "ESPR",
-        reference: "Regulation (EU) 2024/1781",
-        coverage:
-          "Structured passport per batch with a unique identifier, a QR data carrier resolving to a public passport, and lifecycle states (issued, revoked, superseded) that never delete history.",
-      },
-      {
-        name: "PPWR",
-        reference: "Regulation (EU) 2025/40",
-        coverage: "Post-consumer and post-industrial recycled-content shares and per-batch packaging compliance declarations.",
-      },
-      {
-        name: "REACH",
-        reference: "Regulation (EC) No 1907/2006",
-        coverage: "Substance of Very High Concern declarations above 0.1 % w/w, with portfolio-wide alerts.",
-      },
-      {
-        name: "ISCC PLUS",
-        reference: "Mass-balance chain of custody",
-        coverage: "Chain-of-custody records and certificates reviewed by named auditors, with expiry monitoring.",
-      },
-      {
-        name: "GS1 Digital Link",
-        reference: "ISO/IEC 18975",
-        coverage: "Standard web URIs per GTIN and batch, printed as QR labels for packaging and delivery documents.",
-      },
-      {
-        name: "Product carbon footprint",
-        reference: "Cradle-to-gate, kg CO₂e/kg",
-        coverage:
-          "Footprint per batch from feedstock and process inputs, calculated with exact decimal arithmetic and stored with the passport.",
-      },
-    ],
     disclaimer:
       "DPP-Polymer supports your compliance documentation. Responsibility for the accuracy of declarations remains with the manufacturer or economic operator placing the product on the market.",
   },
@@ -403,41 +369,6 @@ const DE: LandingCopy = {
     title: "Ausgerichtet auf die Vorschriften, nach denen Ihre Kunden fragen.",
     lead: "Jedes Feld im Produktpass ist einer Anforderung zugeordnet – Prüfer und Einkäufer erhalten Antworten statt Anhänge.",
     caption: "Von DPP-Polymer unterstützte Vorschriften und Standards",
-    columns: { framework: "Rahmenwerk", reference: "Referenz", coverage: "Was DPP-Polymer erfasst" },
-    frameworks: [
-      {
-        name: "ESPR",
-        reference: "Verordnung (EU) 2024/1781",
-        coverage:
-          "Strukturierter Produktpass pro Charge mit eindeutiger Kennung, QR-Datenträger mit Verweis auf den öffentlichen Pass und Lebenszyklusstatus (ausgestellt, widerrufen, ersetzt), ohne die Historie zu löschen.",
-      },
-      {
-        name: "PPWR",
-        reference: "Verordnung (EU) 2025/40",
-        coverage: "Anteile an Post-Consumer- und Post-Industrial-Rezyklat sowie Konformitätserklärungen für Verpackungen je Charge.",
-      },
-      {
-        name: "REACH",
-        reference: "Verordnung (EG) Nr. 1907/2006",
-        coverage: "Erklärungen zu besonders besorgniserregenden Stoffen (SVHC) über 0,1 % (w/w) mit portfolioweiten Warnungen.",
-      },
-      {
-        name: "ISCC PLUS",
-        reference: "Massenbilanz-Lieferkette",
-        coverage: "Lieferkettennachweise und Zertifikate, geprüft durch benannte Prüfer, mit Überwachung der Gültigkeit.",
-      },
-      {
-        name: "GS1 Digital Link",
-        reference: "ISO/IEC 18975",
-        coverage: "Standardisierte Web-URIs pro GTIN und Charge, gedruckt als QR-Etiketten für Verpackungen und Lieferpapiere.",
-      },
-      {
-        name: "Produkt-CO₂-Fußabdruck",
-        reference: "Cradle-to-Gate, kg CO₂e/kg",
-        coverage:
-          "Fußabdruck pro Charge aus Rohstoff- und Prozessdaten, mit exakter Dezimalarithmetik berechnet und im Pass gespeichert.",
-      },
-    ],
     disclaimer:
       "DPP-Polymer unterstützt Ihre Compliance-Dokumentation. Die Verantwortung für die Richtigkeit der Angaben verbleibt beim Hersteller bzw. beim Wirtschaftsakteur, der das Produkt in Verkehr bringt.",
   },
@@ -614,41 +545,6 @@ const FR: LandingCopy = {
     title: "Conçu autour des réglementations sur lesquelles vos clients vous interrogent.",
     lead: "Chaque champ du passeport correspond à une exigence : auditeurs et acheteurs obtiennent des réponses plutôt que des pièces jointes.",
     caption: "Réglementations et normes prises en charge par DPP-Polymer",
-    columns: { framework: "Cadre", reference: "Référence", coverage: "Ce que DPP-Polymer enregistre" },
-    frameworks: [
-      {
-        name: "ESPR",
-        reference: "Règlement (UE) 2024/1781",
-        coverage:
-          "Passeport structuré par lot avec identifiant unique, support de données QR renvoyant vers un passeport public et statuts de cycle de vie (émis, révoqué, remplacé) sans jamais effacer l'historique.",
-      },
-      {
-        name: "PPWR",
-        reference: "Règlement (UE) 2025/40",
-        coverage: "Parts de recyclé post-consommation et post-industriel, et déclarations de conformité des emballages par lot.",
-      },
-      {
-        name: "REACH",
-        reference: "Règlement (CE) n° 1907/2006",
-        coverage: "Déclarations de substances extrêmement préoccupantes (SVHC) au-delà de 0,1 % m/m, avec alertes sur l'ensemble du portefeuille.",
-      },
-      {
-        name: "ISCC PLUS",
-        reference: "Chaîne de traçabilité en bilan massique",
-        coverage: "Enregistrements de traçabilité et certificats examinés par des auditeurs désignés, avec suivi des échéances.",
-      },
-      {
-        name: "GS1 Digital Link",
-        reference: "ISO/IEC 18975",
-        coverage: "URI web standardisées par GTIN et par lot, imprimées en étiquettes QR pour les emballages et documents de livraison.",
-      },
-      {
-        name: "Empreinte carbone du produit",
-        reference: "Du berceau à la sortie d'usine, kg CO₂e/kg",
-        coverage:
-          "Empreinte par lot calculée à partir des matières premières et des données de procédé, avec une arithmétique décimale exacte, et enregistrée dans le passeport.",
-      },
-    ],
     disclaimer:
       "DPP-Polymer accompagne votre documentation de conformité. L'exactitude des déclarations reste de la responsabilité du fabricant ou de l'opérateur économique qui met le produit sur le marché.",
   },
