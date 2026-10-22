@@ -25,6 +25,7 @@
  * reach, so listing every "all clear" batch here would bury the signal.
  */
 
+import type { DppStatus } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { wrapSchemaDrift } from "@/lib/services/schema-drift";
 
@@ -33,7 +34,7 @@ import { wrapSchemaDrift } from "@/lib/services/schema-drift";
 // withdrawn and a SUPERSEDED one has been replaced by a newer record, so
 // neither is a live gap worth an admin's attention on a portfolio-wide
 // widget, even if its svhcStatus happens to be NOT_ASSESSED.
-const EXCLUDED_PASSPORT_STATUSES = new Set(["REVOKED", "SUPERSEDED"]);
+const EXCLUDED_PASSPORT_STATUSES = new Set<DppStatus>(["REVOKED", "SUPERSEDED"]);
 
 // Never a silent cap — same convention as expiry-alert-service.ts's
 // MAX_ALERT_ROWS_PER_TIER.

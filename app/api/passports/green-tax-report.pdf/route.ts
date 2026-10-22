@@ -40,7 +40,7 @@ export async function GET(req: NextRequest) {
     const pdfBuffer = await generateGreenTaxReportPdf();
     const dateStamp = new Date().toISOString().slice(0, 10);
 
-    return new NextResponse(pdfBuffer, {
+    return new NextResponse(new Uint8Array(pdfBuffer), {
       status: 200,
       headers: {
         "Content-Type": "application/pdf",

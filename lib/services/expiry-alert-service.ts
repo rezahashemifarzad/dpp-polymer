@@ -33,6 +33,7 @@
  * if the earlier, milder warning was already seen.
  */
 
+import type { DppStatus } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { writeAuditLog } from "@/lib/audit";
 import {
@@ -52,7 +53,7 @@ import {
 // row look like" signal for an admin already looking at that specific
 // passport, including a revoked one; this is a "what needs my attention
 // right now, portfolio-wide" signal, where a withdrawn claim is noise.
-const EXCLUDED_PASSPORT_STATUSES = new Set(["REVOKED", "SUPERSEDED"]);
+const EXCLUDED_PASSPORT_STATUSES = new Set<DppStatus>(["REVOKED", "SUPERSEDED"]);
 
 // Never a silent cap — every response reports whether a tier's list was
 // truncated, matching this app's established PDF/Excel export convention.

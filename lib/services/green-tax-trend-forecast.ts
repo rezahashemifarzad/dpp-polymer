@@ -55,6 +55,7 @@
  *      as such in the UI, not implied to be a Jan–Dec figure.
  */
 
+import type { DppStatus } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import {
   DEFAULT_JURISDICTION,
@@ -81,7 +82,7 @@ const TRAILING_WINDOW_QUARTERS = 4;
 // which correctly still consider every active batch regardless of age.
 const LOOKBACK_QUARTERS = 12;
 
-const EXCLUDED_STATUSES = new Set(["REVOKED", "SUPERSEDED"]);
+const EXCLUDED_STATUSES = new Set<DppStatus>(["REVOKED", "SUPERSEDED"]);
 
 export const FORECAST_METHODOLOGY =
   "Ordinary-least-squares linear trend fit to the trailing quarters' actual gross liability and PCR tax savings, " +

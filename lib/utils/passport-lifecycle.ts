@@ -37,3 +37,22 @@ export function isPassportRevoked(status: DppStatus): boolean {
  */
 export const NO_HARD_DELETE_POLICY_MESSAGE =
   'Hard deletion is not permitted for Digital Product Passports or batch records under this platform\'s EU ESPR/PPWR audit-trail policy. To retire a batch, use PATCH with { "status": "REVOKED", "reason": "..." } instead — the record and its full cryptographic audit history are preserved, never erased.';
+
+/**
+ * Public-disclosure rule (repository audit 2026-10-22).
+ *
+ * A passport's data is published to anonymous visitors only once it has left
+ * the internal review flow: ISSUED, or the terminal states REVOKED /
+ * SUPERSEDED (which keep showing their official notice). DRAFT and
+ * PENDING_VERIFICATION records are manufacturer data that no auditor has
+ * signed off yet, so every public surface — the GS1 scan page, the
+ * Certificate of Conformity PDF, the public assistant and the anonymous
+ * passport list — must treat them as not published.
+ *
+ * Single source of truth so those surfaces can never drift apart again.
+ */
+export const PUBLICLY_DISCLOSED_STATUSES: readonly DppStatus[] = ["ISSUED", "REVOKED", "SUPERSEDED"];
+
+export function isPassportPubliclyDisclosed(status: DppStatus): boolean {
+  return PUBLICLY_DISCLOSED_STATUSES.includes(status);
+}

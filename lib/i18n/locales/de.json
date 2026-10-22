@@ -70,5 +70,7 @@
   "ppwr.title": "PPWR-Verpackungskonformität",
   "ppwr.grade": "Recyclingfähigkeits-Klasse {grade}",
   "ppwr.pfasCompliant": "Unterhalb des PFAS-Grenzwerts",
-  "ppwr.pfasNonCompliant": "Überschreitet den PFAS-Grenzwert"
+  "ppwr.pfasNonCompliant": "Überschreitet den PFAS-Grenzwert",
+  "pending.title": "Produktpass noch nicht ausgestellt",
+  "pending.notice": "Dieser digitale Produktpass befindet sich noch in der Prüfung und wurde noch nicht ausgestellt. Die Daten werden hier veröffentlicht, sobald die Prüfung abgeschlossen ist. Berechtigte Nutzer können sich anmelden, um ihn einzusehen."
 }

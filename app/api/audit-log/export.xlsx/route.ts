@@ -63,7 +63,7 @@ export async function GET(req: NextRequest) {
     const workbookBuffer = await generateAuditLogWorkbook(filters);
     const dateStamp = new Date().toISOString().slice(0, 10);
 
-    return new NextResponse(workbookBuffer, {
+    return new NextResponse(new Uint8Array(workbookBuffer), {
       status: 200,
       headers: {
         "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",

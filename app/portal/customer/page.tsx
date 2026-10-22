@@ -93,7 +93,7 @@ export default async function CustomerPortalPage() {
       <div className="max-w-6xl mx-auto space-y-6">
         {!portfolio ? (
           <div className="text-xs text-rose-400 bg-rose-500/10 border border-rose-500/20 rounded-lg px-4 py-3">
-            Could not load your account's purchased batches. Please try again shortly.
+            Could not load your account&apos;s purchased batches. Please try again shortly.
           </div>
         ) : (
           <>

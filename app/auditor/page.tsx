@@ -176,7 +176,7 @@ function AuditorGate({ onAuthenticated }: { onAuthenticated: (key: string, ident
           </div>
         </div>
         <p className="text-xs text-slate-400 mt-4 mb-4 font-mono leading-relaxed">
-          Enter your personal auditor API key. It is held only in this browser tab's session
+          Enter your personal auditor API key. It is held only in this browser tab&apos;s session
           storage — never saved, never sent anywhere but this portal — and clears automatically
           when the tab closes.
         </p>

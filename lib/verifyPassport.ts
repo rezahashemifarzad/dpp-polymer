@@ -22,6 +22,7 @@ import type {
   CarbonFootprintCalculation,
   ChainOfCustodyRecord,
   SubstanceDeclaration,
+  DppStatus,
 } from "@prisma/client";
 
 // Third-Party Auditor Verification Workflow — the latest sign-off event
@@ -49,11 +50,14 @@ export interface GenealogyParentSummary {
   grade: string;
   recycledContentPercent: unknown; // Prisma.Decimal — convert with Number() at the UI boundary
   qrCodePayloadUrl: string | null;
+  status: DppStatus;
 }
 
 export type PassportWithRelations = PolymerPassport & {
   certifications: Certification[];
-  manufacturer: { id: string; legalName: string; country: string; gln: string | null };
+  // Nullable to match the schema (PolymerPassport.manufacturerId is optional).
+  // Consumers must render a fallback rather than dereference blindly.
+  manufacturer: { id: string; legalName: string; country: string; gln: string | null } | null;
   parentLinks: Array<{
     id: string;
     quantityUsedKg: unknown; // Prisma.Decimal | null
@@ -93,7 +97,9 @@ export async function getVerifiedPassport(batchId: string): Promise<VerifiedPass
     where: { batchId },
     include: {
       certifications: true,
-      manufacturer: true,
+      // Narrow select: never load Manufacturer.apiKeyHash into the public
+      // scan / certificate path — only the fields PassportWithRelations declares.
+      manufacturer: { select: { id: true, legalName: true, country: true, gln: true } },
       parentLinks: {
         include: {
           parentPassport: {
@@ -105,6 +111,7 @@ export async function getVerifiedPassport(batchId: string): Promise<VerifiedPass
               grade: true,
               recycledContentPercent: true,
               qrCodePayloadUrl: true,
+              status: true,
             },
           },
         },

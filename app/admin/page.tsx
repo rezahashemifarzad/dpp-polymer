@@ -321,7 +321,7 @@ function AdminDashboardInner() {
             <p className="text-xs text-slate-400 font-mono">
               Opens the full, schema-validated intake form — every field required by
               PolymerPassportInputSchema (GTIN, batch ID, manufacturer, certification, etc.) is
-              collected here, so submissions from this console can never hit "Validation failed"
+              collected here, so submissions from this console can never hit &ldquo;Validation failed&rdquo;
               for a field this page silently omitted.
             </p>
             <button

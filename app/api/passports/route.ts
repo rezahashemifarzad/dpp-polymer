@@ -37,7 +37,7 @@ import { createPassport } from "@/lib/services/create-passport";
 import { authorize, unauthorizedResponse } from "@/lib/rbac";
 import { resolveApiPrincipal } from "@/lib/api-auth";
 import { getPassportCertificationAlert } from "@/lib/utils/certification-status";
-import { NO_HARD_DELETE_POLICY_MESSAGE } from "@/lib/utils/passport-lifecycle";
+import { NO_HARD_DELETE_POLICY_MESSAGE, PUBLICLY_DISCLOSED_STATUSES } from "@/lib/utils/passport-lifecycle";
 
 const MAX_PAGE_SIZE = 100;
 
@@ -45,7 +45,7 @@ const MAX_PAGE_SIZE = 100;
 // see. DRAFT and PENDING_VERIFICATION batches are internal until issued;
 // REVOKED/SUPERSEDED stay visible because their printed QR codes still
 // resolve publicly and must show the revocation.
-const PUBLIC_STATUSES: DppStatus[] = ["ISSUED", "REVOKED", "SUPERSEDED"];
+const PUBLIC_STATUSES: DppStatus[] = [...PUBLICLY_DISCLOSED_STATUSES];
 const DEFAULT_PAGE_SIZE = 25;
 
 function parsePagination(searchParams: URLSearchParams) {
@@ -138,6 +138,8 @@ export async function GET(req: NextRequest) {
           certifications: { where: certificationWhere },
           gs1Link: true,
           parentLinks: {
+            // Anonymous callers never see unpublished upstream batches.
+            where: isPrivileged ? undefined : { parentPassport: { status: { in: PUBLIC_STATUSES } } },
             include: {
               parentPassport: {
                 select: {

@@ -34,6 +34,7 @@
  *    specifically (Post-Industrial Recycled content is not counted here).
  */
 
+import type { DppStatus } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { writeAuditLog } from "@/lib/audit";
 
@@ -57,7 +58,7 @@ export const GREEN_ACCOUNTING_DISCLAIMER =
 // claims are withdrawn and a SUPERSEDED one has been replaced, so neither
 // belongs in a live financial total. Kept as a local copy (not imported)
 // for the same file-independence reason as the rate constant above.
-const EXCLUDED_STATUSES = new Set(["REVOKED", "SUPERSEDED"]);
+const EXCLUDED_STATUSES = new Set<DppStatus>(["REVOKED", "SUPERSEDED"]);
 
 export interface ActiveTaxParameter {
   id: string | null; // null when using the built-in fallback, never persisted

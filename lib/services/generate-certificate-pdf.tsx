@@ -29,6 +29,7 @@
 
 import { Document, Page, Text, View, Image, StyleSheet, renderToBuffer } from "@react-pdf/renderer";
 import { getVerifiedPassport } from "@/lib/verifyPassport";
+import { isPassportPubliclyDisclosed } from "@/lib/utils/passport-lifecycle";
 import { generateQrPngDataUrl } from "@/lib/qr-image";
 
 const styles = StyleSheet.create({
@@ -308,6 +309,11 @@ export async function generateCertificatePdf(batchId: string): Promise<Buffer | 
   if (!result) return null;
   const { passport, integrityVerified } = result;
 
+  // Public-disclosure rule (repository audit 2026-10-22): this route is
+  // public, and a Certificate of Conformity must never exist for a passport
+  // that has not been issued. DRAFT / PENDING_VERIFICATION -> 404.
+  if (!isPassportPubliclyDisclosed(passport.status)) return null;
+
   const verifiedCertifications = passport.certifications
     .filter((c) => c.verificationStatus === "VERIFIED")
     .map((c) => ({
@@ -317,7 +323,9 @@ export async function generateCertificatePdf(batchId: string): Promise<Buffer | 
       validUntil: c.validUntil,
     }));
 
-  const genealogy = passport.parentLinks.map((link) => ({
+  const genealogy = passport.parentLinks
+    .filter((link) => isPassportPubliclyDisclosed(link.parentPassport.status))
+    .map((link) => ({
     batchId: link.parentPassport.batchId,
     polymerType: link.parentPassport.polymerType,
     grade: link.parentPassport.grade,
@@ -361,8 +369,8 @@ export async function generateCertificatePdf(batchId: string): Promise<Buffer | 
       gtin={passport.gtin}
       polymerType={passport.polymerType}
       grade={passport.grade}
-      manufacturerName={passport.manufacturer.legalName}
-      manufacturerCountry={passport.manufacturer.country}
+      manufacturerName={passport.manufacturer?.legalName ?? "Not specified"}
+      manufacturerCountry={passport.manufacturer?.country ?? "—"}
       productionDate={passport.productionDate.toISOString()}
       status={passport.status}
       meltFlowIndex={Number(passport.meltFlowIndex)}

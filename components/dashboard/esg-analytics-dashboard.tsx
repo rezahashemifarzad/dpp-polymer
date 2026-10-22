@@ -630,7 +630,7 @@ export function EsgAnalyticsDashboard({
                     <YAxis stroke="#64748b" fontSize={11} unit="%" />
                     <Tooltip
                       contentStyle={{ backgroundColor: "#090d16", borderColor: "#1e293b", borderRadius: "12px", fontSize: "12px" }}
-                      formatter={(value: number) => [`${value}%`, "Avg PCR"]}
+                      formatter={(value) => [`${value}%`, t("ui.esg.tooltipAvgPcr")]}
                     />
                     <Area
                       type="monotone"
@@ -673,7 +673,7 @@ export function EsgAnalyticsDashboard({
                     <YAxis stroke="#64748b" fontSize={11} />
                     <Tooltip
                       contentStyle={{ backgroundColor: "#090d16", borderColor: "#1e293b", borderRadius: "12px", fontSize: "12px" }}
-                      formatter={(value: number) => [t("ui.esg.kgCo2eKg", { v0: value }), "Avg Intensity"]}
+                      formatter={(value) => [t("ui.esg.kgCo2eKg", { v0: String(value) }), t("ui.esg.tooltipAvgIntensity")]}
                     />
                     <Area
                       type="monotone"

@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "tsx scripts/check-access-control.ts && tsc -p tsconfig.site-copy.json && next build",
+    "build": "tsx scripts/check-access-control.ts && tsx scripts/check-i18n.ts && tsc -p tsconfig.site-copy.json && next build",
     "check:access": "tsx scripts/check-access-control.ts",
     "check:i18n": "tsx scripts/check-i18n.ts",
     "check:site-copy": "tsc -p tsconfig.site-copy.json",

@@ -70,5 +70,7 @@
   "ppwr.title": "Conformité emballage PPWR",
   "ppwr.grade": "Classe d'aptitude au recyclage {grade}",
   "ppwr.pfasCompliant": "Sous le seuil de restriction PFAS",
-  "ppwr.pfasNonCompliant": "Dépasse le seuil de restriction PFAS"
+  "ppwr.pfasNonCompliant": "Dépasse le seuil de restriction PFAS",
+  "pending.title": "Passeport pas encore émis",
+  "pending.notice": "Ce passeport numérique de produit est encore en cours de vérification et n'a pas encore été émis. Ses données seront publiées ici dès la fin de la vérification. Les utilisateurs autorisés peuvent se connecter pour le consulter."
 }

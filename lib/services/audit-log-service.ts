@@ -8,7 +8,7 @@
  * sole write path (see that file and schema.prisma's AuditLog comment).
  */
 
-import { Prisma, AuditAction } from "@prisma/client";
+import { Prisma, AuditAction, type AuditLog } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { hashRecord } from "@/lib/types";
 
@@ -171,7 +171,7 @@ export async function verifyAuditLogChainIntegrity(): Promise<AuditLogChainVerif
   let lastSequence: number | null = null;
 
   for (;;) {
-    const batch = await prisma.auditLog.findMany({
+    const batch: AuditLog[] = await prisma.auditLog.findMany({
       where: cursor !== null ? { sequence: { gt: cursor } } : undefined,
       orderBy: { sequence: "asc" },
       take: CHAIN_VERIFY_BATCH_SIZE,

@@ -44,7 +44,7 @@ function parseArgs(argv: string[]): { id?: string; email?: string; password?: st
 async function promptMissing(partial: { id?: string; email?: string; password?: string }) {
   const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
   try {
-    let id = partial.id;
+    const id = partial.id;
     let email = partial.email;
     if (!id && !email) {
       email = (await rl.question("Auditor email: ")).trim();

@@ -29,9 +29,89 @@
 
 import "dotenv/config";
 import * as readline from "readline/promises";
-import { PrismaClient, Prisma } from "@prisma/client";
+import { createHash } from "crypto";
+import { PrismaClient, Prisma, type AuditAction } from "@prisma/client";
 
 const prisma = new PrismaClient();
+
+// ----------------------------------------------------------------------------
+// Hash-chained audit writer — duplicated byte-for-byte from lib/audit.ts's
+// writeAuditLog and lib/types.ts's hashRecord (same convention as
+// scripts/seed-sample-passports.ts; this CLI avoids "@/..." imports).
+//
+// Repository audit 2026-10-22: this script previously called
+// tx.auditLog.create() directly WITHOUT sequence/entryHash/previousEntryHash.
+// Both are required columns, so every run threw — and had it succeeded it
+// would have forked the tamper-evident audit chain. Every AuditLog write must
+// go through this chained writer.
+// ----------------------------------------------------------------------------
+type TxClient = Prisma.TransactionClient | PrismaClient;
+
+function stableStringify(value: unknown): string {
+  if (value instanceof Prisma.Decimal) return JSON.stringify(value.toFixed());
+  if (value instanceof Date) return JSON.stringify(value.toISOString());
+  if (value === null || typeof value !== "object") return JSON.stringify(value);
+  if (Array.isArray(value)) return `[${value.map(stableStringify).join(",")}]`;
+  const record = value as Record<string, unknown>;
+  const keys = Object.keys(record).sort();
+  const body = keys.map((k) => `${JSON.stringify(k)}:${stableStringify(record[k])}`).join(",");
+  return `{${body}}`;
+}
+
+function hashRecord(data: Record<string, unknown>): string {
+  return createHash("sha256").update(stableStringify(data), "utf8").digest("hex");
+}
+
+function normalizeMetadata(metadata: Record<string, unknown> | undefined): Record<string, unknown> | null {
+  if (metadata === undefined) return null;
+  return JSON.parse(JSON.stringify(metadata)) as Record<string, unknown>;
+}
+
+async function writeAuditLog(
+  client: TxClient,
+  params: {
+    passportId: string;
+    action: AuditAction;
+    actor: string;
+    previousHash: string | null;
+    newHash: string | null;
+    metadata?: Record<string, unknown>;
+  }
+) {
+  const createdAt = new Date();
+  const normalizedMetadata = normalizeMetadata(params.metadata);
+  const previous = await client.auditLog.findFirst({
+    orderBy: { sequence: "desc" },
+    select: { sequence: true, entryHash: true },
+  });
+  const sequence = (previous?.sequence ?? 0) + 1;
+  const previousEntryHash = previous?.entryHash ?? null;
+  const entryHash = hashRecord({
+    sequence,
+    passportId: params.passportId,
+    action: params.action,
+    actor: params.actor,
+    previousHash: params.previousHash,
+    newHash: params.newHash,
+    metadata: normalizedMetadata,
+    createdAt,
+    previousEntryHash,
+  });
+  return client.auditLog.create({
+    data: {
+      sequence,
+      passportId: params.passportId,
+      action: params.action,
+      actor: params.actor,
+      previousHash: params.previousHash,
+      newHash: params.newHash,
+      metadata: normalizedMetadata !== null ? (normalizedMetadata as Prisma.InputJsonValue) : Prisma.JsonNull,
+      entryHash,
+      previousEntryHash,
+      createdAt,
+    },
+  });
+}
 
 function parseArgs(argv: string[]): { client?: string; batch?: string; qty?: string; notes?: string } {
   const out: { client?: string; batch?: string; qty?: string; notes?: string } = {};
@@ -113,15 +193,13 @@ async function main() {
       },
     });
 
-    await tx.auditLog.create({
-      data: {
-        passportId: passport.id,
-        action: "CLIENT_PURCHASE_RECORDED",
-        actor: "CLI:allocate-passport-to-client",
-        previousHash: null,
-        newHash: null,
-        metadata: { clientId, clientCompanyName: client.companyName, quantityKg: quantityKg ?? null },
-      },
+    await writeAuditLog(tx, {
+      passportId: passport.id,
+      action: "CLIENT_PURCHASE_RECORDED",
+      actor: "CLI:allocate-passport-to-client",
+      previousHash: null,
+      newHash: null,
+      metadata: { clientId, clientCompanyName: client.companyName, quantityKg: quantityKg ?? null },
     });
 
     console.log(

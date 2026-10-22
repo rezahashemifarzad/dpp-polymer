@@ -15,7 +15,7 @@
  * a calculation, never round-trip them back into an API call as a float.
  */
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { createPassportAction } from "@/lib/actions/create-passport";
 import { linkBatchGenealogyAction } from "@/lib/actions/link-batch-genealogy";
 import { calculateCarbonFootprintAction } from "@/lib/actions/calculate-carbon-footprint";
@@ -216,7 +216,9 @@ export function usePassports() {
   const [data, setData] = useState<ApiPassport[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const hasLoadedOnce = useRef(false);
+  // State, not a ref: the value is returned to consumers during render, and a
+  // ref change would not re-render them (repository audit 2026-10-22).
+  const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
 
   const refetch = useCallback(async () => {
     setLoading(true);
@@ -232,7 +234,7 @@ export function usePassports() {
       setError(err instanceof Error ? err.message : "Failed to load passports");
     } finally {
       setLoading(false);
-      hasLoadedOnce.current = true;
+      setHasLoadedOnce(true);
     }
   }, []);
 
@@ -375,7 +377,7 @@ export function usePassports() {
     data,
     loading,
     error,
-    hasLoadedOnce: hasLoadedOnce.current,
+    hasLoadedOnce,
     refetch,
     createPassport,
     linkParentBatch,

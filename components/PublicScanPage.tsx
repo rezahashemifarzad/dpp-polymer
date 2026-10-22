@@ -962,3 +962,86 @@ export default function PublicScanPage({ passport, integrityVerified, linkTruste
     </div>
   );
 }
+
+/* ---------------------------------------------------------------------------
+ * Not-yet-issued view (repository audit 2026-10-22)
+ * ---------------------------------------------------------------------------
+ * Rendered by app/01/[gtin]/21/[serialOrBatch]/page.tsx when an anonymous
+ * visitor resolves a passport that is still DRAFT or PENDING_VERIFICATION
+ * (see isPassportPubliclyDisclosed in lib/utils/passport-lifecycle.ts).
+ * Deliberately receives ONLY the GTIN and batch ID — both already present in
+ * the scanned URL — so no unpublished manufacturer data is ever serialized
+ * to the browser. Signed-in admins and auditors get the full view instead.
+ */
+export function PendingPassportScanPage({ gtin, batchId }: { gtin: string; batchId: string }) {
+  const [locale, setLocale] = useState<Locale>(DEFAULT_LOCALE);
+  useEffect(() => {
+    try {
+      const stored = window.localStorage.getItem(LOCALE_STORAGE_KEY);
+      if (isSupportedLocale(stored)) setLocale(stored);
+    } catch {
+      /* localStorage unavailable — default locale stands */
+    }
+  }, []);
+  const changeLocale = (next: Locale) => {
+    setLocale(next);
+    try {
+      window.localStorage.setItem(LOCALE_STORAGE_KEY, next);
+    } catch {
+      /* best-effort persistence only */
+    }
+  };
+  const t = useMemo(() => createTranslator(locale), [locale]);
+
+  return (
+    <div className={`min-h-screen bg-slate-50 f-body ${displayFont.variable} ${bodyFont.variable} ${monoFont.variable}`}>
+      <style>{`
+        .f-display { font-family: var(--font-scan-display), sans-serif; }
+        .f-body { font-family: var(--font-scan-body), system-ui, sans-serif; }
+        .f-mono { font-family: var(--font-scan-mono), monospace; }
+      `}</style>
+
+      <div className="sticky top-0 z-50 shadow-sm bg-slate-900 text-white px-5 py-4 flex items-center justify-between gap-3">
+        <div className="flex items-center gap-2 min-w-0">
+          <Layers className="w-4 h-4 text-teal-400 shrink-0" aria-hidden="true" />
+          <span className="f-mono text-[11px] tracking-widest text-slate-400 truncate">{t("brand")}</span>
+        </div>
+        <LanguageSwitcher locale={locale} onChange={changeLocale} label={t("language.label")} />
+      </div>
+
+      <main className="max-w-md mx-auto px-5 py-6 space-y-5">
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs f-mono text-slate-600">
+          <span>GTIN {gtin}</span>
+          <span aria-hidden="true">·</span>
+          <span>{batchId}</span>
+        </div>
+
+        <section className="rounded-xl bg-amber-50 border border-amber-200 p-5" aria-labelledby="pending-title">
+          <div className="flex items-start gap-3">
+            <div className="shrink-0 w-9 h-9 rounded-full bg-amber-500 flex items-center justify-center">
+              <Clock className="w-4.5 h-4.5 text-white" aria-hidden="true" />
+            </div>
+            <div className="min-w-0">
+              <h1 id="pending-title" className="text-sm font-semibold text-amber-950 f-body">{t("pending.title")}</h1>
+              <p className="text-xs text-amber-900 f-body mt-1 leading-relaxed">{t("pending.notice")}</p>
+            </div>
+          </div>
+        </section>
+
+        <Link
+          href="/login"
+          className="flex items-center justify-center gap-2 rounded-xl bg-slate-900 text-white text-xs f-body font-medium py-3 hover:bg-slate-800 transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-600"
+        >
+          <LogIn className="w-4 h-4" aria-hidden="true" /> {t("auth.login")}
+        </Link>
+
+        <div className="text-center pt-1 pb-4">
+          <a href="https://gs1.org/standards/digital-link" target="_blank" rel="noopener noreferrer"
+            className="inline-flex items-center gap-1 text-[10px] f-body text-slate-500 hover:text-slate-700">
+            {t("footer.resolvedVia")} <ExternalLink className="w-3 h-3" aria-hidden="true" />
+          </a>
+        </div>
+      </main>
+    </div>
+  );
+}

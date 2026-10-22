@@ -75,6 +75,7 @@ import { prisma } from "@/lib/prisma";
 import { computePortfolioExpiryAlerts } from "@/lib/services/expiry-alert-service";
 import { getSupplierAnalytics } from "@/lib/services/supplier-analytics";
 import { buildGs1VerificationUrl } from "@/lib/qr";
+import { isPassportPubliclyDisclosed } from "@/lib/utils/passport-lifecycle";
 
 export interface AssistantLink {
   label: string;
@@ -152,7 +153,11 @@ async function tryBatchLookup(question: string, opts: BatchLookupOptions = {}): 
     },
   });
 
-  if (!passport) {
+  // Public-disclosure rule (repository audit 2026-10-22): in public mode an
+  // unpublished (DRAFT / PENDING_VERIFICATION) batch answers exactly like an
+  // unknown one, so the public assistant can't be used to probe internal data
+  // or even confirm that such a batch exists.
+  if (!passport || (opts.publicMode && !isPassportPubliclyDisclosed(passport.status))) {
     return opts.publicMode
       ? {
           answer: `I couldn't find a batch matching "${token}". Double-check the batch ID printed on the product or QR code.`,
@@ -167,12 +172,17 @@ async function tryBatchLookup(question: string, opts: BatchLookupOptions = {}): 
   }
 
   const now = new Date();
-  const expiredCount = passport.certifications.filter((c) => new Date(c.validUntil) < now).length;
+  // Public mode only ever reports VERIFIED certifications — same "never show
+  // unverified claims as fact" rule as the public scan page.
+  const visibleCertifications = opts.publicMode
+    ? passport.certifications.filter((c) => c.verificationStatus === "VERIFIED")
+    : passport.certifications;
+  const expiredCount = visibleCertifications.filter((c) => new Date(c.validUntil) < now).length;
   const certSummary =
-    passport.certifications.length === 0
+    visibleCertifications.length === 0
       ? "no certifications on file yet"
-      : `${passport.certifications.length} certification${passport.certifications.length === 1 ? "" : "s"} (${
-          passport.certifications.filter((c) => c.verificationStatus === "VERIFIED").length
+      : `${visibleCertifications.length} certification${visibleCertifications.length === 1 ? "" : "s"} (${
+          visibleCertifications.filter((c) => c.verificationStatus === "VERIFIED").length
         } verified${expiredCount > 0 ? `, ${expiredCount} expired` : ""})`;
 
   const manufacturerText = passport.manufacturer

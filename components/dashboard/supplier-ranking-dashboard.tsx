@@ -52,6 +52,46 @@ import type { SupplierAnalyticsSummary, SupplierScorecard, SupplierTier } from "
 
 type SortKey = "rank" | "compliance" | "currency" | "pcr" | "pcf" | "batches";
 
+/**
+ * Sortable column header. Module-scope (not defined inside the dashboard's
+ * render) so React doesn't remount it on every render, and a real <button>
+ * with aria-sort so sorting works by keyboard and is announced by screen
+ * readers (repository audit 2026-10-22, WCAG 2.1.1 / 4.1.2).
+ */
+function SortHeader({
+  label,
+  k,
+  activeKey,
+  descending,
+  onSort,
+  align = "right",
+}: {
+  label: string;
+  k: SortKey;
+  activeKey: SortKey;
+  descending: boolean;
+  onSort: (key: SortKey) => void;
+  align?: "left" | "right";
+}) {
+  const active = activeKey === k;
+  return (
+    <th
+      scope="col"
+      aria-sort={active ? (descending ? "descending" : "ascending") : "none"}
+      className={`py-2 px-2 ${align === "right" ? "text-right" : "text-left"}`}
+    >
+      <button
+        type="button"
+        onClick={() => onSort(k)}
+        className="inline-flex items-center gap-0.5 uppercase select-none hover:text-slate-200 transition-colors rounded focus-visible:outline focus-visible:outline-2 focus-visible:outline-sky-400"
+      >
+        {label}
+        {active && (descending ? <ChevronDown className="w-3 h-3" aria-hidden="true" /> : <ChevronUp className="w-3 h-3" aria-hidden="true" />)}
+      </button>
+    </th>
+  );
+}
+
 const TIER_META: Record<
   SupplierTier | "Insufficient Data",
   { hex: string; badgeClass: string; barClass: string; icon: typeof Award; label: string }
@@ -350,18 +390,6 @@ export function SupplierRankingDashboard({ summary }: { summary: SupplierAnalyti
     }
   };
 
-  const SortHeader = ({ label, k, align = "right" }: { label: string; k: SortKey; align?: "left" | "right" }) => (
-    <th
-      className={`py-2 px-2 cursor-pointer select-none hover:text-slate-200 transition-colors ${align === "right" ? "text-right" : "text-left"}`}
-      onClick={() => handleSort(k)}
-    >
-      <span className="inline-flex items-center gap-0.5">
-        {label}
-        {sortKey === k && (sortDesc ? <ChevronDown className="w-3 h-3" /> : <ChevronUp className="w-3 h-3" />)}
-      </span>
-    </th>
-  );
-
   return (
     <div className="min-h-screen bg-[#020617] text-slate-100 font-sans">
       {/* Header — same min-h-16 + flex-wrap pattern as every other
@@ -471,7 +499,7 @@ export function SupplierRankingDashboard({ summary }: { summary: SupplierAnalyti
           <div className="flex items-start gap-2 bg-slate-900/60 border border-slate-800 rounded-xl p-3 text-[11px] text-slate-400 font-mono">
             <FileWarning className="w-3.5 h-3.5 text-slate-500 shrink-0 mt-0.5" />
             {summary.unassignedBatchCount} batch(es) have no supplier (manufacturer) linked and are excluded from this
-            ranking — see each batch's own record to assign one.
+            ranking — see each batch&apos;s own record to assign one.
           </div>
         )}
 
@@ -528,13 +556,13 @@ export function SupplierRankingDashboard({ summary }: { summary: SupplierAnalyti
                   <tr className="text-slate-500 uppercase text-[10px] border-b border-slate-800">
                     <th className="py-2 px-2 text-left">{t("suppliers.table.supplier")}</th>
                     <th className="py-2 px-2 text-left">{t("suppliers.table.tier")}</th>
-                    <SortHeader label={t("greenAccounting.table.batches")} k="batches" />
-                    <SortHeader label={t("suppliers.table.compliance")} k="compliance" />
-                    <SortHeader label={t("suppliers.table.currency")} k="currency" />
-                    <SortHeader label={t("suppliers.table.avgPcr")} k="pcr" />
-                    <SortHeader label={t("suppliers.table.avgPcf")} k="pcf" />
+                    <SortHeader label={t("greenAccounting.table.batches")} k="batches" activeKey={sortKey} descending={sortDesc} onSort={handleSort} />
+                    <SortHeader label={t("suppliers.table.compliance")} k="compliance" activeKey={sortKey} descending={sortDesc} onSort={handleSort} />
+                    <SortHeader label={t("suppliers.table.currency")} k="currency" activeKey={sortKey} descending={sortDesc} onSort={handleSort} />
+                    <SortHeader label={t("suppliers.table.avgPcr")} k="pcr" activeKey={sortKey} descending={sortDesc} onSort={handleSort} />
+                    <SortHeader label={t("suppliers.table.avgPcf")} k="pcf" activeKey={sortKey} descending={sortDesc} onSort={handleSort} />
                     <th className="py-2 px-2 text-center">{t("suppliers.table.certExpiry")}</th>
-                    <SortHeader label={t("suppliers.table.score")} k="rank" />
+                    <SortHeader label={t("suppliers.table.score")} k="rank" activeKey={sortKey} descending={sortDesc} onSort={handleSort} />
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-800/60">
@@ -614,7 +642,7 @@ export function SupplierRankingDashboard({ summary }: { summary: SupplierAnalyti
           (25%), recycled content adoption vs. the EU PPWR 2030 baseline target (25%), and carbon footprint reporting
           completeness (15%) — weighted sum, 0-100. Computed fresh on every request from the same ledger figures used
           elsewhere in this app; there is no stored or cached supplier score. Suppliers with no active (non-revoked,
-          non-superseded) batches show as "Insufficient Data" rather than being scored 0.
+          non-superseded) batches show as &ldquo;Insufficient Data&rdquo; rather than being scored 0.
         </p>
       </main>
     </div>

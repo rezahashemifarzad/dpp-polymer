@@ -88,9 +88,35 @@ for (const dir of ["components", "app"]) {
   }
 }
 
+// --- Public scan page dictionaries (lib/i18n/locales/*.json) ----------------
+// Added by the repository audit (2026-10-22): these files back
+// components/PublicScanPage.tsx and were not covered by this check before.
+const scanLocales: Record<"en" | "de" | "fr", Record<string, string>> = {
+  en: JSON.parse(readFileSync(join(ROOT, "lib/i18n/locales/en.json"), "utf8")),
+  de: JSON.parse(readFileSync(join(ROOT, "lib/i18n/locales/de.json"), "utf8")),
+  fr: JSON.parse(readFileSync(join(ROOT, "lib/i18n/locales/fr.json"), "utf8")),
+};
+for (const lang of ["de", "fr"] as const) {
+  for (const key of Object.keys(scanLocales.en)) {
+    if (!(key in scanLocales[lang])) failures.push(`locales/${lang}.json is missing key ${key}`);
+    else if (placeholders(scanLocales.en[key]) !== placeholders(scanLocales[lang][key]))
+      failures.push(`locales/${lang}.json placeholders differ for ${key}`);
+  }
+  for (const key of Object.keys(scanLocales[lang]))
+    if (!(key in scanLocales.en)) failures.push(`locales/${lang}.json has extra key ${key}`);
+}
+{
+  const scanSrc = readFileSync(join(ROOT, "components/PublicScanPage.tsx"), "utf8");
+  for (const m of scanSrc.matchAll(/\bt\(\s*"([A-Za-z][\w.]*)"/g)) {
+    if (!(m[1] in scanLocales.en)) failures.push(`components/PublicScanPage.tsx uses unknown key ${m[1]}`);
+  }
+}
+
 if (failures.length) {
   console.error(`i18n check FAILED (${failures.length}):`);
   for (const f of [...new Set(failures)]) console.error("  " + f);
   process.exit(1);
 }
-console.log(`i18n check passed: ${dicts.EN.size} keys in EN, DE and FR; every referenced key exists.`);
+console.log(
+  `i18n check passed: ${dicts.EN.size} app keys and ${Object.keys(scanLocales.en).length} scan-page keys in EN, DE and FR; every referenced key exists.`
+);

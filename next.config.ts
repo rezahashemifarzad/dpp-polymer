@@ -128,22 +128,17 @@ const nextConfig: NextConfig = {
     NEXT_PUBLIC_BASE_URL: resolveBaseUrl(),
   },
 
-  // Unblocks Vercel deploys when strict-mode TypeScript findings would
-  // otherwise fail `next build`. This does NOT fix the underlying type
-  // errors — it only stops them from being build-fatal. Local
-  // `tsc --noEmit` and your editor's type-checking are unaffected, so
-  // errors are still visible during development; they just no longer
-  // block production deploys.
+  // Type checking is ENFORCED during `next build` (repository audit
+  // 2026-10-22). `typescript.ignoreBuildErrors: true` previously hid 36 real
+  // type errors from every production deploy — including an audit-log write
+  // that could never succeed and a public page that crashed on passports
+  // without a manufacturer. `tsc --noEmit` is now clean, so any new type
+  // error fails the build instead of shipping.
   //
   // NOTE: there is no `eslint` config key here. Next.js 16 removed the
   // `next lint` / ESLint integration from `next build` entirely, so
-  // `eslint.ignoreDuringBuilds` is not a recognized option anymore (it
-  // caused the "Unrecognized key(s): 'eslint'" build warning) — and it's
-  // unnecessary besides, since this Next.js version no longer runs ESLint
-  // as part of the build at all.
-  typescript: {
-    ignoreBuildErrors: true,
-  },
+  // `eslint.ignoreDuringBuilds` is not a recognized option anymore. Run
+  // `npm run lint` separately (e.g. in CI).
 };
 
 export default nextConfig;

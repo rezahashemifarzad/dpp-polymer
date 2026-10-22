@@ -23,7 +23,9 @@ import { notFound } from "next/navigation";
 import { getVerifiedPassport } from "@/lib/verifyPassport";
 import { deriveVerificationToken } from "@/lib/qr";
 import { padGtinTo14 } from "@/lib/types";
-import PublicScanPage from "@/components/PublicScanPage";
+import PublicScanPage, { PendingPassportScanPage } from "@/components/PublicScanPage";
+import { getSessionActor } from "@/lib/session-auth";
+import { isPassportPubliclyDisclosed } from "@/lib/utils/passport-lifecycle";
 
 // Integrity checking must reflect the current DB state on every scan —
 // never serve a cached/stale verification result.
@@ -52,8 +54,26 @@ export default async function Gs1ResolverPage({ params, searchParams }: PageProp
   if (!result) notFound();
   const { passport, integrityVerified } = result;
 
+  // Public-disclosure rule (repository audit 2026-10-22): DRAFT and
+  // PENDING_VERIFICATION passports are not published yet. Anonymous visitors
+  // (and customer sessions) get a "not yet issued" notice carrying only the
+  // identifiers already present in the scanned URL; signed-in ADMIN/AUDITOR
+  // users still see the full record for review.
+  const actor = await getSessionActor();
+  const privileged = actor?.role === "ADMIN" || actor?.role === "AUDITOR";
+  if (!isPassportPubliclyDisclosed(passport.status) && !privileged) {
+    return <PendingPassportScanPage gtin={padGtinTo14(gtin)} batchId={passport.batchId} />;
+  }
+  // Same rule one level up the genealogy tree: an upstream batch that is not
+  // published yet is not shown to the public.
+  const visibleParentLinks = privileged
+    ? passport.parentLinks
+    : passport.parentLinks.filter((link) => isPassportPubliclyDisclosed(link.parentPassport.status));
+
   const gtinMatches = padGtinTo14(gtin) === passport.gtin;
-  const tokenMatches = v === deriveVerificationToken(passport.recordHash);
+  // recordHash is nullable in the schema; a record without a seal can never
+  // match a scanned token, so the link is treated as untrusted.
+  const tokenMatches = passport.recordHash !== null && v === deriveVerificationToken(passport.recordHash);
   const linkTrusted = gtinMatches && tokenMatches;
 
   // Third-Party Auditor Verification Workflow — surface the latest review
@@ -122,8 +142,8 @@ export default async function Gs1ResolverPage({ params, searchParams }: PageProp
         ppwrPfasCompliant: passport.ppwrPfasCompliant,
         ppwrAssessedAt: passport.ppwrAssessedAt ? passport.ppwrAssessedAt.toISOString() : null,
         manufacturer: {
-          legalName: passport.manufacturer.legalName,
-          country: passport.manufacturer.country,
+          legalName: passport.manufacturer?.legalName ?? "—",
+          country: passport.manufacturer?.country ?? "—",
         },
         // FIX (Step 4, discovered while touching this file): the public page
         // was rendering every certification regardless of
@@ -145,12 +165,12 @@ export default async function Gs1ResolverPage({ params, searchParams }: PageProp
             validUntil: c.validUntil.toISOString(),
             documentUrl: c.documentUrl,
           })),
-        recordHash: passport.recordHash,
+        recordHash: passport.recordHash ?? "",
         hashAlgorithm: passport.hashAlgorithm,
         previousRecordHash: passport.previousRecordHash,
         signedAt: passport.signedAt ? passport.signedAt.toISOString() : null,
         // Circular Economy Platform Upgrade (Step 4) additions.
-        parentLinks: passport.parentLinks.map((link) => ({
+        parentLinks: visibleParentLinks.map((link) => ({
           id: link.id,
           quantityUsedKg: link.quantityUsedKg !== null ? Number(link.quantityUsedKg) : null,
           notes: link.notes,

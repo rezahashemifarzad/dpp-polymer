@@ -70,5 +70,7 @@
   "ppwr.title": "PPWR Packaging Compliance",
   "ppwr.grade": "Design-for-Recycling grade {grade}",
   "ppwr.pfasCompliant": "Below PFAS restriction threshold",
-  "ppwr.pfasNonCompliant": "Exceeds PFAS restriction threshold"
+  "ppwr.pfasNonCompliant": "Exceeds PFAS restriction threshold",
+  "pending.title": "Passport not yet issued",
+  "pending.notice": "This Digital Product Passport is still under verification and has not been issued yet. Its data will be published here once the review is complete. Authorized users can sign in to view it."
 }
