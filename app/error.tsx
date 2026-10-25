@@ -32,19 +32,19 @@ export default function RootError({ error, reset }: { error: Error & { digest?: 
         <div className="space-y-4">
           <div lang="en">
             <h1 className="text-lg font-semibold text-slate-900">Something went wrong</h1>
-            <p className="mt-1 text-sm leading-relaxed text-slate-600">
+            <p className="copy-justify mt-1 text-sm leading-relaxed text-slate-600">
               This page could not be loaded. This is usually temporary — please try again.
             </p>
           </div>
           <div lang="de">
             <h2 className="text-base font-semibold text-slate-900">Etwas ist schiefgelaufen</h2>
-            <p className="mt-1 text-sm leading-relaxed text-slate-600">
+            <p className="copy-justify mt-1 text-sm leading-relaxed text-slate-600">
               Diese Seite konnte nicht geladen werden. Das ist meist vorübergehend – bitte versuchen Sie es erneut.
             </p>
           </div>
           <div lang="fr">
             <h2 className="text-base font-semibold text-slate-900">Une erreur est survenue</h2>
-            <p className="mt-1 text-sm leading-relaxed text-slate-600">
+            <p className="copy-justify mt-1 text-sm leading-relaxed text-slate-600">
               Cette page n&apos;a pas pu être chargée. C&apos;est généralement temporaire — veuillez réessayer.
             </p>
           </div>

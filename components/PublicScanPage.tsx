@@ -386,7 +386,7 @@ function RevokedNotice({
           </div>
           <div className="min-w-0">
             <div className="text-sm font-semibold text-rose-900 f-body">{t("revoked.title")}</div>
-            <p className="text-xs text-rose-800 f-body mt-1">{t("revoked.notice")}</p>
+            <p className="copy-justify text-xs text-rose-800 f-body mt-1">{t("revoked.notice")}</p>
           </div>
         </div>
         {passport.revocationReason && (
@@ -401,7 +401,7 @@ function RevokedNotice({
         )}
       </section>
 
-      <p className="text-xs f-body text-slate-500 leading-relaxed">{t("revoked.auditNotice")}</p>
+      <p className="copy-justify text-xs f-body text-slate-500 leading-relaxed">{t("revoked.auditNotice")}</p>
 
       <Link
         href="/login"
@@ -457,7 +457,7 @@ export default function PublicScanPage({ passport, integrityVerified, linkTruste
   const t = useMemo(() => createTranslator(locale), [locale]);
 
   return (
-    <div className={`min-h-screen bg-slate-50 f-body ${displayFont.variable} ${bodyFont.variable} ${monoFont.variable}`}>
+    <div lang={locale} className={`min-h-screen bg-slate-50 f-body ${displayFont.variable} ${bodyFont.variable} ${monoFont.variable}`}>
       <style>{`
         .f-display { font-family: var(--font-scan-display), sans-serif; }
         .f-body { font-family: var(--font-scan-body), system-ui, sans-serif; }
@@ -994,7 +994,7 @@ export function PendingPassportScanPage({ gtin, batchId }: { gtin: string; batch
   const t = useMemo(() => createTranslator(locale), [locale]);
 
   return (
-    <div className={`min-h-screen bg-slate-50 f-body ${displayFont.variable} ${bodyFont.variable} ${monoFont.variable}`}>
+    <div lang={locale} className={`min-h-screen bg-slate-50 f-body ${displayFont.variable} ${bodyFont.variable} ${monoFont.variable}`}>
       <style>{`
         .f-display { font-family: var(--font-scan-display), sans-serif; }
         .f-body { font-family: var(--font-scan-body), system-ui, sans-serif; }
@@ -1023,7 +1023,7 @@ export function PendingPassportScanPage({ gtin, batchId }: { gtin: string; batch
             </div>
             <div className="min-w-0">
               <h1 id="pending-title" className="text-sm font-semibold text-amber-950 f-body">{t("pending.title")}</h1>
-              <p className="text-xs text-amber-900 f-body mt-1 leading-relaxed">{t("pending.notice")}</p>
+              <p className="copy-justify text-xs text-amber-900 f-body mt-1 leading-relaxed">{t("pending.notice")}</p>
             </div>
           </div>
         </section>

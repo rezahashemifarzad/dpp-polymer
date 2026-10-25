@@ -49,7 +49,7 @@ export default async function LoginPage() {
             <p className="text-xs text-slate-400">Admin, Auditor &amp; Client Access</p>
           </div>
         </div>
-        <p className="text-xs text-slate-400 mt-4 mb-4 leading-relaxed">
+        <p className="copy-justify text-xs text-slate-400 mt-4 mb-4 leading-relaxed">
           Sign in with the email and password your administrator set up for you. You&apos;ll be
           routed to the Admin Console or your own portal automatically.
         </p>

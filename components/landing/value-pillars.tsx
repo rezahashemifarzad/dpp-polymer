@@ -25,7 +25,7 @@ export function ValuePillars({ locale }: ValuePillarsProps) {
     <section aria-labelledby="features-title" id="features" className="scroll-mt-16 bg-white py-24 sm:py-32">
       <div className="mx-auto max-w-6xl px-5 sm:px-6 lg:px-8">
         <SectionHeading id="features-title" eyebrow={copy.eyebrow} title={copy.title} lead={copy.lead} />
-        <div className="mt-16 grid gap-5 md:grid-cols-3">
+        <div className="mt-16 grid gap-5 lg:grid-cols-3">
           {copy.pillars.map(({ title, summary, points }, i) => {
             const Icon = ICONS[i] ?? Scale;
             return (
@@ -37,10 +37,10 @@ export function ValuePillars({ locale }: ValuePillarsProps) {
                   <Icon className="h-5 w-5" aria-hidden="true" />
                 </span>
                 <h3 className="mt-7 text-[19px] font-semibold tracking-[-0.012em] text-navy-900">{title}</h3>
-                <p className="mt-3 text-[15px] leading-[1.65] text-slate-600">{summary}</p>
+                <p className="copy-justify mt-3 text-[15px] leading-[1.65] text-slate-600">{summary}</p>
                 <ul className="mt-7 space-y-3.5 border-t border-slate-100 pt-7">
                   {points.map((point) => (
-                    <li key={point} className="flex gap-3 text-[14px] leading-snug text-slate-700">
+                    <li key={point} className="flex gap-3 text-left text-[14px] leading-snug text-slate-700">
                       <span className="mt-[7px] h-1 w-1 shrink-0 rounded-full bg-teal-600" aria-hidden="true" />
                       {point}
                     </li>

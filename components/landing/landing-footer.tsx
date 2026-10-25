@@ -60,8 +60,8 @@ export function LandingFooter({ locale }: LandingFooterProps) {
             >
               <BrandMark />
             </Link>
-            <p className="mt-4 text-[13.5px] leading-relaxed text-slate-400">{copy.footer.tagline}</p>
-            <p className="mt-5 text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">{copy.footer.contact}</p>
+            <p className="copy-justify mt-4 text-[13.5px] leading-relaxed text-slate-400">{copy.footer.tagline}</p>
+            <p className="mt-5 text-left text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">{copy.footer.contact}</p>
             <p className="mt-2">
               <a href={contactMailto()} className={`${LINK_CLASS} font-medium text-slate-200`}>
                 {CONTACT_EMAIL}
@@ -70,7 +70,7 @@ export function LandingFooter({ locale }: LandingFooterProps) {
           </div>
           {columns.map((col) => (
             <nav key={col.title} aria-label={col.title}>
-              <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">{col.title}</p>
+              <p className="text-left text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">{col.title}</p>
               <ul className="mt-5 space-y-3">
                 {col.links.map((link) => (
                   <li key={link.label}>

@@ -18,7 +18,7 @@ export function SectionHeading({ id, eyebrow, title, lead, tone = "light" }: Sec
   return (
     <div className="max-w-2xl">
       <p
-        className={`flex items-center gap-2.5 text-[11.5px] font-semibold uppercase tracking-[0.16em] ${
+        className={`flex items-center gap-2.5 text-left text-[11.5px] font-semibold uppercase tracking-[0.16em] ${
           dark ? "text-slate-400" : "text-slate-500"
         }`}
       >
@@ -33,7 +33,7 @@ export function SectionHeading({ id, eyebrow, title, lead, tone = "light" }: Sec
       >
         {title}
       </h2>
-      <p className={`mt-5 text-[17px] leading-[1.7] text-pretty ${dark ? "text-slate-300" : "text-slate-600"}`}>{lead}</p>
+      <p className={`copy-justify mt-5 text-[17px] leading-[1.7] ${dark ? "text-slate-300" : "text-slate-600"}`}>{lead}</p>
     </div>
   );
 }

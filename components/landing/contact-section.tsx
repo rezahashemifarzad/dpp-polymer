@@ -44,11 +44,11 @@ export function ContactSection({ locale }: ContactSectionProps) {
               aria-hidden="true"
             />
           </button>
-          <p className="mt-8 flex items-center gap-2.5 text-[11.5px] font-semibold uppercase tracking-[0.16em] text-slate-500">
+          <p className="mt-8 flex items-center gap-2.5 text-left text-[11.5px] font-semibold uppercase tracking-[0.16em] text-slate-500">
             <Mail className="h-4 w-4 text-teal-700" aria-hidden="true" />
             {copy.emailLabel}
           </p>
-          <p className="mt-2">
+          <p className="mt-2 text-left">
             <a
               href={contactMailto()}
               className="break-all rounded-sm text-[17px] font-semibold text-navy-900 underline decoration-slate-300 underline-offset-4 transition-colors duration-150 hover:decoration-navy-900 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-navy-700"

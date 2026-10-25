@@ -50,7 +50,7 @@ export function LandingNav({ locale, alternates }: LandingNavProps) {
           <BrandMark />
         </Link>
 
-        <nav aria-label={copy.a11y.mainNav} className="hidden items-center gap-9 md:flex">
+        <nav aria-label={copy.a11y.mainNav} className="hidden items-center gap-9 lg:flex">
           {sections.map((link) => (
             <Link
               key={link.href}
@@ -63,7 +63,7 @@ export function LandingNav({ locale, alternates }: LandingNavProps) {
           ))}
         </nav>
 
-        <div className="hidden items-center gap-4 md:flex">
+        <div className="hidden items-center gap-4 lg:flex">
           <LanguageToggle current={locale} hrefs={alternates} label={copy.a11y.languageSwitch} />
           <span className="h-5 w-px bg-white/10" aria-hidden="true" />
           <Link href={ROUTES.login} className={NAV_LINK}>
@@ -74,7 +74,7 @@ export function LandingNav({ locale, alternates }: LandingNavProps) {
           </CtaLink>
         </div>
 
-        <div className="flex items-center gap-2 md:hidden">
+        <div className="flex items-center gap-2 lg:hidden">
           <LanguageToggle current={locale} hrefs={alternates} label={copy.a11y.languageSwitch} />
           <details className="group relative">
             <summary

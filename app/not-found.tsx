@@ -56,7 +56,7 @@ export default function NotFound() {
               ) : (
                 <h2 className="text-base font-semibold text-slate-900">{m.title}</h2>
               )}
-              <p className="mt-1 text-sm leading-relaxed text-slate-600">{m.body}</p>
+              <p className="copy-justify mt-1 text-sm leading-relaxed text-slate-600">{m.body}</p>
             </div>
           ))}
         </div>

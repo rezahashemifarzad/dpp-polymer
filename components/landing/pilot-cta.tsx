@@ -26,7 +26,7 @@ export function PilotCta({ locale }: PilotCtaProps) {
               >
                 {copy.title}
               </h2>
-              <p className="mt-5 text-[17px] leading-[1.7] text-slate-600 text-pretty">{copy.lead}</p>
+              <p className="copy-justify mt-5 text-[17px] leading-[1.7] text-slate-600">{copy.lead}</p>
               <div className="mt-10 flex flex-col gap-3 sm:flex-row">
                 <CtaLink href={pilotMailto(locale)} variant="solid-dark" size="lg" arrow>
                   {copy.requestPilot}
@@ -41,8 +41,8 @@ export function PilotCta({ locale }: PilotCtaProps) {
                 <li key={step.title} className="flex gap-5 px-7 py-6">
                   <span className="pt-0.5 font-mono text-[13px] font-semibold text-teal-700">0{i + 1}</span>
                   <div>
-                    <p className="text-[15.5px] font-semibold text-navy-900">{step.title}</p>
-                    <p className="mt-1.5 text-[14.5px] leading-[1.65] text-slate-600">{step.body}</p>
+                    <p className="text-left text-[15.5px] font-semibold text-navy-900">{step.title}</p>
+                    <p className="copy-justify mt-1.5 text-[14.5px] leading-[1.65] text-slate-600">{step.body}</p>
                   </div>
                 </li>
               ))}

@@ -80,6 +80,15 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
+  // Keep <html lang> in sync with the selected UI language (2026-10-25).
+  // Screen readers use it for pronunciation, and the browser uses it to
+  // hyphenate the site-wide justified text correctly (see app/globals.css).
+  // Landing/legal pages set their own lang on their content wrapper, which
+  // takes precedence for everything inside it.
+  useEffect(() => {
+    document.documentElement.lang = lang.toLowerCase();
+  }, [lang]);
+
   const setLang = useCallback((next: AppLanguage) => {
     setLangState(next);
     try {

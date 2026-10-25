@@ -39,8 +39,8 @@ export function SecuritySection({ locale }: SecuritySectionProps) {
                   >
                     <Icon className="mt-0.5 h-[18px] w-[18px] shrink-0 text-teal-300" aria-hidden="true" />
                     <div>
-                      <p className="text-[14.5px] font-semibold">{name}</p>
-                      <p className="mt-0.5 text-[13.5px] leading-relaxed text-slate-400">{access}</p>
+                      <p className="text-left text-[14.5px] font-semibold">{name}</p>
+                      <p className="copy-justify mt-0.5 text-[13.5px] leading-relaxed text-slate-400">{access}</p>
                     </div>
                   </li>
                 );
@@ -59,8 +59,8 @@ export function SecuritySection({ locale }: SecuritySectionProps) {
                       <Icon className="h-5 w-5 text-white" aria-hidden="true" />
                     </span>
                     <div>
-                      <p className="text-[17px] font-semibold tracking-[-0.01em]">{title}</p>
-                      <p className="mt-2 text-[15px] leading-[1.7] text-slate-300">{body}</p>
+                      <p className="text-left text-[17px] font-semibold tracking-[-0.01em]">{title}</p>
+                      <p className="copy-justify mt-2 text-[15px] leading-[1.7] text-slate-300">{body}</p>
                     </div>
                   </div>
                 );

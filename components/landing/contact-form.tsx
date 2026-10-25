@@ -102,7 +102,7 @@ export function ContactForm({ locale, copy, closeLabel, onClose, onSentChange }:
       <div role="status" className="flex flex-col items-start py-6">
         <CheckCircle2 className="h-9 w-9 text-teal-700" aria-hidden="true" />
         <h3 className="mt-5 text-xl font-semibold tracking-[-0.01em] text-navy-900">{copy.successTitle}</h3>
-        <p className="mt-2 text-[15.5px] leading-[1.65] text-slate-600">{copy.successBody}</p>
+        <p className="copy-justify mt-2 text-[15.5px] leading-[1.65] text-slate-600">{copy.successBody}</p>
         <div className="mt-7 flex flex-wrap items-center gap-x-6 gap-y-3">
           {onClose && closeLabel && (
             <button
@@ -149,7 +149,7 @@ export function ContactForm({ locale, copy, closeLabel, onClose, onSentChange }:
   const fieldError = (field: InquiryField) => {
     const message = errorText(field);
     return message ? (
-      <p id={`inquiry-${field}-error`} className="mt-1.5 text-[13px] font-medium text-rose-700">
+      <p id={`inquiry-${field}-error`} className="mt-1.5 text-left text-[13px] font-medium text-rose-700">
         {message}
       </p>
     ) : null;
@@ -250,7 +250,7 @@ export function ContactForm({ locale, copy, closeLabel, onClose, onSentChange }:
             </>
           )}
         </button>
-        <p className="text-[12.5px] leading-[1.5] text-slate-500 sm:max-w-[16rem] sm:text-right">{copy.privacyNote}</p>
+        <p className="copy-justify text-[12.5px] leading-[1.5] text-slate-500 sm:max-w-[16rem]">{copy.privacyNote}</p>
       </div>
     </form>
   );

@@ -83,6 +83,62 @@ body {
   font-family: Arial, Helvetica, sans-serif;
 }
 
+/* Justified body text (2026-10-25, revised)
+   ---------------------------------------------------------------------------
+   Two layers, so nothing is missed:
+
+   1. `copy-justify` — the explicit utility every descriptive paragraph,
+      definition and content block carries in the components (landing,
+      legal, login, scan, error pages). It is a real Tailwind utility, so
+      variants work (e.g. `md:copy-justify`) and it beats base styles.
+   2. A base-layer safety net that justifies every <p> anywhere in the app
+      (dashboards, portals, future pages), at every screen width.
+
+   Typesetting choices that keep justified text even instead of "rivers":
+   - hyphens: auto, driven by each element's `lang` (set per locale on the
+     corporate site, on <html> by the in-app switcher, and on the scan page).
+   - hyphenate-limit-chars 5 2 2 (Chrome's default, stated explicitly so all
+     browsers agree): words of 5+ letters, at least 2 letters either side.
+     Measured against 6 3 2 on EN/DE/FR at phone widths: fewer loose lines.
+   - text-align-last: start — the final line of a paragraph stays flush-left
+     instead of being stretched.
+   - overflow-wrap: break-word — long tokens (URLs, GTINs, hashes) wrap
+     instead of forcing gaps or overflow.
+   - Do NOT combine with `text-pretty` / `text-balance` on body text: those
+     re-flow the last lines of a paragraph, and with justification that
+     leaves the line above visibly stretched (measured: up to 12x a normal
+     word space on short German leads). Keep them for headings only.
+   - Short phrase lists (feature bullets, badges, labels, headings) stay
+     flush-left on purpose: 4–6 word lines cannot be justified evenly.
+
+   Any alignment utility on the element itself (text-left, text-center …)
+   still overrides the safety net. Paragraphs inside text-center/right
+   containers inherit that alignment, so centred cards stay centred. */
+@utility copy-justify {
+  text-align: justify;
+  text-align-last: start;
+  -webkit-hyphens: auto;
+  hyphens: auto;
+  hyphenate-limit-chars: 5 2 2;
+  overflow-wrap: break-word;
+}
+
+@layer base {
+  p {
+    text-align: justify;
+    text-align-last: start;
+    -webkit-hyphens: auto;
+    hyphens: auto;
+    hyphenate-limit-chars: 5 2 2;
+    overflow-wrap: break-word;
+  }
+  .text-center p,
+  .text-right p,
+  .text-end p {
+    text-align: inherit;
+  }
+}
+
 /* Hides the scrollbar on horizontally-scrollable mobile tab strips (e.g.
    app/page.tsx's mobile view-switch bar) while leaving the element
    scrollable by touch/trackpad/keyboard — purely cosmetic, no behavior

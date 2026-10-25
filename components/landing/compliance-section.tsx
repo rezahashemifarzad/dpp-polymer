@@ -75,7 +75,7 @@ export function ComplianceSection({ locale }: ComplianceSectionProps) {
                     return (
                       <li
                         key={id}
-                        className="grid gap-6 px-6 py-7 transition-colors duration-150 hover:bg-slate-50/60 motion-reduce:transition-none sm:px-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.55fr)] lg:gap-10"
+                        className="grid gap-6 px-5 py-7 transition-colors duration-150 hover:bg-slate-50/60 motion-reduce:transition-none sm:px-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.55fr)] lg:gap-10"
                       >
                         {/* Identity: acronym, full name, legal reference, status */}
                         <div>
@@ -106,14 +106,14 @@ export function ComplianceSection({ locale }: ComplianceSectionProps) {
                             <dt className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">
                               {content.labels.whatItIs}
                             </dt>
-                            <dd className="mt-1.5 text-[14.5px] leading-[1.65] text-slate-700 text-pretty">{f.whatItIs}</dd>
+                            <dd className="copy-justify mt-1.5 text-[14.5px] leading-[1.65] text-slate-700">{f.whatItIs}</dd>
                           </div>
-                          <div className="rounded-xl border border-teal-100 bg-teal-50/50 px-4 py-3.5">
+                          <div className="rounded-xl border border-teal-100 bg-teal-50/50 px-3.5 py-3.5 sm:px-4">
                             <dt className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[0.12em] text-teal-800">
                               <Check className="h-3.5 w-3.5" aria-hidden="true" />
                               {content.labels.howWeSupport}
                             </dt>
-                            <dd className="mt-1.5 text-[14px] leading-[1.6] text-navy-900 text-pretty">{f.howWeSupport}</dd>
+                            <dd className="copy-justify mt-1.5 text-[14px] leading-[1.6] text-navy-900">{f.howWeSupport}</dd>
                           </div>
                         </dl>
                       </li>
@@ -125,7 +125,7 @@ export function ComplianceSection({ locale }: ComplianceSectionProps) {
           })}
         </div>
 
-        <p className="mt-8 max-w-3xl text-[13px] leading-relaxed text-slate-500">{copy.disclaimer}</p>
+        <p className="copy-justify mt-8 max-w-3xl text-[13px] leading-relaxed text-slate-500">{copy.disclaimer}</p>
       </div>
     </section>
   );

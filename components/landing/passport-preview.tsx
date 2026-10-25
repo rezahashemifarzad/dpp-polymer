@@ -19,8 +19,8 @@ export function PassportPreview({ copy }: PassportPreviewProps) {
       <div className="rounded-2xl border border-white/10 bg-white text-navy-900 shadow-[0_30px_80px_-20px_rgba(0,0,0,0.6)] ring-1 ring-black/5 transition-transform duration-500 ease-out hover:-translate-y-1 motion-reduce:transition-none motion-reduce:hover:translate-y-0">
         <div className="flex items-start justify-between gap-4 border-b border-slate-100 px-6 py-5">
           <div>
-            <p className="text-[10.5px] font-semibold uppercase tracking-[0.14em] text-slate-500">{copy.kicker}</p>
-            <p className="mt-1.5 text-[15px] font-semibold tracking-[-0.01em]">{copy.title}</p>
+            <p className="text-left text-[10.5px] font-semibold uppercase tracking-[0.14em] text-slate-500">{copy.kicker}</p>
+            <p className="mt-1.5 text-left text-[15px] font-semibold tracking-[-0.01em]">{copy.title}</p>
           </div>
           <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-teal-50 px-2.5 py-1 text-[11px] font-semibold text-teal-800 ring-1 ring-teal-200/80">
             <Check className="h-3 w-3" aria-hidden="true" />

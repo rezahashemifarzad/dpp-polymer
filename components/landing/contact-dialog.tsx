@@ -95,7 +95,7 @@ export function ContactDialog({ locale, copy }: ContactDialogProps) {
             <h2 id="contact-dialog-title" className="text-2xl font-semibold tracking-[-0.018em] text-navy-900">
               {copy.dialogTitle}
             </h2>
-            <p className="mt-2 text-[15px] leading-[1.6] text-slate-600">{copy.dialogLead}</p>
+            <p className="copy-justify mt-2 text-[15px] leading-[1.6] text-slate-600">{copy.dialogLead}</p>
           </div>
           <button
             type="button"

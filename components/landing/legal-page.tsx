@@ -35,7 +35,7 @@ export function LegalPage({ locale, page, title, updated, children }: LegalPageP
         <article className="mx-auto max-w-3xl px-5 py-20 sm:px-6 sm:py-24">
           <h1 className="text-[2rem] font-semibold leading-tight tracking-[-0.022em] sm:text-[2.5rem]">{title}</h1>
           {updated && <p className="mt-3 text-sm text-slate-500">{updated}</p>}
-          <div className="mt-12 space-y-11 text-[15px] leading-[1.75] text-slate-700 [&_a]:font-medium [&_a]:text-teal-800 [&_a]:underline [&_a]:decoration-teal-800/30 [&_a]:underline-offset-2 [&_a:hover]:decoration-teal-800 [&_h2]:text-[17px] [&_h2]:font-semibold [&_h2]:tracking-[-0.01em] [&_h2]:text-navy-900 [&_h2+*]:mt-3 [&_p+p]:mt-3 [&_ul]:list-disc [&_ul]:space-y-1.5 [&_ul]:pl-5">
+          <div className="copy-justify mt-12 space-y-11 text-[15px] leading-[1.75] text-slate-700 [&_h2]:text-left [&_a]:font-medium [&_a]:text-teal-800 [&_a]:underline [&_a]:decoration-teal-800/30 [&_a]:underline-offset-2 [&_a:hover]:decoration-teal-800 [&_h2]:text-[17px] [&_h2]:font-semibold [&_h2]:tracking-[-0.01em] [&_h2]:text-navy-900 [&_h2+*]:mt-3 [&_p+p]:mt-3 [&_ul]:list-disc [&_ul]:space-y-1.5 [&_ul]:pl-5">
             {children}
           </div>
         </article>
