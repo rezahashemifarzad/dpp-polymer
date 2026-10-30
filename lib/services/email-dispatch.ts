@@ -16,13 +16,17 @@
  * Env vars (see isEmailDispatchConfigured below):
  *   RESEND_API_KEY            — Resend API key (dashboard: resend.com/api-keys).
  *                               Required to send.
- *   DPP_NOTIFICATION_EMAIL_FROM — optional sender override. Defaults to the
- *                               official mailbox, "DPP-Polymer <info@dpp-polymer.de>"
- *                               (DEFAULT_EMAIL_FROM); the dpp-polymer.de domain
- *                               must be verified in Resend (resend.com/domains).
+ *   DPP_NOTIFICATION_EMAIL_FROM — optional sender override. Defaults to
+ *                               "DPP-Polymer <info@dpp-polymer.de>", i.e.
+ *                               info@{SITE.domain} (DEFAULT_EMAIL_FROM);
+ *                               that domain must be verified in Resend
+ *                               (resend.com/domains). The sender is tied to
+ *                               SITE.domain, not to CONTACT_EMAIL, so changing
+ *                               the public contact mailbox can never switch
+ *                               sending to an unverified domain.
  *
- * Every email carries Reply-To: info@dpp-polymer.de by default, so replies
- * land in the official mailbox whatever the sender is. A caller can pass
+ * Every email carries Reply-To: CONTACT_EMAIL (info@dpp-polymer.de) by
+ * default, so replies land in the official mailbox whatever the sender is. A caller can pass
  * options.replyTo instead (the inquiry form sets it to the visitor's
  * address — see lib/actions/submit-inquiry.ts).
  *
@@ -36,7 +40,7 @@
 import { CONTACT_EMAIL, SITE } from "@/lib/site-config";
 
 /** Sender used when DPP_NOTIFICATION_EMAIL_FROM is not set. */
-export const DEFAULT_EMAIL_FROM = `${SITE.name} <${CONTACT_EMAIL}>`;
+export const DEFAULT_EMAIL_FROM = `${SITE.name} <info@${SITE.domain}>`;
 
 export interface EmailDispatchResult {
   ok: boolean;

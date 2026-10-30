@@ -301,7 +301,12 @@ export function privacyMetadata(locale: SiteLocale) {
 export function PrivacyContent({ locale }: { locale: SiteLocale }) {
   const t = TEXT[locale];
   const e = LEGAL_ENTITY;
-  const controllerLines = [e.companyName, e.representative, e.street, e.postalCodeAndCity, e.country[locale]].filter(Boolean);
+  // Before incorporation the founder personally is the controller, so their name leads.
+  const controllerLines = (
+    e.inFormation
+      ? [e.representative, e.companyName, e.street, e.postalCodeAndCity, e.country[locale]]
+      : [e.companyName, e.representative, e.street, e.postalCodeAndCity, e.country[locale]]
+  ).filter(Boolean);
 
   return (
     <LegalPage locale={locale} page="privacy" title={t.title} updated={t.updated}>

@@ -5,6 +5,12 @@
  * French. Renders the legal
  * entity details from lib/site-config.ts; fields left empty there are
  * omitted rather than filled with invented data.
+ *
+ * Pre-incorporation (LEGAL_ENTITY.inFormation): the provider is the founder
+ * personally, so the § 5 DDG block names the founder first, followed by the
+ * project name "DPP-Polymer (in Gründung)" and the address, and a "Legal
+ * status" section explains that no company is registered yet. The register
+ * and VAT section stays hidden until those fields are filled in.
  */
 
 import { LegalPage } from "./legal-page";
@@ -18,6 +24,7 @@ const TEXT: Record<
     description: string;
     info: string;
     representedBy: string;
+    statusTitle: string;
     contact: string;
     email: string;
     phone: string;
@@ -34,6 +41,7 @@ const TEXT: Record<
     description: "Legal notice (Impressum) for DPP-Polymer.",
     info: "Information pursuant to § 5 DDG",
     representedBy: "Represented by",
+    statusTitle: "Legal status",
     contact: "Contact",
     email: "Email",
     phone: "Phone",
@@ -50,6 +58,7 @@ const TEXT: Record<
     description: "Impressum von DPP-Polymer.",
     info: "Angaben gemäß § 5 DDG",
     representedBy: "Vertreten durch",
+    statusTitle: "Rechtlicher Status",
     contact: "Kontakt",
     email: "E-Mail",
     phone: "Telefon",
@@ -66,6 +75,7 @@ const TEXT: Record<
     description: "Mentions légales de DPP-Polymer.",
     info: "Informations conformément au § 5 DDG (loi allemande sur les services numériques)",
     representedBy: "Représentée par",
+    statusTitle: "Statut juridique",
     contact: "Contact",
     email: "E-mail",
     phone: "Téléphone",
@@ -87,7 +97,13 @@ export function imprintMetadata(locale: SiteLocale) {
 export function ImprintContent({ locale }: { locale: SiteLocale }) {
   const t = TEXT[locale];
   const e = LEGAL_ENTITY;
-  const addressLines = [e.companyName, e.street, e.postalCodeAndCity, e.country[locale]].filter(Boolean);
+  // Before incorporation the founder is the provider, so their name leads the block.
+  const addressLines = (
+    e.inFormation
+      ? [e.representative, e.companyName, e.street, e.postalCodeAndCity, e.country[locale]]
+      : [e.companyName, e.street, e.postalCodeAndCity, e.country[locale]]
+  ).filter(Boolean);
+  const statusNote = e.inFormation ? e.legalStatus[locale] : "";
   const streetLines = [e.street, e.postalCodeAndCity].filter(Boolean);
 
   return (
@@ -101,12 +117,21 @@ export function ImprintContent({ locale }: { locale: SiteLocale }) {
             </span>
           ))}
         </address>
-        {e.representative && (
+        {!e.inFormation && e.representative && (
           <p>
             {t.representedBy}: {e.representative}
           </p>
         )}
       </section>
+
+      {statusNote && (
+        <section aria-labelledby="imprint-legal-status">
+          <h2 id="imprint-legal-status">{t.statusTitle}</h2>
+          <p className="rounded-xl border border-slate-200 bg-slate-50 px-5 py-4 text-[14.5px] leading-[1.7] text-slate-700">
+            {statusNote}
+          </p>
+        </section>
+      )}
 
       <section>
         <h2>{t.contact}</h2>

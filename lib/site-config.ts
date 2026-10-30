@@ -16,8 +16,14 @@
  * proxy.ts rewrites "/" on any "app." host to /app.
  *
  * Legal details: an Impressum is mandatory for a commercial website in
- * Germany (§ 5 DDG). Fill in LEGAL_ENTITY below before the site goes live.
- * Empty fields are not rendered, so nothing invented is ever published.
+ * Germany (§ 5 DDG). LEGAL_ENTITY below feeds the Imprint, the privacy
+ * notice's controller block and the footer copyright. Empty fields are not
+ * rendered, so nothing invented is ever published.
+ *
+ * Brand vs. legal name: SITE.name ("DPP-Polymer") is the brand used in the
+ * logo, headers and page titles. LEGAL_ENTITY.companyName carries the legal
+ * status ("DPP-Polymer (in Gründung)") and appears only on the legal pages
+ * and in the footer copyright line.
  */
 
 export type SiteLocale = "en" | "de" | "fr";
@@ -105,9 +111,21 @@ export function pilotMailto(locale: SiteLocale = "en"): string {
 }
 
 export interface LegalEntity {
-  /** Registered company or sole-trader name, e.g. "DPP-Polymer GmbH". */
+  /**
+   * Legal name as shown on the legal pages. Before incorporation this is the
+   * project name with "(in Gründung)"; after registration, the registered
+   * name, e.g. "DPP-Polymer GmbH".
+   */
   companyName: string;
-  /** Person(s) authorised to represent the company. */
+  /**
+   * Pre-incorporation flag. While true, the provider under § 5 DDG is the
+   * founder personally (named in `representative`): the Imprint names the
+   * founder first, labels them "Founder" rather than "Represented by", and
+   * shows `legalStatus`. Set to false once the company is registered, and
+   * fill in commercialRegister / vatId.
+   */
+  inFormation: boolean;
+  /** Founder (while inFormation) or the person(s) authorised to represent the company. */
   representative: string;
   street: string;
   postalCodeAndCity: string;
@@ -121,17 +139,28 @@ export interface LegalEntity {
   vatId: string;
   /** Person responsible for editorial content (§ 18 Abs. 2 MStV). */
   contentResponsible: string;
+  /** Legal status note per language, shown on the Imprint while inFormation is true. */
+  legalStatus: Record<SiteLocale, string>;
 }
 
 export const LEGAL_ENTITY: LegalEntity = {
-  companyName: "DPP-Polymer",
+  companyName: "DPP-Polymer (in Gründung)",
+  inFormation: true,
   representative: "Reza Hashemi Farzad",
-  street: "",
-  postalCodeAndCity: "",
+  street: "Schenkendorfstraße 2-6",
+  postalCodeAndCity: "52066 Aachen",
   country: { en: "Germany", de: "Deutschland", fr: "Allemagne" },
   email: CONTACT_EMAIL,
   phone: "",
   commercialRegister: "",
   vatId: "",
   contentResponsible: "Reza Hashemi Farzad",
+  legalStatus: {
+    en:
+      "DPP-Polymer is currently in the pre-incorporation phase (in Gründung). The project is run by its founder, Reza Hashemi Farzad; no company has been entered in the commercial register yet, and no VAT identification number has been issued. Until incorporation, the provider of this website within the meaning of § 5 DDG is the founder named above. This notice will be updated with the register details as soon as the company is registered.",
+    de:
+      "DPP-Polymer befindet sich derzeit in Gründung. Das Vorhaben wird von seinem Gründer, Reza Hashemi Farzad, betrieben; eine Eintragung in das Handelsregister ist noch nicht erfolgt, eine Umsatzsteuer-Identifikationsnummer wurde noch nicht erteilt. Bis zur Gründung ist Diensteanbieter dieser Website im Sinne des § 5 DDG der oben genannte Gründer. Die Registerangaben werden ergänzt, sobald die Gesellschaft eingetragen ist.",
+    fr:
+      "DPP-Polymer est actuellement en cours de création (in Gründung). Le projet est porté par son fondateur, Reza Hashemi Farzad ; aucune société n'est encore immatriculée au registre du commerce et aucun numéro de TVA intracommunautaire n'a encore été attribué. Jusqu'à la constitution de la société, le prestataire de ce site au sens du § 5 DDG est le fondateur nommé ci-dessus. Ces mentions seront complétées par les informations d'immatriculation dès l'enregistrement de la société.",
+  },
 };
